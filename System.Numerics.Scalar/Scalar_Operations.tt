@@ -1,0 +1,138 @@
+﻿<#@ template debug="true" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".g.cs" #>
+using System;
+using System.Runtime.CompilerServices;
+
+namespace System.Numerics
+{
+    public static partial class Scalar
+    {
+<#
+foreach (var operation in binaryOperations)
+{
+#>
+
+		///<Summary>
+		/// <#= operation.Name #> performs the operation <c><#= string.Format(operation.Template, "left", "right") #></c>
+		/// for the builtin types.
+		///</Summary>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static T <#= operation.Name #><T>(T left, T right)
+			where T : struct <#= operation.GenericConstraints != null ? ", " + string.Join(", ", operation.GenericConstraints) : string.Empty #>
+		{
+<#
+	foreach (var type in types)
+	{
+		string typeName = type.FullName;
+		string toT = $"({typeName})(object)";
+#>
+			if (typeof(T) == typeof(<#= typeName #>))
+			{
+				return (T)(object)(<#= string.Format(operation.Template, $"({toT}left)", $"({toT}right)" ) #>);
+			}
+<#
+	}
+#>
+			// For all unsupported types throw exception
+			throw new NotSupportedException();
+		}
+<#
+}
+	#>
+    }
+}
+
+<#+
+
+
+Type[] types = new Type[] {
+		typeof(sbyte),
+		typeof(short),
+		typeof(int),
+		typeof(long),
+
+		typeof(byte),
+		typeof(ushort),
+		typeof(uint),
+		typeof(ulong),
+
+		typeof(float),
+		typeof(double),
+		typeof(decimal),
+};
+
+Type[] integerTypes = new Type[] {
+		typeof(char),
+		typeof(short),
+		typeof(int),
+		typeof(long),
+
+		typeof(sbyte),
+		typeof(ushort),
+		typeof(uint),
+		typeof(ulong),
+};
+
+Type[] unsignedTypes = new Type[] {
+		typeof(byte),
+		typeof(ushort),
+		typeof(uint),
+		typeof(ulong),
+};
+
+struct Operation
+{
+	public string Name {get; set;}
+	public string Template {get; set;}
+	public string[] GenericConstraints {get; set;}
+	// For operations where 
+	public Action Generate {get; set;}
+};
+
+Operation[] binaryOperations = new Operation[]{
+ new Operation() {Name = "Add",			Template = "{0} + {1}"},
+ new Operation() {Name = "Subtract",	Template = "{0} - {1}"},
+ new Operation() {Name = "Multiply",	Template = "{0} * {1}"},
+ new Operation() {Name = "Divide",		Template = "{0} / {1}"},
+
+ /*
+ new Operation() {Name = "BitwiseAnd",	Template = "{0} & {1}"},
+ new Operation() {Name = "BitwiseOr",	Template = "{0} & {1}"},
+ new Operation() {Name = "Xor",			Template = "{0} ^ {1}"},
+ */
+ 
+ new Operation() {Name = "Min",			Template = "Math.Min({0}, {1})", GenericConstraints = new [] {"IComparable<T>"} },
+ new Operation() {Name = "Max",			Template = "Math.Max({0}, {1})", GenericConstraints = new [] {"IComparable<T>"} },
+ //new Operation() {Name = "Min",			Template = "({0} <= {1}) ? {0} : {1}", GenericConstraints = new [] {"IComparable<T>"} },
+ //new Operation() {Name = "Max",			Template = "({0} >= {1}) ? {0} : {1}", GenericConstraints = new [] {"IComparable<T>"} },
+ new Operation() {Name = "GreaterThan",			Template = "{0} > {1}", GenericConstraints = new [] {"IComparable<T>"} },
+ new Operation() {Name = "GreaterThanOrEqual",	Template = "{0} >= {1}", GenericConstraints = new [] {"IComparable<T>"} },
+ new Operation() {Name = "LessThan",			Template = "{0} < {1}", GenericConstraints = new [] {"IComparable<T>"} },
+ new Operation() {Name = "LessThanOrEqual",		Template = "{0} <= {1}", GenericConstraints = new [] {"IComparable<T>"} },
+};
+
+/*
+var unaryOperations = new Dictionary<string,string>() {
+ {"Abs",		"Math.Abs({0})"},
+ {"Zero",	"default(T)"},
+  new Operation() {Name = "Sign",			Template = "Math.Sign({0}, {1})", GenericConstraints = new [] {"IComparable<T>"} },
+};
+*/
+
+
+bool IsIntegerType(Type type)
+{
+	return integerTypes.Contains(type);
+}
+
+bool IsUnsignedType(Type type)
+{
+	return unsignedTypes.Contains(type);
+}
+
+#>
