@@ -62,7 +62,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="MyAssembly">
-      <HintPath>..\..\ConsoleApplication1\ConsoleApplication1\bin\Debug\MyAssembly.dll</HintPath>
+      <HintPath>MyAssembly.dll</HintPath>
     </Reference>
     <Reference Include="NBench, Version=0.3.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NBench.Runner.0.3.1\lib\net45\NBench.dll</HintPath>
@@ -190,15 +190,14 @@
     <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.CSharp.Analyzers.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="EmitMethods2.dll" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\System.Numerics.Scalar\System.Numerics.Scalar.csproj">
       <Project>{991c3498-f839-43dd-8e41-8b6a2e0d7c47}</Project>
       <Name>System.Numerics.Scalar</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="MyAssembly.dll" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
