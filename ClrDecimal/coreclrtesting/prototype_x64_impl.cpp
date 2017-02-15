@@ -113,11 +113,13 @@ int ScaleResult(ULONG *rgulRes, int iHiRes, int iScale)
 	// the upper 96 bits zero.  iHiRes is the index into rgulRes[]
 	// of the highest non-zero ULONG.
 	// 
-	iNewScale = iHiRes * 32 - 64 - 1;
-	if (iNewScale > 0) {
+	//iNewScale = iHiRes * 32 - 64 - 1;
+	// if (iNewScale > 0) {
+	if (iHiRes > 2) {
 		BOOLEAN found = BitScanReverse(&ulTmp, rgulRes[iHiRes]);
 		assert(found);
 		// msb will be in rance [31,0]
+		iNewScale = iHiRes * 32 - 64 - 1;
 		iNewScale = iNewScale - (31 - ulTmp);
 
 		// Multiply bit position by log10(2) to figure it's power of 10.
@@ -244,8 +246,8 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 	int     iNewScale;
 	int     iCur;
 	DWORD   ulMsb;
-	DWORD64   ulSticky;
-	DWORD64   ulPwr;
+	DWORD64 ulSticky;
+	DWORD64 ulPwr;
 	DWORD64 remainder;
 
 
@@ -314,7 +316,7 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 			// DivMod64by32 returns quotient in Lo, remainder in Hi.
 			//
 			//rgulRes[iHiRes] = _udiv128(rgulRes[iHiRes], 0, ulPwr, &remainder);
-			remainder = _udiv128_v2(rgulRes + iHiRes, 0, ulPwr);
+			remainder = _udiv128_v2(&rgulRes[iHiRes], 0, ulPwr);
 			iCur = iHiRes - 1;
 
 			if (iCur >= 0) {
@@ -327,7 +329,7 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 				//
 				do {
 					//rgulRes[iCur] = _udiv128(rgulRes[iCur], remainder, ulPwr, &remainder);
-					remainder = _udiv128_v2(rgulRes + iCur, remainder, ulPwr);
+					remainder = _udiv128_v2(&rgulRes[iCur], remainder, ulPwr);
 					iCur--;
 				} while (iCur >= 0);
 			}
