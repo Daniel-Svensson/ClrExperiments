@@ -17,13 +17,7 @@ extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, DWORD64 *r
 // In _x64 file
 DWORD64 FullDiv64By64(DWORD64* pdlNum, DWORD64 ulDen);
 
-
 // The following functions are defined in the classlibnative\bcltype\decimal.cpp
-ULONG Div96By32(ULONG *rgulNum, ULONG ulDen);
-ULONG Div96By64(ULONG *rgulNum, SPLIT64 sdlDen);
-ULONG Div128By96(ULONG *rgulNum, ULONG *rgulDen);
-int ScaleResult(ULONG *rgulRes, int iHiRes, int iScale);
-ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
 
 DWORD32 FullDiv64By32_x64(DWORD64* pdlNum, DWORD32 ulDen)
 {
@@ -107,10 +101,21 @@ void TestMultiply(DECIMAL a, DECIMAL b)
 	printf("Ny FullDiv64By64  %I64u %I64u \n", min64Res, min64);
 }
 
-long long run_benchmark(const char *const name, 
+void compare_benchmark(const char *const scenario,
+	const char *const first, 
+	const char *const second,
+	int iterations,
+	DECIMAL* lhs, int lhs_count,
+	DECIMAL* rhs, int rhs_count,
+	DECIMAL* first_target, HRESULT* first_hresult,
+	DECIMAL* second_target, HRESULT* second_hresul,
+	HRESULT(*first_func)(DECIMAL*, DECIMAL*, DECIMAL*),
+	HRESULT(*second_func)(DECIMAL*, DECIMAL*, DECIMAL*));
+
+long long run_benchmark(
 	DECIMAL* lhs, int lhs_count, 
 	DECIMAL* rhs, int rhs_count, 
-	DECIMAL* target, HRESULT* hresult, int target_count,
+	DECIMAL* target, HRESULT* hresult,
 	HRESULT(*func)(DECIMAL*, DECIMAL*, DECIMAL*));
 void CompareResult(const char * A, const char * B,
 	const DECIMAL* lhs, int lhs_count,
@@ -122,6 +127,9 @@ void test_round_to_nearest();
 
 int main()
 {
+	// Use system formatting
+	setlocale(LC_ALL, "");
+
 	DECIMAL a, b;
 	VarDecFromI4(32, &a);
 	VarDecFromI4(3, &b);
@@ -180,6 +188,7 @@ void run_benchmarks(int count, int bytes, int numtests)
 	InitializeTestData(numbers, count, targetA, targetC, bytes);
 
 #ifdef TEST_32bit_with_0_scale
+	/**/
 	printf("32bit multiply with scale = 0\n");
 	for (int i = 0; i < numtests; ++i)
 	{
@@ -189,6 +198,8 @@ void run_benchmarks(int count, int bytes, int numtests)
 //		run_benchmark("Div96By32", targetA, count*count, SHORT_MAX, (DWORD32(*)(DWORD32*, DWORD32)) Div96By32);
 //		run_benchmark("Div96By32_x64", targetC, count*count, SHORT_MAX, Div96By32_x64);
 	}
+	*/
+	compare_benchmark("32bit x 32bit with scale 0", "oleauto", "x64", numtests, numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
 	CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
 #endif
 
@@ -197,24 +208,15 @@ void run_benchmarks(int count, int bytes, int numtests)
 	// Change scale
 	const int minScale = 10;
 	const int maxScale = DEC_SCALE_MAX - 2;
-	printf("Scale [%i, %i]\n", minScale, maxScale);
 	for (int i = 0; i < count;++i)
 		numbers[i].scale = (rand() % (maxScale - minScale)) + minScale;
 
-	for (int i = 0; i < numtests; ++i)
-	{
-		run_benchmark("oleauto", numbers, count, numbers, count, targetA, hresultA, count*count, VarDecMul);
-		run_benchmark("x64", numbers, count, numbers, count, targetC, hresultC, count*count, VarDecMul_x64);
-
-//		run_benchmark("Div96By32_x64_v2", targetA, count*count, SHORT_MAX, Div96By32_x64_v2);
-//		run_benchmark("Div96By32", targetA, count*count, 14, (DWORD32(*)(DWORD32*, DWORD32)) Div96By32);
-	}
+	compare_benchmark("32bit x 32bit with scale in range [10,26]", "oleauto", "x64", numtests, numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
 	CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
 #endif
 
 //#ifdef TEST_64bit_with_scale_64bit_result
 #ifdef TEST_64bit_with_scale_64bit_result
-	printf("64bit values -> 64bit results with varying scale\n");
 	for (int i = 0; i < count;++i)
 		numbers[i].Mid32 = numbers[i].Lo32 >> 4;
 
@@ -235,27 +237,16 @@ void run_benchmarks(int count, int bytes, int numtests)
 	}
 	assert((smallNumbersInit - smallNumbers) == numSmallNumbers);
 
-	for (int i = 0; i < numtests; ++i)
-	{
-		run_benchmark("oleauto", numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, count*numSmallNumbers, VarDecMul);
-		run_benchmark("x64", numbers, count, smallNumbers, numSmallNumbers, targetC, hresultC, count*numSmallNumbers, VarDecMul_x64);
-	}
+	compare_benchmark("64bit values -> 64bit results with varying scale", "oleauto", "x64", numtests, numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
 	CompareResult("oleauto", "x64", numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, count*numSmallNumbers);
 #endif
 
 #ifdef TEST_96bit_with_scale_96bit_result
-	printf("96bit values with varying scale\n");
 	for (int i = 0; i < count;++i)
 		numbers[i].Hi32 = numbers[i].Mid32 = numbers[i].Lo32;
-	for (int i = 0; i < numtests; ++i)
-	{
-		//run_benchmark("oleauto", numbers, count, numbers, count, targetA, hresultA, count*count, VarDecMul);
-		run_benchmark("x64", numbers, count, numbers, count, targetC, hresultC, count*count, VarDecMul_x64);
 
-//		run_benchmark("Div96By32_x64", targetA, count*count, 14, Div96By32_x64);
-//		run_benchmark("Div96By32_x64_v2", targetC, count*count, 14, Div96By32_x64_v2);
-	}
-//CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
+	compare_benchmark("96bit values with varying scale", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
+	//CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
 #endif
 }
 
@@ -358,14 +349,45 @@ void CompareResult(const char * A, const char * B,
 	printf("%zi equal results with different scale (FALSE POSITIVE)\n", scale_diff);
 }
 
-long long run_benchmark(const char *const name,
+void compare_benchmark(
+	const char *const scenario,
+	const char *const first, 
+	const char *const second,
+	const int iterations,
 	DECIMAL* lhs, int lhs_count,
 	DECIMAL* rhs, int rhs_count,
-	DECIMAL* target, HRESULT *result, int target_count,
+	DECIMAL* first_target, HRESULT* first_hresult,
+	DECIMAL* second_target, HRESULT* second_hresul,
+	HRESULT(*first_func)(DECIMAL*, DECIMAL*, DECIMAL*),
+	HRESULT(*second_func)(DECIMAL*, DECIMAL*, DECIMAL*))
+{
+	LARGE_INTEGER frequency;
+	QueryPerformanceFrequency(&frequency);
+	printf("\n\nStarting Scenario %20s\n", scenario);
+
+	printf("%s;%s;;%% time;speedup\n", first, second);
+
+	for (int i = 0; i < iterations; ++i)
+	{
+		auto time1 = run_benchmark(lhs, lhs_count, rhs, rhs_count, first_target, first_hresult, VarDecMul);
+		auto time2 = run_benchmark(lhs, lhs_count, rhs, rhs_count, second_target, second_hresul, VarDecMul_x64);
+
+		double seconds1 = (double)time1 / (double)frequency.QuadPart;
+		double seconds2 = (double)time2 / (double)frequency.QuadPart;
+
+		double percent_of_original = (seconds2 / seconds1);
+		double speedup  = (seconds1 - seconds2) / seconds2;
+
+		printf("%I64u;%g;%I64u;%g;;%f%%;%f%%\n", time1, seconds1, time2, seconds2, percent_of_original * 100.0, speedup* 100.0);
+	}
+	printf("\n");
+}
+
+long long run_benchmark(DECIMAL* lhs, int lhs_count,
+	DECIMAL* rhs, int rhs_count,
+	DECIMAL* target, HRESULT *result, 
 	HRESULT(*func)(DECIMAL*, DECIMAL*, DECIMAL*))
 {
-	assert(target_count == lhs_count * rhs_count);
-
 	LARGE_INTEGER start, end, frequency;
 	QueryPerformanceCounter(&start);
 
@@ -375,12 +397,7 @@ long long run_benchmark(const char *const name,
 			*result++ = func(lhs + i, rhs + j, destination++);
 	QueryPerformanceCounter(&end);
 
-	auto elapsed = end.QuadPart - start.QuadPart;
-	QueryPerformanceFrequency(&frequency);
-
-	printf("%s;%I64u;%f\n", name, elapsed, (double)elapsed / (double)frequency.QuadPart);
-
-	return elapsed;
+	return end.QuadPart - start.QuadPart;
 }
 
 

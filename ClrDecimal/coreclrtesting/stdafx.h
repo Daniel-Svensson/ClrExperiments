@@ -21,6 +21,7 @@
 #include <OleAuto.h>
 #include <assert.h>
 #include <intrin.h>
+#include <locale.h>
 
 // Following is from coreclr headers
 #define LIMITED_METHOD_CONTRACT
