@@ -11,7 +11,8 @@
 //#define TEST_32bit_with_0_scale
 //#define TEST_32bit_with_scale
 //#define TEST_64bit_with_scale_64bit_result
-#define TEST_96bit_with_scale_96bit_result
+#define TEST_96bit_with_scale_96bit_result_and_overflow
+#define TEST_96bit_with_scale_96bit_result_no_overflow
 
 extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, DWORD64 *remainder);
 // In _x64 file
@@ -150,7 +151,11 @@ int main()
 	//test_round_to_nearest();
 
 	//run_benchmarks(30000, 4, 5);
-	run_benchmarks(15000, 4, 5);
+#if DEBUG
+	run_benchmarks(1000, 4, 5);
+#else
+	run_benchmarks(4000, 4, 5);
+#endif
 	//run_benchmarks(10000, 8);
 						
 	//auto str = COMDecimal::ToString(sum);
@@ -187,6 +192,10 @@ void run_benchmarks(int count, int bytes, int numtests)
 	HRESULT* hresultC = new HRESULT[count*count];
 	InitializeTestData(numbers, count, targetA, targetC, bytes);
 
+	// Change scale
+	const int minScale = 10;
+	const int maxScale = DEC_SCALE_MAX - 2;
+
 #ifdef TEST_32bit_with_0_scale
 	/**/
 	printf("32bit multiply with scale = 0\n");
@@ -205,9 +214,6 @@ void run_benchmarks(int count, int bytes, int numtests)
 
 
 #ifdef TEST_32bit_with_scale
-	// Change scale
-	const int minScale = 10;
-	const int maxScale = DEC_SCALE_MAX - 2;
 	for (int i = 0; i < count;++i)
 		numbers[i].scale = (rand() % (maxScale - minScale)) + minScale;
 
@@ -241,11 +247,25 @@ void run_benchmarks(int count, int bytes, int numtests)
 	CompareResult("oleauto", "x64", numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, count*numSmallNumbers);
 #endif
 
-#ifdef TEST_96bit_with_scale_96bit_result
+#ifdef TEST_96bit_with_scale_96bit_result_and_overflow
 	for (int i = 0; i < count;++i)
+	{
+		numbers[i].scale = rand() % 5;
 		numbers[i].Hi32 = numbers[i].Mid32 = numbers[i].Lo32;
+	}
 
-	compare_benchmark("96bit values with varying scale", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
+	compare_benchmark("96bit values with high overflow probablility", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
+	//CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
+#endif
+
+#ifdef TEST_96bit_with_scale_96bit_result_no_overflow
+	for (int i = 0; i < count;++i)
+	{
+		numbers[i].scale = (rand() % (maxScale - minScale)) + minScale;
+		numbers[i].Hi32 = numbers[i].Mid32 = numbers[i].Lo32;
+	}
+
+	compare_benchmark("96bit values with no overflow", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
 	//CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
 #endif
 }
@@ -381,6 +401,11 @@ void compare_benchmark(
 		printf("%I64u;%g;%I64u;%g;;%f%%;%f%%\n", time1, seconds1, time2, seconds2, percent_of_original * 100.0, speedup* 100.0);
 	}
 	printf("\n");
+
+	int hres0 = 0;
+	for (int i = 0; i < lhs_count*rhs_count; ++i)
+		hres0 += (second_hresul[i] == 0);
+	printf("%d out of %d results was successfull, ratio is %f%%\n", hres0, lhs_count*rhs_count, 100.0 * (double)hres0 / (double)(lhs_count*rhs_count));
 }
 
 long long run_benchmark(DECIMAL* lhs, int lhs_count,

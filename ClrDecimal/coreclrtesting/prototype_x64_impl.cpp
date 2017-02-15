@@ -93,152 +93,7 @@ static ULONG rgulPower10[POWER10_MAX + 1] = { 1, 10, 100, 1000, 10000, 100000, 1
 10000000, 100000000, 1000000000 };
 static const ULONG ulTenToNine = 1000000000U;
 
-#define SCALERESULT_VERSION 3
-#if SCALERESULT_VERSION == 1
-int ScaleResult(ULONG *rgulRes, int iHiRes, int iScale)
-{
-	LIMITED_METHOD_CONTRACT;
-
-	int     iNewScale;
-	int     iCur;
-	ULONG   ulPwr;
-	ULONG   ulTmp;
-	ULONG   ulSticky;
-	SPLIT64 sdlTmp;
-
-	// See if we need to scale the result.  The combined scale must
-	// be <= DEC_SCALE_MAX and the upper 96 bits must be zero.
-	// 
-	// Start by figuring a lower bound on the scaling needed to make
-	// the upper 96 bits zero.  iHiRes is the index into rgulRes[]
-	// of the highest non-zero ULONG.
-	// 
-	//iNewScale = iHiRes * 32 - 64 - 1;
-	// if (iNewScale > 0) {
-	if (iHiRes > 2) {
-		BOOLEAN found = BitScanReverse(&ulTmp, rgulRes[iHiRes]);
-		assert(found);
-		// msb will be in rance [31,0]
-		iNewScale = iHiRes * 32 - 64 - 1;
-		iNewScale = iNewScale - (31 - ulTmp);
-
-		// Multiply bit position by log10(2) to figure it's power of 10.
-		// We scale the log by 256.  log(2) = .30103, * 256 = 77.  Doing this 
-		// with a multiply saves a 96-byte lookup table.  The power returned
-		// is <= the power of the number, so we must add one power of 10
-		// to make it's integer part zero after dividing by 256.
-		// 
-		// Note: the result of this multiplication by an approximation of
-		// log10(2) have been exhaustively checked to verify it gives the 
-		// correct result.  (There were only 95 to check...)
-		// 
-		iNewScale = ((iNewScale * 77) >> 8) + 1;
-
-		// iNewScale = min scale factor to make high 96 bits zero, 0 - 29.
-		// This reduces the scale factor of the result.  If it exceeds the
-		// current scale of the result, we'll overflow.
-		// 
-		if (iNewScale > iScale)
-			return -1;
-	}
-	else
-		iNewScale = 0;
-
-	// Make sure we scale by enough to bring the current scale factor
-	// into valid range.
-	//
-	if (iNewScale < iScale - DEC_SCALE_MAX)
-		iNewScale = iScale - DEC_SCALE_MAX;
-
-	if (iNewScale != 0) {
-		// Scale by the power of 10 given by iNewScale.  Note that this is 
-		// NOT guaranteed to bring the number within 96 bits -- it could 
-		// be 1 power of 10 short.
-		//
-		iScale -= iNewScale;
-		ulSticky = 0;
-		sdlTmp.u.Hi = 0; // initialize remainder
-
-		for (;;) {
-
-			ulSticky |= sdlTmp.u.Hi; // record remainder as sticky bit
-
-			if (iNewScale > POWER10_MAX)
-				ulPwr = ulTenToNine;
-			else
-				ulPwr = rgulPower10[iNewScale];
-
-			// Compute first quotient.
-			// DivMod64by32 returns quotient in Lo, remainder in Hi.
-			//
-			sdlTmp.int64 = DivMod64by32(rgulRes[iHiRes], ulPwr);
-			rgulRes[iHiRes] = sdlTmp.u.Lo;
-			iCur = iHiRes - 1;
-
-			if (iCur >= 0) {
-				// If first quotient was 0, update iHiRes.
-				//
-				if (sdlTmp.u.Lo == 0)
-					iHiRes--;
-
-				// Compute subsequent quotients.
-				//
-				do {
-					sdlTmp.u.Lo = rgulRes[iCur];
-					sdlTmp.int64 = DivMod64by32(sdlTmp.int64, ulPwr);
-					rgulRes[iCur] = sdlTmp.u.Lo;
-					iCur--;
-				} while (iCur >= 0);
-
-			}
-
-			iNewScale -= POWER10_MAX;
-			if (iNewScale > 0)
-				continue; // scale some more
-
-						  // If we scaled enough, iHiRes would be 2 or less.  If not,
-						  // divide by 10 more.
-						  //
-			if (iHiRes > 2) {
-				iNewScale = 1;
-				iScale--;
-				continue; // scale by 10
-			}
-
-			// Round final result.  See if remainder >= 1/2 of divisor.
-			// If remainder == 1/2 divisor, round up if odd or sticky bit set.
-			//
-			ulPwr >>= 1;  // power of 10 always even
-			if (ulPwr <= sdlTmp.u.Hi && (ulPwr < sdlTmp.u.Hi ||
-				((rgulRes[0] & 1) | ulSticky))) {
-				iCur = -1;
-				while (++rgulRes[++iCur] == 0);
-
-				if (iCur > 2) {
-					// The rounding caused us to carry beyond 96 bits. 
-					// Scale by 10 more.
-					//
-					iHiRes = iCur;
-					ulSticky = 0;  // no sticky bit
-					sdlTmp.u.Hi = 0; // or remainder
-					iNewScale = 1;
-					iScale--;
-					continue; // scale by 10
-				}
-			}
-
-			// We may have scaled it more than we planned.  Make sure the scale 
-			// factor hasn't gone negative, indicating overflow.
-			// 
-			if (iScale < 0)
-				return -1;
-
-			return iScale;
-		} // for(;;)
-	}
-	return iScale;
-}
-#elif SCALERESULT_VERSION == 3
+// ScaleResult is called from AddSub as well as multiply
 int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 {
 	LIMITED_METHOD_CONTRACT;
@@ -265,6 +120,8 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 		// msb will be in rance [63,0]
 		iNewScale = iHiRes * 64 - 64 - 1;
 		iNewScale = iNewScale - (63 - ulMsb);
+		// actual MSB = iHiRes*64 + ulMsb
+		// iNewScale = iHiRes * 64 - 64 - 1 - 63 + ulMsb = MSB - 128
 
 		// Multiply bit position by log10(2) to figure it's power of 10.
 		// We scale the log by 256.  log(2) = .30103, * 256 = 77.  Doing this 
@@ -307,7 +164,7 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 
 			ulSticky |= remainder; // record remainder as sticky bit
 
-			if (iNewScale > POWER10_MAX64)
+			if (iNewScale >= POWER10_MAX64) // TODO: inkludera POWER10_MAX64 eller inte ???
 				ulPwr = POWER10_MAX_VALUE64;
 			else
 				ulPwr = rgulPower10_64[iNewScale];
@@ -351,7 +208,7 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 			// Round final result.  See if remainder >= 1/2 of divisor.
 			// If remainder == 1/2 divisor, round up if odd or sticky bit set.
 			ulPwr >>= 1;  // power of 10 always even
-			if (ulPwr < remainder || (ulPwr == remainder && ((rgulRes[0] & 1) | ulSticky))) {
+			if (remainder > ulPwr || (ulPwr == remainder && ((rgulRes[0] & 1) | ulSticky))) {
 				iCur = -1;
 				while (++rgulRes[++iCur] == 0);
 
@@ -379,7 +236,6 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 	}
 	return iScale;
 }
-#endif
 
 __declspec(noinline) STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 {
@@ -432,44 +288,16 @@ __declspec(noinline) STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMA
 		}
 		else
 		{
-#if SCALERESULT_VERSION < 3
-			// Bits in upper 64 bit
-			// 
-			// CONVERT to old representation
-			ULONG tmpSpace[4];
-			((DWORD64*)&tmpSpace)[0] = lo;
-			((DWORD64*)&tmpSpace)[1] = hi;
-			//tmpSpace[0] = ((SPLIT64*)&lo)->u.Lo;
-			//tmpSpace[1] = ((SPLIT64*)&lo)->u.Hi;
-			//tmpSpace[2] = ((SPLIT64*)&hi)->u.Lo;
-			//tmpSpace[3] = ((SPLIT64*)&hi)->u.Hi;
-
-			// Check for leading zero ULONGs on the product
-			//
-			int iHiProd = 3;
-			while (tmpSpace[iHiProd] == 0) {
-				iHiProd--;
-				if (iHiProd < 0)
-					goto ReturnZero;
-			}
-			iScale = ScaleResult(tmpSpace, iHiProd, iScale);
-#else
 			DWORD64 tmpSpace[2];
 			tmpSpace[0] = lo;
 			tmpSpace[1] = hi;
 			iScale = ScaleResult_x64(tmpSpace, 1, iScale);
-#endif
+
 			if (iScale == -1)
 				return DISP_E_OVERFLOW;
 
-#if SCALERESULT_VERSION < 3
-			res->Lo32 = tmpSpace[0];
-			res->Mid32 = tmpSpace[1];
-			res->Hi32 = tmpSpace[2];
-#else
 			res->Lo64 = tmpSpace[0];
 			res->Hi32 = (DWORD32)tmpSpace[1];
-#endif
 		}
 	}
 	else
@@ -516,19 +344,6 @@ __declspec(noinline) STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMA
 		_addcarry_u64(carry1, hi, rgulProd[2], &rgulProd[2]);
 		_addcarry_u64(carry2, tmpHi2, rgulProd[2], &rgulProd[2]);
 
-#if SCALERESULT_VERSION < 2
-		// CONVERT to old representation
-		ULONG* tmpSpace = (ULONG*)&rgulProd[0];
-		// Check for leading zero ULONGs on the product
-		//
-		int iHiProd = 5;
-		while (tmpSpace[iHiProd] == 0) {
-			iHiProd--;
-			if (iHiProd < 0)
-				goto ReturnZero;
-		}
-		iScale = ScaleResult(tmpSpace, iHiProd, iScale);
-#else
 		// Check for leading zero ULONGs on the product
 		//
 		int iHiProd = 2;
@@ -538,17 +353,11 @@ __declspec(noinline) STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMA
 				goto ReturnZero;
 		}
 		iScale = ScaleResult_x64(rgulProd, iHiProd, iScale);
-#endif
 		if (iScale == -1)
 			return DISP_E_OVERFLOW;
 
-#if SCALERESULT_VERSION < 2
-		res->Lo64 = rgulProd[0];
-		res->Hi32 = tmpSpace[2];
-#else
 		res->Lo64 = rgulProd[0];
 		res->Hi32 = (DWORD32)rgulProd[1];
-#endif
 	}
 
 	res->sign = pdecL->sign ^ pdecR->sign;
