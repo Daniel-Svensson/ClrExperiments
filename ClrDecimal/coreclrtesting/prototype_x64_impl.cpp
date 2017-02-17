@@ -15,7 +15,14 @@ extern "C" DWORD64 _udiv128_v2(__inout DWORD64* pLow, DWORD64 hi, DWORD64 ulDen)
 #define DEC_SCALE_MAX   28
 #define POWER10_MAX64 19
 static const DWORD64 POWER10_MAX_VALUE64 = 10000000000000000000;
-static const DWORD64 rgulPower10_64[POWER10_MAX64 + 1] = { 1, 10, 100, 1000, 10000, 100000, 1000000,
+static const DWORD64 rgulPower10_64[POWER10_MAX64 + 1] = { 
+1, 
+10, 
+100, 
+1000, 
+10000, 
+100000, 
+1000000,
 10000000,
 100000000,
 1000000000,
@@ -30,8 +37,6 @@ static const DWORD64 rgulPower10_64[POWER10_MAX64 + 1] = { 1, 10, 100, 1000, 100
 1000000000000000000,
 10000000000000000000,
 };
-
-
 
 // Divides a 64bit ulong by 32bit, returns 32bit remainder
 // This translates to a single div instruction on x64 platforms
@@ -113,13 +118,15 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 	// the upper 96 bits zero.  iHiRes is the index into rgulRes[]
 	// of the highest non-zero ULONG.
 	// 
-	
-	if (iHiRes > 1) {
-		BOOLEAN found = BitScanReverse64(&ulMsb, rgulRes[iHiRes]);
-		assert(found);
-		// msb will be in rance [63,0]
-		iNewScale = iHiRes * 64 - 64 - 1;
-		iNewScale = iNewScale - (63 - ulMsb);
+	BOOLEAN found = BitScanReverse64(&ulMsb, rgulRes[iHiRes]);
+	assert(found);
+	// msb will be in rance [63,0]
+	//iNewScale = iHiRes * 64 - 64 - 1;
+	//iNewScale = iNewScale - (63 - ulMsb);
+
+	iNewScale = iHiRes * 64 + ulMsb - 96;
+
+	if (iNewScale >= 0) {
 		// actual MSB = iHiRes*64 + ulMsb
 		// iNewScale = iHiRes * 64 - 64 - 1 - 63 + ulMsb = MSB - 128
 
