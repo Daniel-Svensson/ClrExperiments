@@ -21,7 +21,6 @@ _udiv128 endp
 ; RCX       Low Digit
 ; RDX       High Digit
 ; R8        Divisor
-; R9        *Remainder
 
 ; RAX       Quotient upon return
 ; extern "C" digit64 _udiv128_v2(digit64 *low, digit64 hi, digit64 divisor);
@@ -30,9 +29,9 @@ _udiv128 endp
 _udiv128_v2 proc
     mov rax, [rcx]    ; Put the low digit in place (hi is already there)
     div r8      ; 128 bit divide rdx:rax/r8 = rdx remainder, rax quotient
-    mov [rcx], rax   ; Save the reminder
+    mov [rcx], rax   ; Save the quotient
 	mov rax, rdx	; Set remainder as return value
-    ret     ; Return the quotient, already in rax
+    ret     ; Return the remainder
 _udiv128_v2 endp
 
 end

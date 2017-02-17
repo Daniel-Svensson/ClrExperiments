@@ -8,10 +8,12 @@
 #define _CRT_RAND_S  
 #include <stdlib.h>  
 
-//#define TEST_32bit_with_0_scale
-//#define TEST_32bit_with_scale
-//#define TEST_64bit_with_scale_64bit_result
+#define TEST_32bit_with_0_scale
+#define TEST_32bit_with_scale
+#define TEST_64bit_with_scale_64bit_result
 #define TEST_96bit_with_scale_96bit_result_and_overflow
+#define TEST_64bit_with_0_scale_128bit_result
+#define TEST_64bit_with_scale_128bit_result
 #define TEST_96bit_with_scale_96bit_result_no_overflow
 
 extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, DWORD64 *remainder);
@@ -126,6 +128,12 @@ void run_benchmarks(int count, int bytes, int numtests);
 void InitializeTestData(DECIMAL * numbers, int count, DECIMAL * targetA, DECIMAL * targetC, int bytes);
 void test_round_to_nearest();
 
+
+BYTE random_scale(int min, int max)
+{
+	return (rand() % (max - min)) + min;
+}
+
 int main()
 {
 	// Use system formatting
@@ -140,11 +148,12 @@ int main()
 
 	//TestMultiply(a, b);
 
-	a.Mid32 = 4294967295;
-	a.Lo32 = 4294967295;
-	a.scale = 23;
-	b.Lo64 = 0;
-	b.scale = 12;
+	a.Hi32 = 4294967295;
+	a.Lo64 = 18446744073709551615;
+	a.scale = 16;
+	b.Hi32 = 4;
+	b.Lo64 = 17179869188;
+	b.scale = 25;
 
 	VarDecMul_x64(&a, &b, &sum);
 
@@ -152,9 +161,9 @@ int main()
 
 	//run_benchmarks(30000, 4, 5);
 #if DEBUG
-	run_benchmarks(1000, 4, 5);
+	run_benchmarks(1000, 4, 2);
 #else
-	run_benchmarks(4000, 4, 5);
+	run_benchmarks(6000, 4, 5);
 #endif
 	//run_benchmarks(10000, 8);
 						
@@ -197,34 +206,24 @@ void run_benchmarks(int count, int bytes, int numtests)
 	const int maxScale = DEC_SCALE_MAX - 2;
 
 #ifdef TEST_32bit_with_0_scale
-	/**/
-	printf("32bit multiply with scale = 0\n");
-	for (int i = 0; i < numtests; ++i)
-	{
-		run_benchmark("oleauto", numbers, count, numbers, count, targetA, hresultA, count*count, VarDecMul);
-		run_benchmark("x64", numbers, count, numbers, count, targetC, hresultC, count*count, VarDecMul_x64);
-
-//		run_benchmark("Div96By32", targetA, count*count, SHORT_MAX, (DWORD32(*)(DWORD32*, DWORD32)) Div96By32);
-//		run_benchmark("Div96By32_x64", targetC, count*count, SHORT_MAX, Div96By32_x64);
-	}
-	*/
-	compare_benchmark("32bit x 32bit with scale 0", "oleauto", "x64", numtests, numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
-	CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
+	compare_benchmark("32bit x 32bit with scale 0", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
 #endif
 
 
 #ifdef TEST_32bit_with_scale
 	for (int i = 0; i < count;++i)
-		numbers[i].scale = (rand() % (maxScale - minScale)) + minScale;
+		numbers[i].scale = random_scale(minScale, maxScale);
 
-	compare_benchmark("32bit x 32bit with scale in range [10,26]", "oleauto", "x64", numtests, numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
-	CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
+	compare_benchmark("32bit x 32bit with scale in range [10,26]", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
 #endif
 
 //#ifdef TEST_64bit_with_scale_64bit_result
 #ifdef TEST_64bit_with_scale_64bit_result
 	for (int i = 0; i < count;++i)
+	{
+		numbers[i].scale = random_scale(minScale, maxScale);
 		numbers[i].Mid32 = numbers[i].Lo32 >> 4;
+	}
 
 	// use 4 bits with scales [0,28]
 	const BYTE smallNumScaleLimit = DEC_SCALE_MAX;
@@ -232,7 +231,7 @@ void run_benchmarks(int count, int bytes, int numtests)
 	const size_t numSmallNumbers = smallNumBitLimit * (smallNumScaleLimit + 1);
 	DECIMAL smallNumbers[numSmallNumbers] = { 0 };
 	DECIMAL* smallNumbersInit = smallNumbers;
-	for (size_t bits = 1; bits <= smallNumBitLimit; bits++)
+	for (int bits = 1; bits <= smallNumBitLimit; bits++)
 	{
 		for (BYTE scale = 0; scale <= smallNumScaleLimit; scale++)
 		{
@@ -244,7 +243,26 @@ void run_benchmarks(int count, int bytes, int numtests)
 	assert((smallNumbersInit - smallNumbers) == numSmallNumbers);
 
 	compare_benchmark("64bit values -> 64bit results with varying scale", "oleauto", "x64", numtests, numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
-	CompareResult("oleauto", "x64", numbers, count, smallNumbers, numSmallNumbers, targetA, hresultA, targetC, hresultC, count*numSmallNumbers);
+#endif
+
+#ifdef TEST_64bit_with_0_scale_128bit_result
+	for (int i = 0; i < count;++i)
+	{
+		numbers[i].Mid32 = RotateLeft32(numbers[i].Lo32, 14);
+		numbers[i].scale = 0;
+	}
+
+	compare_benchmark("64bit values -> 65-128 bit results and no scale", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
+#endif
+
+#ifdef TEST_64bit_with_scale_128bit_result
+	for (int i = 0; i < count;++i)
+	{
+		numbers[i].Mid32 = RotateLeft32(numbers[i].Lo32, 14);
+		numbers[i].scale = random_scale(2, 9);
+	}
+
+	compare_benchmark("64bit values -> 65-128 bit results and scale", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
 #endif
 
 #ifdef TEST_96bit_with_scale_96bit_result_and_overflow
@@ -255,7 +273,6 @@ void run_benchmarks(int count, int bytes, int numtests)
 	}
 
 	compare_benchmark("96bit values with high overflow probablility", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
-	//CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
 #endif
 
 #ifdef TEST_96bit_with_scale_96bit_result_no_overflow
@@ -266,7 +283,6 @@ void run_benchmarks(int count, int bytes, int numtests)
 	}
 
 	compare_benchmark("96bit values with no overflow", "oleauto", "x64", numtests, numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, VarDecMul, VarDecMul_x64);
-	//CompareResult("oleauto", "x64", numbers, count, numbers, count, targetA, hresultA, targetC, hresultC, count*count);
 #endif
 }
 
@@ -330,6 +346,7 @@ void CompareResult(const char * A, const char * B,
 	assert(result_count == lhs_count * rhs_count);
 
 	size_t scale_diff = 0;
+	size_t errors = 0;
 
 	for (int i = 0; i < lhs_count; ++i)
 	for (int j = 0; j < rhs_count; ++j)
@@ -354,18 +371,28 @@ void CompareResult(const char * A, const char * B,
 			}
 			else
 			{
-				printf("[%i]x[%i] expected results '%i' had %i\n", i, j, expected_result[result_idx], actual_result[result_idx]);
-				printf("(%i) %u %u %u /10^%i  * (%i) %u %u %u / 10^%i: expected (%i) %u %u %u / 10^%i but got (%i) %u %u %u / 10^%i\n",
-					lhs[i].sign, lhs[i].Hi32, lhs[i].Mid32, lhs[i].Lo32, lhs[i].scale,
-					rhs[j].sign, rhs[j].Hi32, rhs[j].Mid32, rhs[j].Lo32, rhs[j].scale,
-					expected[result_idx].sign, expected[result_idx].Hi32, expected[result_idx].Mid32, expected[result_idx].Lo32, expected[result_idx].scale,
-					actual[result_idx].sign, actual[result_idx].Hi32, actual[result_idx].Mid32, actual[result_idx].Lo32, actual[result_idx].scale
-				);
+				if (++errors < 10)
+				{
+					printf("[%i]x[%i]  -- (%i) %u %I64u /10^%i  * (%i) %u %I64u / 10^%i: \n", 
+						i, j,
+						lhs[i].sign, lhs[i].Hi32, lhs[i].Lo64, lhs[i].scale,
+						rhs[j].sign, rhs[j].Hi32, rhs[j].Lo64, rhs[j].scale);
+
+					if (expected_result[result_idx] != actual_result[result_idx])
+						printf(" RESULT expected %i actual %i\n", expected_result[result_idx], actual_result[result_idx]);
+					else
+						printf(" PRODUCT expected (%i) %u %I64u / 10^%i but got (%i) %u %I64u / 10^%i\n",
+							expected[result_idx].sign, expected[result_idx].Hi32, expected[result_idx].Lo64, expected[result_idx].scale,
+							actual[result_idx].sign, actual[result_idx].Hi32, actual[result_idx].Lo64, actual[result_idx].scale
+						);
+				}
 			}
 		}
 	}
 
 	
+	if (errors > 0)
+		printf("ERRORS FOUND: %zi with different results (%f%%)\n", errors, 100.0 * (double)errors/(double)(lhs_count*rhs_count));
 	printf("%zi equal results with different scale (FALSE POSITIVE)\n", scale_diff);
 }
 
@@ -385,7 +412,8 @@ void compare_benchmark(
 	QueryPerformanceFrequency(&frequency);
 	printf("\n\nStarting Scenario %20s\n", scenario);
 
-	printf("%s;%s;;%% time;speedup\n", first, second);
+	printf("%s;;%s;;;%% time;speedup\n", first, second);
+	printf("ticks;sec;ticks;sec;;;\n");
 
 	for (int i = 0; i < iterations; ++i)
 	{
@@ -402,10 +430,16 @@ void compare_benchmark(
 	}
 	printf("\n");
 
-	int hres0 = 0;
+	int first_hres0 = 0, second_hres0 = 0;
 	for (int i = 0; i < lhs_count*rhs_count; ++i)
-		hres0 += (second_hresul[i] == 0);
-	printf("%d out of %d results was successfull, ratio is %f%%\n", hres0, lhs_count*rhs_count, 100.0 * (double)hres0 / (double)(lhs_count*rhs_count));
+	{
+		first_hres0 += (first_hresult[i] == 0);
+		second_hres0 += (second_hresul[i] == 0);
+	}
+		
+	printf("%d out of %d results was successfull, expected %d, ratio is %f%%\n", second_hres0, lhs_count*rhs_count, first_hres0, 100.0 * (double)second_hres0 / (double)(lhs_count*rhs_count));
+
+	CompareResult(first, second, lhs, lhs_count, rhs, rhs_count, first_target, first_hresult, second_target, second_hresul, lhs_count*rhs_count);
 }
 
 long long run_benchmark(DECIMAL* lhs, int lhs_count,
@@ -413,7 +447,7 @@ long long run_benchmark(DECIMAL* lhs, int lhs_count,
 	DECIMAL* target, HRESULT *result, 
 	HRESULT(*func)(DECIMAL*, DECIMAL*, DECIMAL*))
 {
-	LARGE_INTEGER start, end, frequency;
+	LARGE_INTEGER start, end;
 	QueryPerformanceCounter(&start);
 
 	DECIMAL* destination = target;
