@@ -206,7 +206,7 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 						  // If we scaled enough, iHiRes would be 2 or less.  If not,
 						  // divide by 10 more.
 						  //
-			if (iCur > 1 || (iCur == 1 && (rgulRes[iCur] & 0xffffffff00000000))) {
+			if (iHiRes > 1 || (iHiRes == 1 && (rgulRes[iHiRes] & 0xffffffff00000000))) {
 				iNewScale = 1;
 				iScale--;
 				continue; // scale by 10
@@ -244,7 +244,8 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 	return iScale;
 }
 
-__declspec(noinline) STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
+
+STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 {
 	DWORD64 lo;
 	DWORD64 hi;
