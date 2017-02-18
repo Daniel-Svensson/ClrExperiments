@@ -52,7 +52,7 @@ DWORD32 Div96By32_x64(DWORD32 *pdlNum, DWORD32 ulDen)
 	return remainder;
 }
 
-static ULONG FullDiv64By32_ORI(DWORDLONG *pdlNum, ULONG ulDen)
+ULONG FullDiv64By32_ORI(DWORDLONG *pdlNum, ULONG ulDen)
 {
 	SPLIT64  sdlTmp;
 	SPLIT64  sdlRes;
@@ -462,16 +462,28 @@ int main()
 	VarDecAdd(&a, &b, &sum);
 
 	//TestMultiply(a, b);
+	//[0]x[0]  --(0) 4294967295 18446744073709551615 / 10 ^ 16 * (0) 4294967295 18446744073709551615 / 10 ^ 16:
+	// PRODUCT expected(0) 858993459 3689348814741910323 / 10 ^ 15 but got(0) 0 9223372036854775808 / 10 ^ 15
+// 		[0]x[10]  --(0) 4294967295 18446744073709551615 / 10 ^ 16 * (0) 8 34359738376 / 10 ^ 10 :
+		//PRODUCT expected(0) 430296729 11071482418063330970 / 10 ^ 15 but got(0) 8000000 7382133603321420646 / 10 ^ 15
 
-	a.Hi32 = 0;
-	a.Lo64 = 0;
-	a.scale = 22;
-	b.Hi32 = 33554431;
-	b.Lo64 = 144115183814443007;
-	b.scale = 10;
+	// 2]x[11]  --(0) 2147483647 9223372034707292159 / 10 ^ 4 * (0) 268435455 1152921500580315135 / 10 ^ 3:
+	// PRODUCT expected(0) 483183819 14987979555647730482 / 10 ^ 3 but got(0) 536870903 7609281926163909836 / 10 ^ 3
+
+	a.Hi32 = 2147483647;
+	a.Lo64 = 9223372034707292159;
+	a.scale = 4;
+	b.Hi32 = 268435455;
+	b.Lo64 = 1152921500580315135;
+	b.scale = 3;
 
 	VarDecAdd_x64(&a, &b, &sum);
-	VarDecMul_x64(&a, &b, &sum);
+	//VarDecMul_x64(&a, &b, &sum);
+
+	assert(sum.Hi32 == 483183819);
+	assert(sum.Lo64 == 14987979555647730482);
+	assert(sum.scale == 3);
+	assert(sum.sign == 0);
 
 	//test_round_to_nearest();
 
@@ -480,7 +492,7 @@ int main()
 	//run_benchmarks(30000, 4, 5);
 #ifdef DEBUG
 	const int iterations = 2;
-	const int elements = 2;
+	const int elements = 1000;
 #else
 	const int iterations = 5;
 	const int elements = 6000;
