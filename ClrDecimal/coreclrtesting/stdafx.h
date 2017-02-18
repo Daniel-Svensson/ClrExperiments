@@ -23,6 +23,10 @@
 #include <intrin.h>
 #include <locale.h>
 
+#include <array>
+#include <vector>
+#include <iostream>
+
 // Following is from coreclr headers
 #define LIMITED_METHOD_CONTRACT
 
@@ -71,6 +75,8 @@ STDAPI VarDecSub_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 
 // Prototype X64 Implementations
 STDAPI VarDecMul_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
+STDAPI VarDecAdd_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
+STDAPI VarDecSub_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
 DWORD64 FullDiv64By64(DWORD64 *pdlNum, DWORD64 ulDen);
 
 

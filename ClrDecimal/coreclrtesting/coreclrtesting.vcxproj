@@ -144,7 +144,7 @@
       <AdditionalOptions> /d2Zi+ /Zm200 /ZH:SHA_256 /guard:cf %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>C:\Users\danie\Documents\GitHub\coreclr\bin\obj\Windows_NT.x64.Debug\src\classlibnative\bcltype;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\bcltype;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\..\vm\amd64;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\..\vm;C:\Users\danie\Documents\GitHub\coreclr\src\pal\prebuilt\inc;C:\Users\danie\Documents\GitHub\coreclr\bin\obj;C:\Users\danie\Documents\GitHub\coreclr\src\inc;C:\Users\danie\Documents\GitHub\coreclr\src\strongname\inc;C:\Users\danie\Documents\GitHub\coreclr\src\inc\winrt;C:\Users\danie\Documents\GitHub\coreclr\src\debug\inc;C:\Users\danie\Documents\GitHub\coreclr\src\debug\inc\amd64;C:\Users\danie\Documents\GitHub\coreclr\src\debug\inc\dump;C:\Users\danie\Documents\GitHub\coreclr\src\md\inc;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\cryptography;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\inc;C:\Users\danie\Documents\GitHub\coreclr\bin\obj\Windows_NT.x64.Debug\src\inc;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\..\inc;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\..\debug\inc;C:\Users\danie\Documents\GitHub\coreclr\src\classlibnative\..\debug\inc\dump;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BufferSecurityCheck>true</BufferSecurityCheck>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Full</Optimization>
       <!--        <Optimization>MinSpace</Optimization> -->
