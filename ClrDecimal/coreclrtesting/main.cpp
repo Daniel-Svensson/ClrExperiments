@@ -43,16 +43,6 @@ DWORD32 Div96By32_x64(DWORD32 *pdlNum, DWORD32 ulDen)
 	return remainder;
 }
 
-DWORD32 Div96By32_x64_v2(DWORD32 *pdlNum, DWORD32 ulDen)
-{
-	// Upper 64bit
-	DWORD64 hi = pdlNum[2];
-	DWORD64 lo = *(DWORD64*)pdlNum;
-	*(DWORD64*)pdlNum = _udiv128(lo, hi, ulDen, &hi);
-	pdlNum[2] = 0;
-	return (DWORD32)hi;
-}
-
 static ULONG FullDiv64By32_ORI(DWORDLONG *pdlNum, ULONG ulDen)
 {
 	SPLIT64  sdlTmp;
@@ -83,8 +73,8 @@ void TestMultiply(DECIMAL a, DECIMAL b)
 	HRESULT res1 = VarDecMul(&a, &b, &prod);
 	HRESULT res2 = VarDecMul_x64(&a, &b, &prod2);
 
-	printf("Original DecMul %u %u %u sign %i scale %i\n (RETURN %i)", prod.Hi32, prod.Mid32, prod.Lo32, (int)prod.sign, (int)prod.scale, res1);
-	printf("Ny DecMul %u %u %u sign %i scale %i (RETURN %i)\n", prod2.Hi32, prod2.Mid32, prod2.Lo32, (int)prod2.sign, (int)prod2.scale, res2);
+	printf("Original DecMul %lu %lu %lu sign %i scale %i\n (RETURN %li)", prod.Hi32, prod.Mid32, prod.Lo32, (int)prod.sign, (int)prod.scale, res1);
+	printf("Ny DecMul %lu %lu %lu sign %i scale %i (RETURN %li)\n", prod2.Hi32, prod2.Mid32, prod2.Lo32, (int)prod2.sign, (int)prod2.scale, res2);
 
 	DWORD64 dividend = prod.Lo64;
 	DWORD64 divisor64 = b.Lo64 + 2;
@@ -99,7 +89,7 @@ void TestMultiply(DECIMAL a, DECIMAL b)
 
 	auto dummy = FullDiv64By64(&min64Res, divisor64);
 
-	printf("Original Div6432  %I64u %i\n", derasRes, deras);
+	printf("Original Div6432  %I64u %lu\n", derasRes, deras);
 	printf("Ny Div6432        %I64u %i \n", minRes, min);
 	printf("Ny FullDiv64By64  %I64u %I64u \n", min64Res, min64);
 }
@@ -120,18 +110,18 @@ long long run_benchmark(
 	DECIMAL* rhs, int rhs_count, 
 	DECIMAL* target, HRESULT* hresult,
 	HRESULT(*func)(DECIMAL*, DECIMAL*, DECIMAL*));
-void CompareResult(const char * A, const char * B,
+void CompareResult(
 	const DECIMAL* lhs, int lhs_count,
 	const DECIMAL* rhs, int rhs_count,
 	DECIMAL* expected, HRESULT* expected_res, DECIMAL* actual, HRESULT* actual_res, int result_count);
 void run_benchmarks(int count, int bytes, int numtests);
-void InitializeTestData(DECIMAL * numbers, int count, DECIMAL * targetA, DECIMAL * targetC, int bytes);
+void InitializeTestData(DECIMAL * numbers, int count, int bytes);
 void test_round_to_nearest();
 
 
 BYTE random_scale(int min, int max)
 {
-	return (rand() % (max - min)) + min;
+	return (BYTE)(rand() % (max - min)) + min;
 }
 
 int main()
@@ -148,19 +138,19 @@ int main()
 
 	//TestMultiply(a, b);
 
-	a.Hi32 = 4294967295;
+	a.Hi32 = 0;
 	a.Lo64 = 18446744073709551615;
-	a.scale = 16;
-	b.Hi32 = 4;
-	b.Lo64 = 17179869188;
-	b.scale = 25;
+	a.scale = 4;
+	b.Hi32 = 0;
+	b.Lo64 = 70368743915520;
+	b.scale = 2;
 
 	VarDecMul_x64(&a, &b, &sum);
 
 	//test_round_to_nearest();
 
 	//run_benchmarks(30000, 4, 5);
-#if DEBUG
+#ifdef DEBUG
 	run_benchmarks(1000, 4, 2);
 #else
 	run_benchmarks(6000, 4, 5);
@@ -173,7 +163,6 @@ int main()
 
 long long run_benchmark(const char *const name,
 	DECIMAL* lhs, int lhs_count,
-	DWORD32 denominator,
 	DWORD32(*func)(DWORD32*, DWORD32))
 {
 	LARGE_INTEGER start, end, frequency;
@@ -199,7 +188,7 @@ void run_benchmarks(int count, int bytes, int numtests)
 	DECIMAL* targetC = new DECIMAL[count*count];
 	HRESULT* hresultA = new HRESULT[count*count];
 	HRESULT* hresultC = new HRESULT[count*count];
-	InitializeTestData(numbers, count, targetA, targetC, bytes);
+	InitializeTestData(numbers, count, bytes);
 
 	// Change scale
 	const int minScale = 10;
@@ -286,7 +275,7 @@ void run_benchmarks(int count, int bytes, int numtests)
 #endif
 }
 
-void InitializeTestData(DECIMAL * numbers, int count, DECIMAL * targetA, DECIMAL * targetC, int bytes)
+void InitializeTestData(DECIMAL * numbers, int count, int bytes)
 {
 	// Start with some specific patters
 	const int nibbles = bytes * 2;
@@ -321,8 +310,6 @@ void InitializeTestData(DECIMAL * numbers, int count, DECIMAL * targetA, DECIMAL
 	}
 
 	// Generate deterministic random sequence to fill the rest of the numbers
-	//CLRRandom random;
-	//random.Init(42);
 	srand(42);
 	for (;dest < count; ++dest)
 	{
@@ -337,8 +324,7 @@ void InitializeTestData(DECIMAL * numbers, int count, DECIMAL * targetA, DECIMAL
 	}
 }
 
-//void CompareResult(const char * A, const char * B, int count, DECIMAL * numbers,  DECIMAL * targetA, DECIMAL * targetB)
-void CompareResult(const char * A, const char * B, 
+void CompareResult(
 	const DECIMAL* lhs, int lhs_count,
 	const DECIMAL* rhs, int rhs_count,
 	DECIMAL* expected, HRESULT* expected_result, DECIMAL* actual, HRESULT* actual_result, int result_count)
@@ -373,15 +359,15 @@ void CompareResult(const char * A, const char * B,
 			{
 				if (++errors < 10)
 				{
-					printf("[%i]x[%i]  -- (%i) %u %I64u /10^%i  * (%i) %u %I64u / 10^%i: \n", 
+					printf("[%i]x[%i]  -- (%i) %lu %I64u /10^%i  * (%i) %lu %I64u / 10^%i: \n", 
 						i, j,
 						lhs[i].sign, lhs[i].Hi32, lhs[i].Lo64, lhs[i].scale,
 						rhs[j].sign, rhs[j].Hi32, rhs[j].Lo64, rhs[j].scale);
 
 					if (expected_result[result_idx] != actual_result[result_idx])
-						printf(" RESULT expected %i actual %i\n", expected_result[result_idx], actual_result[result_idx]);
+						printf(" RESULT expected %li actual %li\n", expected_result[result_idx], actual_result[result_idx]);
 					else
-						printf(" PRODUCT expected (%i) %u %I64u / 10^%i but got (%i) %u %I64u / 10^%i\n",
+						printf(" PRODUCT expected (%i) %lu %I64u / 10^%i but got (%i) %lu %I64u / 10^%i\n",
 							expected[result_idx].sign, expected[result_idx].Hi32, expected[result_idx].Lo64, expected[result_idx].scale,
 							actual[result_idx].sign, actual[result_idx].Hi32, actual[result_idx].Lo64, actual[result_idx].scale
 						);
@@ -417,8 +403,8 @@ void compare_benchmark(
 
 	for (int i = 0; i < iterations; ++i)
 	{
-		auto time1 = run_benchmark(lhs, lhs_count, rhs, rhs_count, first_target, first_hresult, VarDecMul);
-		auto time2 = run_benchmark(lhs, lhs_count, rhs, rhs_count, second_target, second_hresul, VarDecMul_x64);
+		auto time1 = run_benchmark(lhs, lhs_count, rhs, rhs_count, first_target, first_hresult, first_func);
+		auto time2 = run_benchmark(lhs, lhs_count, rhs, rhs_count, second_target, second_hresul, second_func);
 
 		double seconds1 = (double)time1 / (double)frequency.QuadPart;
 		double seconds2 = (double)time2 / (double)frequency.QuadPart;
@@ -439,7 +425,7 @@ void compare_benchmark(
 		
 	printf("%d out of %d results was successfull, expected %d, ratio is %f%%\n", second_hres0, lhs_count*rhs_count, first_hres0, 100.0 * (double)second_hres0 / (double)(lhs_count*rhs_count));
 
-	CompareResult(first, second, lhs, lhs_count, rhs, rhs_count, first_target, first_hresult, second_target, second_hresul, lhs_count*rhs_count);
+	CompareResult(lhs, lhs_count, rhs, rhs_count, first_target, first_hresult, second_target, second_hresul, lhs_count*rhs_count);
 }
 
 long long run_benchmark(DECIMAL* lhs, int lhs_count,
