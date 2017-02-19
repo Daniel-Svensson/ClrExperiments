@@ -423,6 +423,9 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 	DECIMAL   decTmp;
 	DECIMAL   decRes;
 	DWORD64   rgulNum[3];
+#if DEBUG
+	rgulNum[0] = rgulNum[1] = rgulNum[2] = 0;
+#endif
 
 	bSign ^= (pdecR->sign ^ pdecL->sign) & DECIMAL_NEG;
 
@@ -470,6 +473,7 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 				DWORD64 remainder;
 				decRes.Hi32 = FullDiv64By32((DWORD64)decRes.Hi32 + (1Ui64 << 32), 10, &remainder);
 				decRes.Lo64 = _udiv128(decRes.Lo64, remainder, 10, &remainder);
+				//remainder = _udiv128_v2(&decRes.Lo64, remainder, 10);
 
 				// See if we need to round up.
 				//
@@ -484,7 +488,6 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 		DWORD64   ullPwr;
 		int       iScale;
 		int       iHiProd;
-		int       iCur;
 
 		// Scale factors are not equal.  Assume that a larger scale
 		// factor (more decimal places) is likely to mean that number
@@ -508,9 +511,12 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 		// *pdecL will need to be multiplied by 10^iScale so
 		// it will have the same scale as *pdecR.  We could be
 		// extending it to up to 192 bits of precision.
+		// Remarks: iScale is in range [0, 28] which can required up to 94 bits
+		// so final result will be at most log2(10^28) + 96  < 190 bits without overflow
 		//
 		if (iScale <= POWER10_MAX) {
-			// Scaling won't make it larger than 4 ULONGs
+			// Scaling won't make it larger than 96 + log2(10^9) < 126 bits so it will 
+			// fit in 128 bits (2*DWORD64)
 			//
 			ullPwr = rgulPower10[iScale];
 
@@ -534,6 +540,7 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 			//
 			rgulNum[0] = pdecL->Lo64;
 			rgulNum[1] = pdecL->Hi32;
+			// TODO: rgulNum[2] = 0 to simplify rest of the logic
 			iHiProd = 1;
 
 			// Scan for zeros in the upper words.
@@ -550,8 +557,8 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 				}
 			}
 
-			// Scaling loop, up to 10^9 at a time.  iHiProd stays updated
-			// with index of highest non-zero ULONG.
+			// Scaling loop, up to 10^19 at a time.  iHiProd stays updated
+			// with index of highest non-zero element.
 			//
 			for (; iScale > 0; iScale -= POWER10_MAX64) {
 				if (iScale >= POWER10_MAX64)
@@ -560,9 +567,14 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 					ullPwr = rgulPower10_64[iScale];
 
 				DWORD64 hi = 0;
-				for (iCur = 0; iCur <= iHiProd; iCur++) {
+				for (int iCur = 0; iCur <= iHiProd; iCur++) {
 					DWORD64 tmp = hi;
-					rgulNum[iCur] = tmp + _umul128(ullPwr, rgulNum[iCur], &hi);
+					DWORD64 lo = _umul128(ullPwr, rgulNum[iCur], &hi);
+					auto carry = _addcarry_u64(0, tmp, lo, &rgulNum[iCur]);
+					// Hi is at least 1 away from it's max value so we can add carry without overflow.
+					// ex: 0xffff*0xffff => "fffe0001", and it is the same pattern for all bitlenghts
+					//
+					_addcarry_u64(carry, hi, 0, &hi);
 				}
 
 				if (hi != 0)
@@ -577,22 +589,43 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 			// Signs differ, subtract.
 			//
 			auto carry = _subborrow_u64(0, rgulNum[0], pdecR->Lo64, &decRes.Lo64);
-			carry = _subborrow_u64(carry, rgulNum[1], pdecR->Hi32, &rgulNum[1]);
-			decRes.Hi32 = (DWORD32)rgulNum[1];
+			carry = _subborrow_u64(carry, rgulNum[1], pdecR->Hi32, &decTmp.Lo64);
+			rgulNum[1] = decTmp.Lo64;
+			decRes.Hi32 = (DWORD32)decTmp.Lo32;
+			// TODO: 
 
 			// Propagate carry
 			//
-			if (carry) {
+			if (carry != 0 || decTmp.Mid32 != 0) { // || ((SPLIT64*)&rgulNum[1])->u.Hi != 0) TODO
 				// If rgulNum has more than 96 bits of precision, then we need to
 				// carry the subtraction into the higher bits.  If it doesn't,
 				// then we subtracted in the wrong order and have to flip the 
 				// sign of the result.
 				// 
-				if (iHiProd < 1 || (iHiProd == 1 && ((SPLIT64*)&rgulNum[1])->u.Hi == 0))
+
+				if (carry != 0)
+				{
+					// TODO: Add testcase for this !
+					printf("carry\n");
+				}
+
+				if (iHiProd < 1 || (iHiProd == 1 && decTmp.Mid32 == 0))
 					goto SignFlip; // Result placed already placed in decRes 
 
-				iCur = 2;
-				while (rgulNum[iCur++]-- == 0);
+				// > 96 bits, TODO: CHECK INTO THIS, make sure tests covers this area, 
+				// iCur should never be greater than 2 so se if we can remove loop
+				
+				if (carry)
+				{
+					if (iHiProd == 1) {
+						iHiProd = 2;
+						rgulNum[2] = MAXDWORD64;
+					}
+					else {
+						--rgulNum[2];
+					}
+				}
+
 				if (rgulNum[iHiProd] == 0)
 					iHiProd--;
 			}
@@ -607,19 +640,21 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 			// Propagate carry
 			//
 			if (carry) {
-				// Had a carry above 96 bits.
-				//
-				iCur = 2;
-				do {
-					if (iHiProd < iCur) {
-						rgulNum[iCur] = 1;
-						iHiProd = iCur;
-						break;
-					}
-				} while (++rgulNum[iCur++] == 0);
+				// Result above 128 bits, If upper bits are not yet set 
+				// then set it as 1 otherwise increase. There is not risk
+				// for overflow
+				// 
+				if (iHiProd < 2) {
+					rgulNum[2] = 1;
+					iHiProd = 2;
+				}
+				else  {
+					++rgulNum[2];
+				}
 			}
 		}
 
+		// TODO: consider refactoring if statement as "ResultFitsIn96Bit" or similar
 		if (iHiProd > 1 || (iHiProd == 1 && ((SPLIT64*)&rgulNum[1])->u.Hi != 0)) {
 			rgulNum[0] = decRes.Lo64;
 			assert(decRes.Hi32 == ((SPLIT64*)&rgulNum[1])->u.Lo);
