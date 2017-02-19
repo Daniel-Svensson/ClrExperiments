@@ -9,7 +9,7 @@
 #include <stdlib.h>  
 
 using namespace std;
-//#define TEST_MULTIPLY
+#define TEST_MULTIPLY
 #define TEST_ADDSUB
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
@@ -24,6 +24,8 @@ void run_benchmarks(int iterations, int elements, int bytes,
 	HRESULT(*baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), HRESULT(*func)(const DECIMAL *, const DECIMAL *, DECIMAL *));
 void InitializeTestData(std::vector<DECIMAL>& numbers, int bytes);
 void test_round_to_nearest();
+
+void AdditionalTests(const int &iterations);
 
 extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, DWORD64 *remainder);
 // In _x64 file
@@ -458,32 +460,32 @@ int main()
 	VarDecFromI4(32, &a);
 	VarDecFromI4(3, &b);
 
-	DECIMAL sum;
-	VarDecAdd(&a, &b, &sum);
+	DECIMAL expected, actual;
+	
 
 	//TestMultiply(a, b);
-	//[0]x[0]  --(0) 4294967295 18446744073709551615 / 10 ^ 16 * (0) 4294967295 18446744073709551615 / 10 ^ 16:
-	// PRODUCT expected(0) 858993459 3689348814741910323 / 10 ^ 15 but got(0) 0 9223372036854775808 / 10 ^ 15
-// 		[0]x[10]  --(0) 4294967295 18446744073709551615 / 10 ^ 16 * (0) 8 34359738376 / 10 ^ 10 :
-		//PRODUCT expected(0) 430296729 11071482418063330970 / 10 ^ 15 but got(0) 8000000 7382133603321420646 / 10 ^ 15
+	// [0]x[25]  --(0) 0 1152921504606846975 / 10 ^ 13 * (0) 0 1 / 10 ^ 25:
+	//   PRODUCT expected(0) 624999999 18446744063709551616 / 10 ^ 23 but got(0) 2370457855 18446743073709551617 / 10 ^ 25
 
-	// 2]x[11]  --(0) 2147483647 9223372034707292159 / 10 ^ 4 * (0) 268435455 1152921500580315135 / 10 ^ 3:
-	// PRODUCT expected(0) 483183819 14987979555647730482 / 10 ^ 3 but got(0) 536870903 7609281926163909836 / 10 ^ 3
+	a.Hi32 = 1;
+	a.Lo64 = 18446744073709551615;
+	a.scale = 0;
+	b.Hi32 = 1;
+	b.Lo64 = 18446744073709551615;
+	b.scale = 19;
 
-	a.Hi32 = 2147483647;
-	a.Lo64 = 9223372034707292159;
-	a.scale = 4;
-	b.Hi32 = 268435455;
-	b.Lo64 = 1152921500580315135;
-	b.scale = 3;
-
-	VarDecAdd_x64(&a, &b, &sum);
+	VarDecAdd(&a, &b, &expected);
+	VarDecAdd_x64(&a, &b, &actual);
 	//VarDecMul_x64(&a, &b, &sum);
 
-	assert(sum.Hi32 == 483183819);
-	assert(sum.Lo64 == 14987979555647730482);
-	assert(sum.scale == 3);
-	assert(sum.sign == 0);
+	assert(actual.Hi32 == 2000000000);
+	assert(actual.Lo64 == 2689348815);
+	assert(actual.scale == 9);
+	assert(actual.sign == 0);
+	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
+	assert(actual.Hi32 == expected.Hi32);
+	assert(actual.Lo64 == expected.Lo64);
+	assert(actual.signscale == expected.signscale);
 
 	//test_round_to_nearest();
 
@@ -508,5 +510,54 @@ int main()
 	run_benchmarks(iterations, elements, bytes, "oleauto", "x64", VarDecSub, VarDecSub_x64);
 #endif
 
+	AdditionalTests(iterations);
+
 	return 0;
+}
+
+void AdditionalTests(const int &iterations)
+{
+	// Additional tests
+	vector<DECIMAL> numbers;
+	numbers.reserve(2 * (DEC_SCALE_MAX + 1) * 96);
+	BYTE signs[] = { 0, DECIMAL_NEG };
+	for (byte sign : signs)
+	{
+		DECIMAL current;
+		current.sign = sign;
+		for (size_t scale = 0; scale <= DEC_SCALE_MAX; scale++)
+		{
+			current.scale = scale;
+			current.Lo64 = MAXDWORD64;
+			current.Hi32 = 0;
+
+			//for (int bit = 0; bit < 96; ++bit)
+			for (int bit = 0; bit < 32; ++bit)
+			{
+				if (current.Lo64 == MAXDWORD64)
+					current.Hi32 = (current.Hi32 << 1) | 1;
+				current.Lo64 = (current.Lo64 << 1) | 1;
+				numbers.push_back(current);
+			}
+		}
+	}
+	vector<DECIMAL> expected(numbers.size()*numbers.size()), actual(numbers.size()*numbers.size());
+	vector<HRESULT> expected_res(numbers.size()*numbers.size()), actual_res(numbers.size()*numbers.size());
+
+	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+		numbers, expected, expected_res, actual, actual_res,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
+	);
+
+	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+		numbers, expected, expected_res, actual, actual_res,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
+	);
+	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+		numbers, expected, expected_res, actual, actual_res,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
+	);
 }
