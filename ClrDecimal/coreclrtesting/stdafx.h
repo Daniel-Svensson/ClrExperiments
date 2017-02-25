@@ -77,7 +77,21 @@ STDAPI VarDecSub_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 STDAPI VarDecMul_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
 STDAPI VarDecAdd_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
 STDAPI VarDecSub_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
+STDAPI VarDecDiv_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
 DWORD64 FullDiv64By64(DWORD64 *pdlNum, DWORD64 ulDen);
 
 
 // TODO: reference additional headers your program requires here
+
+inline void COPYDEC(DECIMAL &to, const DECIMAL &from)
+{
+	(to).Hi32 = (from).Hi32;
+	(to).Lo64 = (from).Lo64;
+	(to).signscale = (from).signscale;
+}
+inline void DECIMAL_LO64_SET(DECIMAL & dec, DWORD64 value) { dec.Lo64 = value; }
+inline DWORD64 & DECIMAL_LO64_GET(DECIMAL & dec) { return dec.Lo64; }
+inline ULONG & DECIMAL_HI32(DECIMAL &dec) { return dec.Hi32; }
+inline ULONG & DECIMAL_MID32(DECIMAL &dec) { return dec.Mid32; }
+inline ULONG & DECIMAL_LO32(DECIMAL &dec) { return dec.Lo32; }
+inline USHORT & DECIMAL_SIGNSCALE(DECIMAL &dec) { return dec.signscale; }

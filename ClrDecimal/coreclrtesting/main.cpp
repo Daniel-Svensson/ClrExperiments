@@ -9,8 +9,10 @@
 #include <stdlib.h>  
 
 using namespace std;
-#define TEST_MULTIPLY
-#define TEST_ADDSUB
+#define NO_COMPARE
+//#define TEST_MULTIPLY
+//#define TEST_ADDSUB
+#define TEST_DIV
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
 #define TEST_64bit_with_scale_64bit_result
@@ -216,8 +218,13 @@ void compare_benchmark(
 
 	for (int i = 0; i < iterations; ++i)
 	{
+#ifndef NO_COMPARE
 		auto time1 = run_benchmark(lhs, rhs, first_target, first_result, first_func);
 		auto time2 = run_benchmark(lhs, rhs, second_target, second_result, second_func);
+#else // !NO_COMPARE
+		auto time2 = run_benchmark(lhs, rhs, second_target, second_result, second_func);
+		auto time1 = time2;
+#endif
 
 		double seconds1 = (double)time1 / (double)frequency.QuadPart;
 		double seconds2 = (double)time2 / (double)frequency.QuadPart;
@@ -229,12 +236,14 @@ void compare_benchmark(
 	}
 	printf("\n");
 
+#ifndef NO_COMPARE
 	int first_hres0 = (int)std::count(first_result.begin(), first_result.end(), 0);
 	int second_hres0 = (int)std::count(second_result.begin(), second_result.end(), 0);
 	//cout << second_hres0 << " out of " << first_target.size() << " resuts was successfull, expected " << first_hres0 << " => ratio " << 100.0 * (double)second_hres0 / (double)(first_target.size()) << "%" << endl;
 	printf("%d out of %zi results was successfull, expected %d, ratio is %f%%\n", second_hres0, first_target.size(), first_hres0, 100.0 * (double)second_hres0 / (double)(first_target.size()));
 
 	CompareResult(lhs, rhs, first_target, first_result, second_target, second_result);
+#endif // !NO_COMPARE
 }
 
 long long run_benchmark(const char *const name,
@@ -451,70 +460,6 @@ void test_round_to_nearest()
 
 }
 
-int main()
-{
-	// Use system formatting
-	setlocale(LC_ALL, "");
-
-	DECIMAL a, b;
-	VarDecFromI4(32, &a);
-	VarDecFromI4(3, &b);
-
-	DECIMAL expected, actual;
-	
-
-	//TestMultiply(a, b);
-	// [0]x[25]  --(0) 0 1152921504606846975 / 10 ^ 13 * (0) 0 1 / 10 ^ 25:
-	//   PRODUCT expected(0) 624999999 18446744063709551616 / 10 ^ 23 but got(0) 2370457855 18446743073709551617 / 10 ^ 25
-
-	a.Hi32 = 1;
-	a.Lo64 = 18446744073709551615;
-	a.scale = 0;
-	b.Hi32 = 1;
-	b.Lo64 = 18446744073709551615;
-	b.scale = 19;
-
-	VarDecAdd(&a, &b, &expected);
-	VarDecAdd_x64(&a, &b, &actual);
-	//VarDecMul_x64(&a, &b, &sum);
-
-	assert(actual.Hi32 == 2000000000);
-	assert(actual.Lo64 == 2689348815);
-	assert(actual.scale == 9);
-	assert(actual.sign == 0);
-	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
-	assert(actual.Hi32 == expected.Hi32);
-	assert(actual.Lo64 == expected.Lo64);
-	assert(actual.signscale == expected.signscale);
-
-	//test_round_to_nearest();
-
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS /* or ABOVE_NORMAL_PRIORITY_CLASS */);
-
-	//run_benchmarks(30000, 4, 5);
-#ifdef DEBUG
-	const int iterations = 2;
-	const int elements = 1000;
-#else
-	const int iterations = 5;
-	const int elements = 6000;
-#endif
-	const int bytes = 4;
-
-#ifdef TEST_MULTIPLY
-	run_benchmarks(iterations, elements, bytes, "oleauto", "x64", VarDecMul, VarDecMul_x64);
-#endif
-
-#ifdef TEST_ADDSUB
-	run_benchmarks(iterations, elements, bytes, "oleauto", "x64", VarDecAdd, VarDecAdd_x64);
-	run_benchmarks(iterations, elements, bytes, "oleauto", "x64", VarDecSub, VarDecSub_x64);
-#endif
-
-	AdditionalTests(iterations);
-
-	return 0;
-}
-
 void AdditionalTests(const int &iterations)
 {
 	// Additional tests
@@ -560,4 +505,81 @@ void AdditionalTests(const int &iterations)
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
 	);
+}
+
+
+int main()
+{
+	// Use system formatting
+	setlocale(LC_ALL, "");
+
+	DECIMAL a, b;
+	VarDecFromI4(32, &a);
+	VarDecFromI4(3, &b);
+
+	DECIMAL expected, actual;
+
+
+	//a.Hi32 = 1;
+	//a.Lo64 = 18446744073709551615;
+	//a.scale = 0;
+	//b.Hi32 = 1;
+	//b.Lo64 = 18446744073709551615;
+	//b.scale = 19;
+	a.Hi32 = 0;
+	a.Lo64 = MAXDWORD64 >> 4;
+	a.scale = 0;
+	b.Hi32 = MAXDWORD32;
+	b.Lo64 = MAXDWORD64;
+	b.scale = 10;
+	b.sign = DECIMAL_NEG;
+
+
+	VarDecAdd(&a, &b, &expected);
+	VarDecAdd_x64(&a, &b, &actual);
+	//VarDecMul_x64(&a, &b, &sum);
+
+	//assert(actual.Hi32 == 2000000000);
+	//assert(actual.Lo64 == 2689348815);
+	//assert(actual.scale == 9);
+	//assert(actual.sign == 0);
+	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
+	assert(actual.Hi32 == expected.Hi32);
+	assert(actual.Lo64 == expected.Lo64);
+	assert(actual.signscale == expected.signscale);
+
+	//test_round_to_nearest();
+
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS /* or ABOVE_NORMAL_PRIORITY_CLASS */);
+
+	//run_benchmarks(30000, 4, 5);
+#ifdef DEBUG
+	const int iterations = 2;
+	const int elements = 1000;
+#else
+	const int iterations = 3;
+	const int elements = 2000;
+#endif
+	const int bytes = 4;
+
+#ifdef TEST_MULTIPLY
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecMul", "x64", VarDecMul, VarDecMul_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecMul", "x64", VarDecMul_PALRT, VarDecMul_x64);
+#endif
+
+#ifdef TEST_DIV
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", "x64", VarDecDiv, VarDecDiv_x64);
+#endif
+
+#ifdef TEST_ADDSUB
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecAdd", "x64", VarDecAdd, VarDecAdd_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecSub", "x64", VarDecSub, VarDecSub_x64);
+
+	run_benchmarks(iterations, elements, bytes, "coreclr-VarDecAdd", "x64", VarDecAdd_PALRT, VarDecAdd_x64);
+	run_benchmarks(iterations, elements, bytes, "coreclr-VarDecSub", "x64", VarDecSub_PALRT, VarDecSub_x64);
+#endif
+
+	AdditionalTests(iterations);
+
+	return 0;
 }
