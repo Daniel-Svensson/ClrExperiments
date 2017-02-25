@@ -675,7 +675,8 @@ RetDec:
 }
 // ********************** DIVIDE **************************************
 // Divides a 96bit ulong by 32bit, returns 32bit remainder
-DWORD32 Div96By32(ULONG *pdlNum, DWORD32 ulDen)
+ULONG Div96By32(ULONG *rgulNum, ULONG ulDen);
+DWORD32 Div96By32_x64(ULONG *pdlNum, DWORD32 ulDen)
 {
 	// Upper 64bit
 	DWORD64* hiPtr = (DWORD64*)(pdlNum + 1);
