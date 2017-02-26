@@ -9,7 +9,7 @@
 #include <stdlib.h>  
 
 using namespace std;
-#define NO_COMPARE
+//#define NO_COMPARE
 //#define TEST_MULTIPLY
 //#define TEST_ADDSUB
 #define TEST_DIV
@@ -29,57 +29,6 @@ void test_round_to_nearest();
 
 void AdditionalTests(const int &iterations);
 
-extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, DWORD64 *remainder);
-// In _x64 file
-DWORD64 FullDiv64By64(DWORD64* pdlNum, DWORD64 ulDen);
-
-// The following functions are defined in the classlibnative\bcltype\decimal.cpp
-
-DWORD32 FullDiv64By32_x64(DWORD64* pdlNum, DWORD32 ulDen)
-{
-	auto mod = DWORD32(*pdlNum % ulDen);
-	auto res = *pdlNum / ulDen;
-
-	*pdlNum = res;
-	return mod;
-}
-
-// Divides a 96bit ulong by 32bit, returns 32bit remainder
-DWORD32 Div96By32_x64(DWORD32 *pdlNum, DWORD32 ulDen)
-{
-	// Upper 64bit
-	DWORD64* hiPtr = (DWORD64*)(pdlNum + 1);
-	DWORD64 lopart = (FullDiv64By64(hiPtr, ulDen) << 32) + *pdlNum;
-	DWORD32 remainder = FullDiv64By32_x64(&lopart, ulDen);
-	*pdlNum = (DWORD32)lopart;
-
-	return remainder;
-}
-
-ULONG FullDiv64By32_ORI(DWORDLONG *pdlNum, ULONG ulDen)
-{
-	SPLIT64  sdlTmp;
-	SPLIT64  sdlRes;
-
-	sdlTmp.int64 = *pdlNum;
-	sdlRes.u.Hi = 0;
-
-	if (sdlTmp.u.Hi >= ulDen) {
-		// DivMod64by32 returns quotient in Lo, remainder in Hi.
-		//
-		sdlRes.u.Lo = sdlTmp.u.Hi;
-		sdlRes.int64 = DivMod64by32(sdlRes.int64, ulDen);
-		sdlTmp.u.Hi = sdlRes.u.Hi;
-		sdlRes.u.Hi = sdlRes.u.Lo;
-	}
-
-	sdlTmp.int64 = DivMod64by32(sdlTmp.int64, ulDen);
-	sdlRes.u.Lo = sdlTmp.u.Lo;
-	*pdlNum = sdlRes.int64;
-	return sdlTmp.u.Hi;
-}
-
-
 void TestMultiply(DECIMAL a, DECIMAL b)
 {
 	DECIMAL prod, prod2;
@@ -88,23 +37,6 @@ void TestMultiply(DECIMAL a, DECIMAL b)
 
 	printf("Original DecMul %lu %lu %lu sign %i scale %i\n (RETURN %li)", prod.Hi32, prod.Mid32, prod.Lo32, (int)prod.sign, (int)prod.scale, res1);
 	printf("Ny DecMul %lu %lu %lu sign %i scale %i (RETURN %li)\n", prod2.Hi32, prod2.Mid32, prod2.Lo32, (int)prod2.sign, (int)prod2.scale, res2);
-
-	DWORD64 dividend = prod.Lo64;
-	DWORD64 divisor64 = b.Lo64 + 2;
-	DWORD32 divisor32 = static_cast<DWORD32>(b.Lo64 + 2);
-
-	auto minRes = dividend;
-	auto min = FullDiv64By32_x64(&minRes, divisor32);
-	auto derasRes = dividend;
-	auto deras = FullDiv64By32_ORI(&derasRes, divisor32);
-	auto min64Res = dividend;
-	auto min64 = FullDiv64By64(&min64Res, divisor64);
-
-	auto dummy = FullDiv64By64(&min64Res, divisor64);
-
-	printf("Original Div6432  %I64u %lu\n", derasRes, deras);
-	printf("Ny Div6432        %I64u %i \n", minRes, min);
-	printf("Ny FullDiv64By64  %I64u %I64u \n", min64Res, min64);
 }
 
 
@@ -149,10 +81,11 @@ void CompareResult(
 	size_t errors = 0;
 
 
+	size_t result_idx = -1;
 	for (int i = 0; i < lhs.size(); ++i)
 		for (int j = 0; j < rhs.size(); ++j)
 		{
-			auto result_idx = (i * lhs.size()) + j;
+			++result_idx;
 
 			if (expected_result[result_idx] != actual_result[result_idx]
 				|| (expected[result_idx].Lo64 != actual[result_idx].Lo64)
@@ -174,7 +107,7 @@ void CompareResult(
 				{
 					if (++errors < 10)
 					{
-						printf("[%i]x[%i]  -- (%i) %lu %I64u /10^%i  * (%i) %lu %I64u / 10^%i: \n",
+						printf("[%i]x[%i]  -- (%i) %lu %I64u / 10^%i  * (%i) %lu %I64u / 10^%i: \n",
 							i, j,
 							lhs[i].sign, lhs[i].Hi32, lhs[i].Lo64, lhs[i].scale,
 							rhs[j].sign, rhs[j].Hi32, rhs[j].Lo64, rhs[j].scale);
@@ -489,22 +422,35 @@ void AdditionalTests(const int &iterations)
 	vector<DECIMAL> expected(numbers.size()*numbers.size()), actual(numbers.size()*numbers.size());
 	vector<HRESULT> expected_res(numbers.size()*numbers.size()), actual_res(numbers.size()*numbers.size());
 
-	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+#ifdef TEST_MULTIPLY
+	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
 	);
+#endif
 
-	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+#ifdef TEST_ADDSUB
+	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
 	);
-	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
 	);
+#endif
+
+#ifdef TEST_DIV
+	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+		numbers, expected, expected_res, actual, actual_res,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
+	);
+#endif
+
 }
 
 
@@ -526,23 +472,19 @@ int main()
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 0;
-	a.Lo64 = MAXDWORD64 >> 4;
-	a.scale = 0;
-	b.Hi32 = MAXDWORD32;
-	b.Lo64 = MAXDWORD64;
-	b.scale = 10;
-	b.sign = DECIMAL_NEG;
+	a.Hi32 = 1;
+	a.Lo64 = 18446744073709551615;
+	a.scale = 20;
+	b.Hi32 = 1;
+	b.Lo64 = 18446744073709551615;
+	b.scale = 28;
+	b.sign = 0;
 
 
-	VarDecAdd(&a, &b, &expected);
-	VarDecAdd_x64(&a, &b, &actual);
+	VarDecMul(&a, &b, &expected);
+	VarDecMul_x64(&a, &b, &actual);
 	//VarDecMul_x64(&a, &b, &sum);
 
-	//assert(actual.Hi32 == 2000000000);
-	//assert(actual.Lo64 == 2689348815);
-	//assert(actual.scale == 9);
-	//assert(actual.sign == 0);
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
 	assert(actual.Hi32 == expected.Hi32);
 	assert(actual.Lo64 == expected.Lo64);
@@ -558,7 +500,7 @@ int main()
 	const int elements = 1000;
 #else
 	const int iterations = 3;
-	const int elements = 2000;
+	const int elements = 3000;
 #endif
 	const int bytes = 4;
 
@@ -569,6 +511,7 @@ int main()
 
 #ifdef TEST_DIV
 	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", "x64", VarDecDiv, VarDecDiv_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecDiv", "x64", VarDecDiv_PALRT, VarDecDiv_x64);
 #endif
 
 #ifdef TEST_ADDSUB
