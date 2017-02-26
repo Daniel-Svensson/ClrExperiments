@@ -40,7 +40,7 @@ static const DWORD64 rgulPower10_64[POWER10_MAX64 + 1] = {
 
 // Divides a 64bit ulong by 32bit, returns 32bit remainder
 // This translates to a single div instruction on x64 platforms
-DWORD64 FullDiv64By64(DWORD64 *pdlNum, DWORD64 ulDen)
+static DWORD64 FullDiv64By64(DWORD64 *pdlNum, DWORD64 ulDen)
 {
 	auto mod = *pdlNum % ulDen;
 	auto res = *pdlNum / ulDen;
@@ -69,19 +69,19 @@ static inline DWORD32 FullDiv64By32_x64(DWORD64* pdlNum, DWORD32 ulDen)
 	return mod;
 }
 
+
 // Divides a 96bit ulong by 32bit, returns 32bit remainder
-static DWORD32 FullDiv96By32(DWORD32 *pdlNum, DWORD32 ulDen)
+ULONG Div96By32(ULONG *rgulNum, ULONG ulDen);
+static DWORD32 Div96By32_x64(ULONG *pdlNum, DWORD32 ulDen)
 {
 	// Upper 64bit
 	DWORD64* hiPtr = (DWORD64*)(pdlNum + 1);
-	DWORD64 lopart = ((DWORD64)FullDiv64By32_x64(hiPtr, ulDen) << 32) + *pdlNum;
+	DWORD64 lopart = (FullDiv64By64(hiPtr, ulDen) << 32) + *pdlNum;
 	DWORD32 remainder = FullDiv64By32_x64(&lopart, ulDen);
 	*pdlNum = (DWORD32)lopart;
 
 	return remainder;
 }
-
-
 
 /***
 * ScaleResult
@@ -411,15 +411,10 @@ STDAPI VarDecSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 }
 
 // Add one to the decimal, returns carry
-inline unsigned char INC96(DECIMAL *pDec)
+static inline unsigned char INC96(DECIMAL *pDec)
 {
 	auto carry = _addcarry_u64(0, pDec->Lo64, 1, &pDec->Lo64);
 	return _addcarry_u32(carry, pDec->Hi32, 0, (DWORD32*)&pDec->Hi32);
-}
-inline unsigned char ADD96(const DECIMAL *pLhs, const  DECIMAL *pRhs, DECIMAL *pRes)
-{
-	auto carry = _addcarry_u64(0, pLhs->Lo64, pRhs->Lo64, &pRes->Lo64);
-	return _addcarry_u32(carry, pLhs->Hi32, pRhs->Hi32, (DWORD32*)&pRes->Hi32);
 }
 
 static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes, char bSign)
@@ -677,16 +672,7 @@ RetDec:
 }
 // ********************** DIVIDE **************************************
 // Divides a 96bit ulong by 32bit, returns 32bit remainder
-DWORD32 Div96By32(ULONG *pdlNum, DWORD32 ulDen)
-{
-	// Upper 64bit
-	DWORD64* hiPtr = (DWORD64*)(pdlNum + 1);
-	DWORD64 lopart = (FullDiv64By64(hiPtr, ulDen) << 32) + *pdlNum;
-	DWORD32 remainder = FullDiv64By32_x64(&lopart, ulDen);
-	*pdlNum = (DWORD32)lopart;
 
-	return remainder;
-}
 
 struct DECOVFL
 {
@@ -747,7 +733,8 @@ static DECOVFL PowerOvfl[] = {
 *
 ***********************************************************************/
 
-ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr)
+ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
+ULONG IncreaseScale_x64(ULONG *rgulNum, ULONG ulPwr)
 {
 	LIMITED_METHOD_CONTRACT;
 
@@ -879,8 +866,8 @@ HaveScale:
 *   None.
 *
 ***********************************************************************/
-
-ULONG Div128By96(ULONG *rgulNum, ULONG *rgulDen)
+ULONG Div128By96(ULONG *rgulNum, ULONG *rgulDen);
+ULONG Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 {
 	LIMITED_METHOD_CONTRACT;
 
