@@ -108,38 +108,47 @@ static ULONG rgulPower10[POWER10_MAX + 1] = { 1, 10, 100, 1000, 10000, 100000, 1
 10000000, 100000000, 1000000000 };
 static const ULONG ulTenToNine = 1000000000U;
 
+/***
+* ScaleResult
+*
+* Entry:
+*   rgulRes - Array of DWORD64 with value, least-significant first.
+*   iHiRes  - Index of last non-zero value in rgulRes, Max 2.
+*   iScale  - Scale factor for this value, range 0 - 2 * DEC_SCALE_MAX
+*
+* Purpose:
+*   See if we need to scale the result to fit it in 96 bits.
+*   Perform needed scaling.  Adjust scale factor accordingly.
+*
+* Exit:
+*   rgulRes updated in place, all items with index <= iHiRes are updated.
+*   New scale factor returned, -1 if overflow error.
+*
+***********************************************************************/
 // ScaleResult is called from AddSub as well as multiply
-int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
+int ScaleResult_x64(DWORD64 *rgullRes, int iHiRes, int iScale)
 {
 	LIMITED_METHOD_CONTRACT;
 
 	int     iNewScale;
 	int     iCur;
 	DWORD   ulMsb;
-	DWORD64 ulSticky;
-	DWORD64 ulPwr;
+	DWORD64 ullSticky;
+	DWORD64 ullPwr;
 	DWORD64 remainder;
-
 
 	// See if we need to scale the result.  The combined scale must
 	// be <= DEC_SCALE_MAX and the upper 96 bits must be zero.
 	// 
 	// Start by figuring a lower bound on the scaling needed to make
-	// the upper 96 bits zero.  iHiRes is the index into rgulRes[]
-	// of the highest non-zero ULONG.
+	// all but the lower 96 bits zero.  iHiRes is the index into rgulRes[]
+	// of the highest non-zero element.
 	// 
-	BOOLEAN found = BitScanReverse64(&ulMsb, rgulRes[iHiRes]);
+	BOOLEAN found = BitScanReverse64(&ulMsb, rgullRes[iHiRes]);
 	assert(found);
-	// msb will be in rance [63,0]
-	//iNewScale = iHiRes * 64 - 64 - 1;
-	//iNewScale = iNewScale - (63 - ulMsb);
-
 	iNewScale = iHiRes * 64 + ulMsb - 96;
 
 	if (iNewScale >= 0) {
-		// actual MSB = iHiRes*64 + ulMsb
-		// iNewScale = iHiRes * 64 - 64 - 1 - 63 + ulMsb = MSB - 128
-
 		// Multiply bit position by log10(2) to figure it's power of 10.
 		// We scale the log by 256.  log(2) = .30103, * 256 = 77.  Doing this 
 		// with a multiply saves a 96-byte lookup table.  The power returned
@@ -176,35 +185,32 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 		// be 1 power of 10 short.
 		//
 		iScale -= iNewScale;
-		ulSticky = 0;
+		ullSticky = 0;
 		remainder = 0;
 
 		for (;;) {
 
-			ulSticky |= remainder; // record remainder as sticky bit
+			ullSticky |= remainder; // record remainder as sticky bit
 
-			if (iNewScale < POWER10_MAX64) // TODO: inkludera POWER10_MAX64 eller inte ???
-				ulPwr = rgulPower10_64[iNewScale];
+			if (iNewScale < POWER10_MAX64)
+				ullPwr = rgulPower10_64[iNewScale];
 			else
-				ulPwr = POWER10_MAX_VALUE64;
+				ullPwr = POWER10_MAX_VALUE64;
 
 			// Compute first quotient.
 			//
-			//rgulRes[iHiRes] = _udiv128(rgulRes[iHiRes], 0, ulPwr, &remainder);
-			remainder = _udiv128_v2(&rgulRes[iHiRes], 0, ulPwr);
+			remainder = _udiv128_v2(&rgullRes[iHiRes], 0, ullPwr);
 			iCur = iHiRes - 1;
 
 			if (iCur >= 0) {
 				// If first quotient was 0, update iHiRes.
-				// TODO: See if this really increase perf
-				if (rgulRes[iHiRes] == 0)
+				if (rgullRes[iHiRes] == 0)
 					iHiRes--;
 
 				// Compute subsequent quotients.
 				//
 				do {
-					//rgulRes[iCur] = _udiv128(rgulRes[iCur], remainder, ulPwr, &remainder);
-					remainder = _udiv128_v2(&rgulRes[iCur], remainder, ulPwr);
+					remainder = _udiv128_v2(&rgullRes[iCur], remainder, ullPwr);
 					iCur--;
 				} while (iCur >= 0);
 			}
@@ -213,10 +219,10 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 			if (iNewScale > 0)
 				continue; // scale some more
 
-			// If we scaled enough, iHiRes would be 0 or 1 without anythin in upper 32bits.  If not,
+			// If we scaled enough, iHiRes would be 0 or 1 without anything above first 96bits.  If not,
 			// divide by 10 more.
 			//
-			if (iHiRes > 1 || (((SPLIT64*)&rgulRes[iHiRes])->u.Hi != 0)) {
+			if (iHiRes > 1 || (((SPLIT64*)&rgullRes[1])->u.Hi != 0)) {
 				iNewScale = 1;
 				iScale--;
 				continue; // scale by 10
@@ -224,28 +230,26 @@ int ScaleResult_x64(DWORD64 *rgulRes, int iHiRes, int iScale)
 
 			// Round final result.  See if remainder >= 1/2 of divisor.
 			// If remainder == 1/2 divisor, round up if odd or sticky bit set.
-			ulPwr >>= 1;  // power of 10 always even
-			if (remainder > ulPwr || (ulPwr == remainder && ((rgulRes[0] & 1) | ulSticky))) {
+			//
+			ullPwr >>= 1;  // power of 10 always even
+			if (remainder > ullPwr || (ullPwr == remainder && ((rgullRes[0] & 1) | ullSticky))) {
 				// if (remainder >= ulPwr && (ulPwr > remainder || ((rgulRes[0] & 1) | ulSticky))) {
 
-				// We know that (iCur < 0 || (iCur == 1 && (((SPLIT64*)&rgulRes[iCur])->u.Hi == 0))) before rounding up
-				// so we should be able to just add above and then check Hi sign
-				// we also know that we only get this far if iHiRes was originally >= 1 so rgulRes[1] will contain a valid value
+				// Add 1 to first 96 bit word and check for overflow.
+				// We only scale if iHiRes was originally >= 1 so rgulRes[1] is already initalized.
 				// 
+				auto carry = _addcarry_u64(0, rgullRes[0], 1, &rgullRes[0]);
+				carry = _addcarry_u32(carry, (DWORD32)rgullRes[1], 0, (DWORD32*)&rgullRes[1]);
 
-				// Add 1 to first 96 bit word and check for overflow
-				auto carry = _addcarry_u64(0, rgulRes[0], 1, &rgulRes[0]);
-				carry = _addcarry_u32(carry, (DWORD32)rgulRes[1], 0, (DWORD32*)&rgulRes[1]);
-
-				// if ((SPLIT64*)&rgulRes[iCur])->u.Hi != 0
 				if (carry != 0) {
-					// 
 					// The rounding caused us to carry beyond 96 bits. 
 					// Scale by 10 more.
+					// We know that (SPLIT64*)&rgulRes[1])->u.Hi == 0 before rounding up
+					// so adding the carry results in 1.
 					//
-					iHiRes = 1;
-					((SPLIT64*)&rgulRes[1])->u.Hi = 1;
-					ulSticky = 0;  // no sticky bit
+					assert(iHiRes == 1);
+					((SPLIT64*)&rgullRes[1])->u.Hi = 1;
+					ullSticky = 0;  // no sticky bit
 					remainder = 0; // or remainder
 					iNewScale = 1;
 					iScale--;
@@ -279,7 +283,6 @@ STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 	if ((pdecL->Hi32 | pdecR->Hi32) == 0)
 	{
 		lo = _umul128(pdecL->Lo64, pdecR->Lo64, &hi);
-		//if ((hi & 0xffffffff00000000) == 0)
 		if (hi == 0ui64)
 		{
 			// Result iScale is too big.  Divide result by power of 10 to reduce it down to 'DEC_SCALE_MAX'
@@ -353,7 +356,6 @@ STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 		// ------------------------------
 		//      [p-3][p-2][p-1][p-0]   prod[] array
 
-		// TODO: must do 4 crosswise mult
 		rgulProd[0] = _umul128(pdecL->Lo64, pdecR->Lo64, &tmpSum);
 
 		// Both will generate a 96 bit results
@@ -370,8 +372,8 @@ STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 		//  so adding their carry to the addition will only result in a 32bit value at most MAXDWORD32
 		//  so this will never generate a carry.		
 		rgulProd[2] = ((DWORD64)pdecL->Hi32 * (DWORD64)pdecR->Hi32);
-		_addcarry_u64(carry1, hi, rgulProd[2], &rgulProd[2]);
-		_addcarry_u64(carry2, tmpHi2, rgulProd[2], &rgulProd[2]);
+		_addcarry_u64(carry2, hi, rgulProd[2], &rgulProd[2]);
+		_addcarry_u64(carry1, tmpHi2, rgulProd[2], &rgulProd[2]);
 
 		// Check for leading zero ULONGs on the product
 		//
