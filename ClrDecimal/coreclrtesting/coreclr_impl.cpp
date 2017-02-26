@@ -953,8 +953,14 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	SPLIT64 sdlDivisor;
 	int     iScale;
 	int     iCurScale;
+	// not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl
+	// TODO: Determine if this it improves x64 impl or not
+	// for original code the perf diff is -1% - +4% (64bit / 64bit where 64bit*64it -> 64bit)
+	// most other scenarios has a small perf inpact from it
+	BOOL    fUnscale;
 
 	iScale = pdecL->scale - pdecR->scale;
+	fUnscale = FALSE;
 	rgulDivisor[0] = pdecR->Lo32;
 	rgulDivisor[1] = pdecR->Mid32;
 	rgulDivisor[2] = pdecR->Hi32;
@@ -978,6 +984,8 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				}
 				break;
 			}
+			// We need to unscale if and only if we have a non-zero remainder
+			fUnscale = TRUE;
 
 			// We have computed a quotient based on the natural scale 
 			// ( <dividend scale> - <divisor scale> ).  We have a non-zero 
@@ -1102,6 +1110,9 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					break;
 				}
 
+				// We need to unscale if and only if we have a non-zero remainder
+				fUnscale = TRUE;
+
 				// Remainder is non-zero.  Scale up quotient and remainder by 
 				// powers of 10 so we can compute more significant bits.
 				// 
@@ -1166,6 +1177,9 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					break;
 				}
 
+				// We need to unscale if and only if we have a non-zero remainder
+				fUnscale = TRUE;
+
 				// Remainder is non-zero.  Scale up quotient and remainder by 
 				// powers of 10 so we can compute more significant bits.
 				// 
@@ -1212,67 +1226,71 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 		}
 	}
 
-	// No more remainder.  Try extracting any extra powers of 10 we may have 
-	// added.  We do this by trying to divide out 10^8, 10^4, 10^2, and 10^1.
-	// If a division by one of these powers returns a zero remainder, then
-	// we keep the quotient.  If the remainder is not zero, then we restore
-	// the previous value.
-	// 
-	// Since 10 = 2 * 5, there must be a factor of 2 for every power of 10
-	// we can extract.  We use this as a quick test on whether to try a
-	// given power.
-	// 
-	while ((rgulQuo[0] & 0xFF) == 0 && iScale >= 8) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+	// We need to unscale if and only if we have a non-zero remainder
+	if (fUnscale) {
 
-		if (Div96By32(rgulQuoSave, 100000000) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 8;
+		// No more remainder.  Try extracting any extra powers of 10 we may have 
+		// added.  We do this by trying to divide out 10^8, 10^4, 10^2, and 10^1.
+		// If a division by one of these powers returns a zero remainder, then
+		// we keep the quotient.  If the remainder is not zero, then we restore
+		// the previous value.
+		// 
+		// Since 10 = 2 * 5, there must be a factor of 2 for every power of 10
+		// we can extract.  We use this as a quick test on whether to try a
+		// given power.
+		// 
+		while ((rgulQuo[0] & 0xFF) == 0 && iScale >= 8) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
+
+			if (Div96By32(rgulQuoSave, 100000000) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 8;
+			}
+			else
+				break;
 		}
-		else
-			break;
-	}
 
-	if ((rgulQuo[0] & 0xF) == 0 && iScale >= 4) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+		if ((rgulQuo[0] & 0xF) == 0 && iScale >= 4) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
 
-		if (Div96By32(rgulQuoSave, 10000) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 4;
+			if (Div96By32(rgulQuoSave, 10000) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 4;
+			}
 		}
-	}
 
-	if ((rgulQuo[0] & 3) == 0 && iScale >= 2) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+		if ((rgulQuo[0] & 3) == 0 && iScale >= 2) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
 
-		if (Div96By32(rgulQuoSave, 100) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 2;
+			if (Div96By32(rgulQuoSave, 100) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 2;
+			}
 		}
-	}
 
-	if ((rgulQuo[0] & 1) == 0 && iScale >= 1) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+		if ((rgulQuo[0] & 1) == 0 && iScale >= 1) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
 
-		if (Div96By32(rgulQuoSave, 10) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 1;
+			if (Div96By32(rgulQuoSave, 10) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 1;
+			}
 		}
 	}
 

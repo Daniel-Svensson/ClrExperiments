@@ -1027,6 +1027,9 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	int     iScale;
 	int     iCurScale;
 	// not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl
+	// TODO: Determine if this it improves x64 impl or not
+	// for original code the perf diff is -1% to +3% (where later is in case 64bit / 64bit where 64bit*64it -> 64bit)
+	// most other scenarios has a small perf inpact from it
 	BOOL    fUnscale;
 
 	iScale = pdecL->scale - pdecR->scale;
