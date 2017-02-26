@@ -38,7 +38,7 @@ static const DWORD64 rgulPower10_64[POWER10_MAX64 + 1] = {
 10000000000000000000,
 };
 
-// Divides a 64bit ulong by 32bit, returns 32bit remainder
+// Divides a 64bit ulong by 64bit, returns 64bit remainder
 // This translates to a single div instruction on x64 platforms
 static DWORD64 FullDiv64By64(DWORD64 *pdlNum, DWORD64 ulDen)
 {
@@ -71,7 +71,6 @@ static inline DWORD32 FullDiv64By32_x64(DWORD64* pdlNum, DWORD32 ulDen)
 
 
 // Divides a 96bit ulong by 32bit, returns 32bit remainder
-ULONG Div96By32(ULONG *rgulNum, ULONG ulDen);
 static DWORD32 Div96By32_x64(ULONG *pdlNum, DWORD32 ulDen)
 {
 	// Upper 64bit
@@ -957,7 +956,7 @@ ULONG Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 *
 ***********************************************************************/
 
-ULONG Div96By64(ULONG *rgulNum, SPLIT64 sdlDen); // decimal.cpp
+//ULONG Div96By64(ULONG *rgulNum, SPLIT64 sdlDen); // decimal.cpp
 ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 {
 	LIMITED_METHOD_CONTRACT;
@@ -966,14 +965,13 @@ ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 	SPLIT64 sdlNum;
 	SPLIT64 sdlProd;
 
-	sdlNum.u.Lo = rgulNum[0];
-
 	if (rgulNum[2] >= sdlDen.u.Hi) {
 		// Divide would overflow.  Assume a quotient of 2^32, and set
 		// up remainder accordingly.  Then jump to loop which reduces
 		// the quotient.
 		//
 		sdlNum.u.Hi = rgulNum[1] - sdlDen.u.Lo;
+		sdlNum.u.Lo = rgulNum[0];
 		sdlQuo.u.Lo = 0;
 		goto NegRem;
 	}
@@ -981,10 +979,18 @@ ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 	// Hardware divide won't overflow
 	//
 	if (rgulNum[2] == 0 && rgulNum[1] < sdlDen.u.Hi)
+	{
 		// Result is zero.  Entire dividend is remainder.
 		//
 		return 0;
-
+	}
+/*
+	DWORD64* rgullNum = (DWORD64*)rgulNum;
+	DWORD64 quotient = _udiv128(rgullNum[0], rgulNum[2], sdlDen.int64, &rgullNum[0]);
+	assert(((SPLIT64*)&quotient)->u.Hi == 0);
+	return (DWORD32)quotient;
+*/
+	sdlNum.u.Lo = rgulNum[0];
 	// DivMod64by32 returns quotient in Lo, remainder in Hi.
 	//
 	sdlQuo.u.Lo = rgulNum[1];
@@ -1047,7 +1053,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 		rgulQuo[0] = pdecL->Lo32;
 		rgulQuo[1] = pdecL->Mid32;
 		rgulQuo[2] = pdecL->Hi32;
-		rgulRem[0] = Div96By32(rgulQuo, rgulDivisor[0]);
+		rgulRem[0] = Div96By32_x64(rgulQuo, rgulDivisor[0]);
 
 		for (;;) {
 			if (rgulRem[0] == 0) {
@@ -1126,27 +1132,10 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 		else
 			ulTmp = rgulDivisor[2];
 
-		iCurScale = 0;
-		if (!(ulTmp & 0xFFFF0000)) {
-			iCurScale += 16;
-			ulTmp <<= 16;
-		}
-		if (!(ulTmp & 0xFF000000)) {
-			iCurScale += 8;
-			ulTmp <<= 8;
-		}
-		if (!(ulTmp & 0xF0000000)) {
-			iCurScale += 4;
-			ulTmp <<= 4;
-		}
-		if (!(ulTmp & 0xC0000000)) {
-			iCurScale += 2;
-			ulTmp <<= 2;
-		}
-		if (!(ulTmp & 0x80000000)) {
-			iCurScale++;
-			ulTmp <<= 1;
-		}
+		DWORD msb;
+		BOOL found = BitScanReverse(&msb, ulTmp);
+		iCurScale = 31 - msb;
+		assert(found);
 
 		// Shift both dividend and divisor left by iCurScale.
 		// 
@@ -1171,8 +1160,8 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			sdlTmp.u.Hi = rgulRem[3];
 
 			rgulQuo[2] = 0;
-			rgulQuo[1] = Div96By64(&rgulRem[1], sdlDivisor);
-			rgulQuo[0] = Div96By64(rgulRem, sdlDivisor);
+			rgulQuo[1] = Div96By64_x64(&rgulRem[1], sdlDivisor);
+			rgulQuo[0] = Div96By64_x64(rgulRem, sdlDivisor);
 
 			for (;;) {
 				if ((rgulRem[0] | rgulRem[1]) == 0) {
@@ -1214,7 +1203,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 				rgulRem[2] = 0;  // rem is 64 bits, IncreaseScale uses 96
 				IncreaseScale(rgulRem, ulPwr);
-				ulTmp = Div96By64(rgulRem, sdlDivisor);
+				ulTmp = Div96By64_x64(rgulRem, sdlDivisor);
 				rgulQuo[0] += ulTmp;
 				if (rgulQuo[0] < ulTmp)
 					if (++rgulQuo[1] == 0)
@@ -1317,7 +1306,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			rgulQuoSave[1] = rgulQuo[1];
 			rgulQuoSave[2] = rgulQuo[2];
 
-			if (Div96By32(rgulQuoSave, 100000000) == 0) {
+			if (Div96By32_x64(rgulQuoSave, 100000000) == 0) {
 				rgulQuo[0] = rgulQuoSave[0];
 				rgulQuo[1] = rgulQuoSave[1];
 				rgulQuo[2] = rgulQuoSave[2];
@@ -1332,7 +1321,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			rgulQuoSave[1] = rgulQuo[1];
 			rgulQuoSave[2] = rgulQuo[2];
 
-			if (Div96By32(rgulQuoSave, 10000) == 0) {
+			if (Div96By32_x64(rgulQuoSave, 10000) == 0) {
 				rgulQuo[0] = rgulQuoSave[0];
 				rgulQuo[1] = rgulQuoSave[1];
 				rgulQuo[2] = rgulQuoSave[2];
@@ -1345,7 +1334,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			rgulQuoSave[1] = rgulQuo[1];
 			rgulQuoSave[2] = rgulQuo[2];
 
-			if (Div96By32(rgulQuoSave, 100) == 0) {
+			if (Div96By32_x64(rgulQuoSave, 100) == 0) {
 				rgulQuo[0] = rgulQuoSave[0];
 				rgulQuo[1] = rgulQuoSave[1];
 				rgulQuo[2] = rgulQuoSave[2];
@@ -1358,7 +1347,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			rgulQuoSave[1] = rgulQuo[1];
 			rgulQuoSave[2] = rgulQuo[2];
 
-			if (Div96By32(rgulQuoSave, 10) == 0) {
+			if (Div96By32_x64(rgulQuoSave, 10) == 0) {
 				rgulQuo[0] = rgulQuoSave[0];
 				rgulQuo[1] = rgulQuoSave[1];
 				rgulQuo[2] = rgulQuoSave[2];
