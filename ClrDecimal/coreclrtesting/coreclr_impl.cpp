@@ -939,8 +939,8 @@ RetDec:
 // VarDecDiv - Decimal Divide
 //
 //**********************************************************************
-#if 0
-STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
+
+STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 {
 	ULONG   rgulQuo[3];
 	ULONG   rgulQuoSave[3];
@@ -1283,7 +1283,6 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	pdecRes->sign = pdecL->sign ^ pdecR->sign;
 	return NOERROR;
 }
-#endif
 
 //**********************************************************************
 //
