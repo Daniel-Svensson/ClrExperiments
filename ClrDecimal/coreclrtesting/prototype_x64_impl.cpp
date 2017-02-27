@@ -198,7 +198,16 @@ int ScaleResult_x64(DWORD64 *rgullRes, int iHiRes, int iScale)
 
 			// Compute first quotient.
 			//
-			remainder = _udiv128_v2(&rgullRes[iHiRes], 0, ullPwr);
+			//if (rgullRes[iHiRes] < ullPwr)
+			//{
+			//	remainder = rgullRes[iHiRes];
+			//	rgullRes[iHiRes] = 0;
+			//}
+			//else
+			//{
+				remainder = _udiv128_v2(&rgullRes[iHiRes], 0, ullPwr);
+			//}
+			
 			iCur = iHiRes - 1;
 
 			if (iCur >= 0) {
@@ -732,13 +741,19 @@ static DECOVFL PowerOvfl[] = {
 *
 ***********************************************************************/
 
+
 ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
+#define IncreaseScale IncreaseScale_x64
+
+DECLSPEC_NOINLINE
 ULONG IncreaseScale_x64(ULONG *rgulNum, ULONG ulPwr)
 {
 	LIMITED_METHOD_CONTRACT;
 
+	DWORD64 *rgullNum = (DWORD64*)rgulNum;
 	SPLIT64   sdlTmp;
 
+	// Remarks: Replacing below with 64*64bit + 32*32 is a slowdown / perf regression
 	sdlTmp.int64 = UInt32x32To64(rgulNum[0], ulPwr);
 	rgulNum[0] = sdlTmp.u.Lo;
 	sdlTmp.int64 = UInt32x32To64(rgulNum[1], ulPwr) + sdlTmp.u.Hi;
@@ -865,54 +880,49 @@ HaveScale:
 *   None.
 *
 ***********************************************************************/
+#define Div128By96 Div128By96_x64
 ULONG Div128By96(ULONG *rgulNum, ULONG *rgulDen);
+
+DECLSPEC_NOINLINE
 ULONG Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 {
 	LIMITED_METHOD_CONTRACT;
 
+	DWORD64* const rgullNum = (DWORD64*)(&rgulNum[0]);
+	DWORD64* const rgullDen = (DWORD64*)(&rgulDen[0]);
+	DWORD64* const rgullNumMid64 = (DWORD64*)(&rgulNum[1]);
+	DWORD64* const rgullDenHi64 = (DWORD64*)(&rgulNum[1]);
+
 	SPLIT64 sdlQuo;
 	SPLIT64 sdlNum;
 	SPLIT64 sdlProd1;
-	SPLIT64 sdlProd2;
-
-	sdlNum.u.Lo = rgulNum[0];
-	sdlNum.u.Hi = rgulNum[1];
 
 	if (rgulNum[3] == 0 && rgulNum[2] < rgulDen[2])
+	// TODO: TEST
+	//if (rgulNum[3] == 0 && *rgullNumMid64 < *rgullDenHi64)
 		// Result is zero.  Entire dividend is remainder.
 		//
 		return 0;
 
 	// DivMod64by32 returns quotient in Lo, remainder in Hi.
 	//
-	sdlQuo.u.Lo = rgulNum[2];
-	sdlQuo.u.Hi = rgulNum[3];
-	sdlQuo.int64 = DivMod64by32(sdlQuo.int64, rgulDen[2]);
+	sdlQuo.int64 = DivMod64by32(rgullNum[1], rgulDen[2]);
 
 	// Compute full remainder, rem = dividend - (quo * divisor).
+	DWORD64 hi;
+	sdlProd1.int64 = _umul128(sdlQuo.u.Lo, rgullDen[0], &hi);
+	auto carry = _subborrow_u64(0, rgullNum[0], sdlProd1.int64, &sdlNum.int64);
+
+	// Since hi is at most 32bit since (quo * divisor) is (32bit * 64bit) => 96bit
+	carry = _subborrow_u32(carry, sdlQuo.u.Hi, (DWORD32)hi, (DWORD32*)&rgulNum[2]);// sdlQuo.Hi is remainder
+
+	// Propagate carries
 	//
-	sdlProd1.int64 = UInt32x32To64(sdlQuo.u.Lo, rgulDen[0]); // quo * lo divisor
-	sdlProd2.int64 = UInt32x32To64(sdlQuo.u.Lo, rgulDen[1]); // quo * mid divisor
-	sdlProd2.int64 += sdlProd1.u.Hi;
-	sdlProd1.u.Hi = sdlProd2.u.Lo;
-
-	sdlNum.int64 -= sdlProd1.int64;
-	rgulNum[2] = sdlQuo.u.Hi - sdlProd2.u.Hi; // sdlQuo.Hi is remainder
-
-											  // Propagate carries
-											  //
-	if (sdlNum.int64 > ~sdlProd1.int64) {
-		rgulNum[2]--;
-		if (rgulNum[2] >= ~sdlProd2.u.Hi)
-			goto NegRem;
-	}
-	else if (rgulNum[2] > ~sdlProd2.u.Hi) {
-	NegRem:
+	 if (carry) {
 		// Remainder went negative.  Add divisor back in until it's positive,
 		// a max of 2 times.
 		//
-		sdlProd1.u.Lo = rgulDen[0];
-		sdlProd1.u.Hi = rgulDen[1];
+		sdlProd1.int64 = rgullDen[0];
 
 		for (;;) {
 			sdlQuo.u.Lo--;
@@ -931,8 +941,7 @@ ULONG Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 		}
 	}
 
-	rgulNum[0] = sdlNum.u.Lo;
-	rgulNum[1] = sdlNum.u.Hi;
+	rgullNum[0] = sdlNum.int64;
 	return sdlQuo.u.Lo;
 }
 
@@ -957,6 +966,7 @@ ULONG Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 ***********************************************************************/
 
 //ULONG Div96By64(ULONG *rgulNum, SPLIT64 sdlDen); // decimal.cpp
+DECLSPEC_NOINLINE
 ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 {
 	LIMITED_METHOD_CONTRACT;
@@ -965,7 +975,11 @@ ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 	SPLIT64 sdlNum;
 	SPLIT64 sdlProd;
 
-	if (rgulNum[2] >= sdlDen.u.Hi) {
+	DWORD64* const rgullNum = (DWORD64*)&rgulNum[0];
+	DWORD64* const pHi64 = (DWORD64*)&rgulNum[1];
+	DWORD64* const pLo64 = (DWORD64*)&rgulNum[0];
+
+	if (*pHi64 >= sdlDen.int64) {
 		// Divide would overflow.  Assume a quotient of 2^32, and set
 		// up remainder accordingly.  Then jump to loop which reduces
 		// the quotient.
@@ -978,7 +992,7 @@ ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 
 	// Hardware divide won't overflow
 	//
-	if (rgulNum[2] == 0 && rgulNum[1] < sdlDen.u.Hi)
+	if (rgulNum[2] == 0 && *pLo64 < sdlDen.int64)
 	{
 		// Result is zero.  Entire dividend is remainder.
 		//
@@ -993,17 +1007,17 @@ ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 	sdlNum.u.Lo = rgulNum[0];
 	// DivMod64by32 returns quotient in Lo, remainder in Hi.
 	//
-	sdlQuo.u.Lo = rgulNum[1];
-	sdlQuo.u.Hi = rgulNum[2];
-	sdlQuo.int64 = DivMod64by32(sdlQuo.int64, sdlDen.u.Hi);
+	sdlQuo.int64 = DivMod64by32(*pHi64, sdlDen.u.Hi);
 	sdlNum.u.Hi = sdlQuo.u.Hi; // remainder
 
 							   // Compute full remainder, rem = dividend - (quo * divisor).
 							   //
 	sdlProd.int64 = UInt32x32To64(sdlQuo.u.Lo, sdlDen.u.Lo); // quo * lo divisor
-	sdlNum.int64 -= sdlProd.int64;
+	//sdlNum.int64 -= sdlProd.int64;
+	auto carry = _subborrow_u64(0, sdlNum.int64, sdlProd.int64, &sdlNum.int64);
 
-	if (sdlNum.int64 > ~sdlProd.int64) {
+	//if (sdlNum.int64 > ~sdlProd.int64) {
+	if (carry != 0) {
 	NegRem:
 		// Remainder went negative.  Add divisor back in until it's positive,
 		// a max of 2 times.
@@ -1014,8 +1028,7 @@ ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
 		} while (sdlNum.int64 >= sdlDen.int64);
 	}
 
-	rgulNum[0] = sdlNum.u.Lo;
-	rgulNum[1] = sdlNum.u.Hi;
+	rgullNum[0] = sdlNum.int64;
 	return sdlQuo.u.Lo;
 }
 
@@ -1032,6 +1045,12 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	SPLIT64 sdlDivisor;
 	int     iScale;
 	int     iCurScale;
+	
+	DWORD64* rgullRem = (DWORD64*)(&rgulRem[0]);
+	DWORD64* rgullDivisor = (DWORD64*)(&rgulDivisor[0]);
+	DWORD64* rgullQuoSave = (DWORD64*)(&rgulQuoSave[0]);
+	DWORD64* rgullQuo = (DWORD64*)(&rgulQuo[0]);
+
 	// not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl
 	// TODO: Determine if this it improves x64 impl or not
 	// for original code the perf diff is -1% to +3% (where later is in case 64bit / 64bit where 64bit*64it -> 64bit)
@@ -1040,8 +1059,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 	iScale = pdecL->scale - pdecR->scale;
 	fUnscale = FALSE;
-	rgulDivisor[0] = pdecR->Lo32;
-	rgulDivisor[1] = pdecR->Mid32;
+	rgullDivisor[0] = pdecR->Lo64;
 	rgulDivisor[2] = pdecR->Hi32;
 
 	if (rgulDivisor[1] == 0 && rgulDivisor[2] == 0) {
@@ -1050,8 +1068,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 		if (rgulDivisor[0] == 0)
 			return DISP_E_DIVBYZERO;
 
-		rgulQuo[0] = pdecL->Lo32;
-		rgulQuo[1] = pdecL->Mid32;
+		rgullQuo[0] = pdecL->Lo64;
 		rgulQuo[2] = pdecL->Hi32;
 		rgulRem[0] = Div96By32_x64(rgulQuo, rgulDivisor[0]);
 
@@ -1139,18 +1156,9 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 		// Shift both dividend and divisor left by iCurScale.
 		// 
-		sdlTmp.int64 = DECIMAL_LO64_GET(*pdecL) << iCurScale;
-		rgulRem[0] = sdlTmp.u.Lo;
-		rgulRem[1] = sdlTmp.u.Hi;
-		sdlTmp.u.Lo = pdecL->Mid32;
-		sdlTmp.u.Hi = pdecL->Hi32;
-		sdlTmp.int64 <<= iCurScale;
-		rgulRem[2] = sdlTmp.u.Hi;
-		rgulRem[3] = (pdecL->Hi32 >> (31 - iCurScale)) >> 1;
-
-		sdlDivisor.u.Lo = rgulDivisor[0];
-		sdlDivisor.u.Hi = rgulDivisor[1];
-		sdlDivisor.int64 <<= iCurScale;
+		rgullRem[0] = pdecL->Lo64 << iCurScale;
+		rgullRem[1] = ShiftLeft128(pdecL->Lo64, pdecL->Hi32, iCurScale);
+		sdlDivisor.int64 = rgullDivisor[0] << iCurScale;
 
 		if (rgulDivisor[2] == 0) {
 			// Have a 64-bit divisor in sdlDivisor.  The remainder
@@ -1219,8 +1227,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			sdlTmp.u.Lo = rgulDivisor[1];
 			sdlTmp.u.Hi = rgulDivisor[2];
 			sdlTmp.int64 <<= iCurScale;
-			rgulDivisor[0] = sdlDivisor.u.Lo;
-			rgulDivisor[1] = sdlDivisor.u.Hi;
+			rgullDivisor[0] = sdlDivisor.int64;
 			rgulDivisor[2] = sdlTmp.u.Hi;
 
 			// The remainder (currently 96 bits spread over 4 ULONGs) 

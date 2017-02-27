@@ -1299,6 +1299,7 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	pdecRes->Lo32 = rgulQuo[0];
 	pdecRes->scale = iScale;
 	pdecRes->sign = pdecL->sign ^ pdecR->sign;
+	pdecRes->wReserved = 0; // not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl 
 	return NOERROR;
 }
 
