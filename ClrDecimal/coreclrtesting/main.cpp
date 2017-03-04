@@ -16,10 +16,11 @@ using namespace std;
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
 #define TEST_64bit_with_scale_64bit_result
-#define TEST_96bit_with_scale_96bit_result_and_overflow
 #define TEST_64bit_with_0_scale_128bit_result
 #define TEST_64bit_with_scale_128bit_result
+#define TEST_96bit_with_scale_96bit_result_and_overflow
 #define TEST_96bit_with_scale_96bit_result_no_overflow
+#define TEST_Bitpatterns_with_all_scales
 
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
@@ -466,23 +467,27 @@ int main()
 	DECIMAL expected, actual;
 
 
+	/*
+	[0]x[9]  -- (0) 0 18446744073709551615 / 10^3  * (0) 0 18446251492500307960 / 10^6:
+ PRODUCT expected (0) 542115562 5349999624952008190 / 10^25 but got (0) 0 0 / 10^0
+	*/
 	//a.Hi32 = 1;
 	//a.Lo64 = 18446744073709551615;
 	//a.scale = 0;
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 1;
+	a.Hi32 = 4294967295;
 	a.Lo64 = 18446744073709551615;
-	a.scale = 20;
-	b.Hi32 = 1;
-	b.Lo64 = 18446744073709551615;
-	b.scale = 28;
+	a.scale = 1;
+	b.Hi32 = 2147483647;
+	b.Lo64 = 9223372034707292159;
+	b.scale = 3;
 	b.sign = 0;
 
 
-	VarDecMul(&a, &b, &expected);
-	VarDecMul_x64(&a, &b, &actual);
+	VarDecDiv_PALRT(&a, &b, &expected);
+	VarDecDiv_x64(&a, &b, &actual);
 	//VarDecMul_x64(&a, &b, &sum);
 
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
@@ -499,7 +504,7 @@ int main()
 	const int iterations = 2;
 	const int elements = 1000;
 #else
-	const int iterations = 3;
+	const int iterations = 2;
 	const int elements = 3000;
 #endif
 	const int bytes = 4;
@@ -522,7 +527,9 @@ int main()
 	run_benchmarks(iterations, elements, bytes, "coreclr-VarDecSub", "x64", VarDecSub_PALRT, VarDecSub_x64);
 #endif
 
+#ifdef TEST_Bitpatterns_with_all_scales
 	AdditionalTests(iterations);
+#endif
 
 	return 0;
 }
