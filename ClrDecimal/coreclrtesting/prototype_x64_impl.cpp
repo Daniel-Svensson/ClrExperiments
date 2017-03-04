@@ -863,7 +863,7 @@ void IncreaseScale64By64(DWORD64 *rgullNum, DWORD64 ulPwr)
 	rgullNum[1] = hi;
 }
 
-#define IncreaseScale IncreaseScale96By32
+#define IncreaseScale IncreaseScale96By64
 
 /***
 * SearchScale
@@ -884,16 +884,15 @@ void IncreaseScale64By64(DWORD64 *rgullNum, DWORD64 ulPwr)
 
 int SearchScale(ULONG ulResHi, ULONG ulResLo, int iScale); // coreclr_impl
 
-int SearchScale_Wrapper(const ULONG* rgulQuo, int iScale)
+int SearchScale32(const ULONG* rgulQuo, int iScale)
 {
 	return SearchScale(rgulQuo[2], rgulQuo[1], iScale);
 }
 
-#define SearchScale SearchScale_Wrapper
 // TODO: change to 19
-const int SEARCHSCALE_MAX_SCALE = 18;
+const int SEARCHSCALE_MAX_SCALE = 19;
 DECLSPEC_NOINLINE
-int SearchScale_x64(const ULONG* rgulQuo, int iScale)
+int SearchScale64(const ULONG* rgulQuo, int iScale)
 {
 	DWORD64 ulResHi = *(const DWORD64*)&rgulQuo[1];
 	ULONG ulResLo = rgulQuo[0];
@@ -1230,7 +1229,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 		for (;;) {
 			if (rgulRem[0] == 0) {
 				if (iScale < 0) {
-					iCurScale = min(19, -iScale);
+					iCurScale = min(9, -iScale);
 					goto HaveScale;
 				}
 				break;
@@ -1255,7 +1254,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			// is the largest value in rgulQuo[1] (when rgulQuo[2] == 4) that is 
 			// assured not to overflow.
 			// 
-			iCurScale = SearchScale(rgulQuo, iScale);
+			iCurScale = SearchScale32(rgulQuo, iScale);
 			if (iCurScale == 0) {
 				// No more scaling to be done, but remainder is non-zero.
 				// Round quotient.
@@ -1273,7 +1272,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				return DISP_E_OVERFLOW;
 
 		HaveScale:
-			iCurScale = min(iCurScale, 9);
 			ulPwr32 = rgulPower10[iCurScale];
 			iScale += iCurScale;
 
@@ -1361,7 +1359,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				// Remainder is non-zero.  Scale up quotient and remainder by 
 				// powers of 10 so we can compute more significant bits.
 				// 
-				iCurScale = SearchScale(rgulQuo, iScale);
+				iCurScale = SearchScale64(rgulQuo, iScale);
 				if (iCurScale == 0) {
 					// No more scaling to be done, but remainder is non-zero.
 					// Round quotient.
@@ -1386,14 +1384,9 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				// Reminder is at most 64bits, a single multiply is needed to IncreaseScale
 				// result is up to 128 bits
 				// TODO: Use this
-				// rgullRem[0] = _umul128(rgullRem[0], ulPwr64, &rgullRem[1]);
-				// DWORD64 ullTmp = Div128By64_x64(rgullRem, sdlDivisor.int64);
-				// Add96(rgulQuo, ullTmp);
-				
-				rgulRem[2] = 0;  // rem is 64 bits, IncreaseScale uses 96
-				IncreaseScale(rgulRem, ulPwr64);
-				ulTmp = Div96By64_x64(rgulRem, sdlDivisor);
-				Add96(rgulQuo, ulTmp);
+				 rgullRem[0] = _umul128(rgullRem[0], ulPwr64, &rgullRem[1]);
+				 DWORD64 tmp64 = Div128By64_x64(rgullRem, sdlDivisor.int64);
+				 Add96(rgulQuo, tmp64);
 			} // for (;;)
 		}
 		else {
@@ -1429,7 +1422,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				// Remainder is non-zero.  Scale up quotient and remainder by 
 				// powers of 10 so we can compute more significant bits.
 				// 
-				iCurScale = SearchScale(rgulQuo, iScale);
+				iCurScale = SearchScale32(rgulQuo, iScale);
 				if (iCurScale == 0) {
 					// No more scaling to be done, but remainder is non-zero.
 					// Round quotient.
@@ -1455,7 +1448,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					return DISP_E_OVERFLOW;
 
 			HaveScale96:
-				iCurScale = min(iCurScale, 9);
 				ulPwr32 = rgulPower10[iCurScale];
 				iScale += iCurScale;
 
