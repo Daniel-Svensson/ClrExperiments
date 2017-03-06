@@ -210,7 +210,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 }
 
 void run_benchmarks(int iterations, int elements, int bytes,
-	 const char *const baseline_name, const char *const func_name,
+	const char *const baseline_name, const char *const func_name,
 	HRESULT(*baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), HRESULT(*func)(const DECIMAL *, const DECIMAL *, DECIMAL *))
 {
 	std::vector<DECIMAL> numbers(elements);
@@ -454,11 +454,109 @@ void AdditionalTests(const int &iterations)
 
 }
 
+struct DECOVFL2
+{
+	DWORD64 Hi;
+	DWORD32 Lo;
+};
+
+static const DECOVFL2 PowerOvfl[] = {
+	{ ULLONG_MAX, ULONG_MAX }, // 
+	{ 1844674407370955161uI64, 2576980377u }, // 10^1 0,6
+	{ 184467440737095516uI64, 687194767u }, // 10^2 0,16
+	{ 18446744073709551uI64, 2645699854u }, // 10^3 0,616
+	{ 1844674407370955uI64, 694066715u }, // 10^4 0,1616
+	{ 184467440737095uI64, 2216890319u }, // 10^5 0,51616
+	{ 18446744073709uI64, 2369172679u }, // 10^6 0,551616
+	{ 1844674407370uI64, 4102387834u }, // 10^7 0,9551616
+	{ 184467440737uI64, 410238783u }, // 10^8 0,09551616
+	{ 18446744073uI64, 3047500985u }, // 10^9 0,709551616 
+	{ 1844674407uI64, 1593240287u }, // 10^10 0,3709551616
+	{ 184467440uI64, 3165801135u }, // 10^11 0,73709551616
+	{ 18446744uI64, 316580113u }, // 10^12 0,073709551616
+	{ 1844674uI64, 1749644929u }, // 10^13 0,4073709551616
+	{ 184467uI64, 1892951411u }, // 10^14 0,44073709551616
+	{ 18446uI64, 3195772248u }, // 10^15 0,744073709551616
+	{ 1844uI64, 2896557602u }, // 10^16 0,674407370955162
+	{ 184uI64, 2007642678u }, // 10^17 0,467440737095516
+	{ 18uI64, 1918751186u }, // 10^18 0,446744073709552
+	{ 1uI64, 3627848955u }, // 10^19 0,844674407370955
+};
+
+int SearchScale32(const ULONG* rgulQuo, int iScale);
+int SearchScale64(const ULONG(&rgulQuo)[4], int iScale);
+int SearchScale64_1(const ULONG(&rgulQuo)[4], int iScale);
+
+void CompareScaleResult()
+{
+	ULONG input[4];
+	DWORD64 *pHi64 = (DWORD64*)&input[1];
+	DWORD32 *pLo32 = (DWORD32*)&input[0];
+	std::vector<std::vector<int>> all_results(3);
+	std::vector<int(*)(ULONG*, int)> all_functions;
+	//all_functions[0] = (int(*)(ULONG*, int))SearchScale32;
+	all_functions.push_back( (int(*)(ULONG*, int))SearchScale64_1);
+	all_functions.push_back( (int(*)(ULONG*, int))SearchScale64 );
+	
+
+	for (int i = 1; i <= 19; ++i)
+	{
+		for (int hi = -1000; hi <= 1000; ++hi)
+		{
+			for (int lo = -100; lo <= 100; ++lo)
+			//for (int lo = 0; lo <= 0; ++lo)
+			{
+				*pHi64 = PowerOvfl[i].Hi + hi;
+				*pLo32 = PowerOvfl[i].Lo + lo;
+
+				//for (int scale = -10; scale <= 30; ++scale)
+				for (int scale = -DEC_SCALE_MAX; scale <= DEC_SCALE_MAX; ++scale)
+				{
+					//for (int func = 0; func < all_functions.size(); ++func)
+					const int func = 1;
+					{
+						auto &result = all_results[func];
+						auto funcion = all_functions[func];
+
+						auto expected = SearchScale64_1(input, scale);
+						auto res = SearchScale64(input, scale);
+						auto control = SearchScale32(input, scale);
+
+
+						if (min(res,9) != control)
+						{
+							cout << "FAILED control" << endl;
+							cin.get();
+							exit(-1);
+						}
+					
+						//cout << "Function " << func << " item " << i << " => " << res;
+						/*
+						if (func != 0)
+						{
+							bool ok = res == all_results[0].at(result.size() - 1);
+							//cout << (ok ? " OK" : " FAIL");
+							assert(ok);
+						}
+						*/
+						//cout << endl;
+					}
+				}
+			}
+		}
+	}
+}
+
 
 int main()
 {
 	// Use system formatting
 	setlocale(LC_ALL, "");
+	//cin.get();
+
+	//for(int i=0; i < 4; ++i)
+	//	CompareScaleResult();
+	//return 0;
 
 	DECIMAL a, b;
 	VarDecFromI4(32, &a);
@@ -516,7 +614,9 @@ int main()
 
 #ifdef TEST_DIV
 	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", "x64", VarDecDiv, VarDecDiv_x64);
+#ifndef NO_COMPARE
 	run_benchmarks(iterations, elements, bytes, "palrt-VarDecDiv", "x64", VarDecDiv_PALRT, VarDecDiv_x64);
+#endif // NO_COMPARE
 #endif
 
 #ifdef TEST_ADDSUB

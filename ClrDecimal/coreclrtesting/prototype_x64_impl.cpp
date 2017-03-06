@@ -882,20 +882,22 @@ void IncreaseScale64By64(DWORD64 *rgullNum, DWORD64 ulPwr)
 *
 ***********************************************************************/
 
-int SearchScale(ULONG ulResHi, ULONG ulResLo, int iScale); // coreclr_impl
+int SearchScale(ULONG ulResHi, ULONG ulResMid, ULONG ulResLo, int iScale); // coreclr_impl
 
 int SearchScale32(const ULONG* rgulQuo, int iScale)
 {
-	return SearchScale(rgulQuo[2], rgulQuo[1], iScale);
+	return SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
 }
 
 // TODO: change to 19
 const int SEARCHSCALE_MAX_SCALE = 19;
-DECLSPEC_NOINLINE
-int SearchScale64(const ULONG* rgulQuo, int iScale)
+//DECLSPEC_NOINLINE
+int SearchScale64_1(const ULONG (&rgulQuo)[4], int iScale)
 {
-	DWORD64 ulResHi = *(const DWORD64*)&rgulQuo[1];
-	ULONG ulResLo = rgulQuo[0];
+	const DWORD64* rgullQuo = (const DWORD64*)rgulQuo;
+	//DWORD64 ulResHi = *(const DWORD64*)&rgulQuo[1];
+	DWORD64 ulResHi = __shiftright128(rgullQuo[0], rgulQuo[2], 32);
+	ULONG ulResLo = (ULONG)rgullQuo[0];
 	int   iCurScale;
 
 	// Quick check to stop us from trying to scale any more.
@@ -916,7 +918,7 @@ int SearchScale64(const ULONG* rgulQuo, int iScale)
 
 		if (ulResHi == PowerOvfl[iCurScale].Hi) {
 		UpperEq:
-			if (ulResLo >= PowerOvfl[iCurScale].Lo)
+			if (ulResLo > PowerOvfl[iCurScale].Lo)
 				iCurScale--;
 			goto HaveScale;
 		}
@@ -949,8 +951,12 @@ int SearchScale64(const ULONG* rgulQuo, int iScale)
 		}
 	} while (max > min);
 
+	if (ulResHi == PowerOvfl[iCurScale].Hi)
+		goto UpperEq;
+
 	assert(iCurScale == SEARCHSCALE_MAX_SCALE || ulResHi >= PowerOvfl[iCurScale + 1].Hi);
 	assert(ulResHi < PowerOvfl[iCurScale].Hi);
+	// TODO: assert(ulResHi < PowerOvfl[iCurScale].Hi);
 HaveScale:
 
 	// iCurScale = largest power of 10 we can scale by without overflow, 
@@ -963,6 +969,88 @@ HaveScale:
 	return iCurScale;
 }
 
+//DECLSPEC_NOINLINE
+// Assumes input is not 0
+int SearchScale64(const ULONG (&rgulQuo)[4], int iScale)
+{
+	DWORD msb;
+	int iCurScale;
+	DWORD64 ulResHi;
+	//int expected = SearchScale64_1(rgulQuo, iScale);
+
+	auto hi32 = rgulQuo[2];
+	auto mid32 = rgulQuo[1];
+	// Quick check to stop us from trying to scale any more.
+	//
+	if (iScale >= DEC_SCALE_MAX || hi32 > OVFL_MAX_1_HI) {
+		iCurScale = 0;
+		goto HaveScale;
+	}
+
+	ulResHi = ((DWORD64)hi32 << 32) + mid32;
+	if (iScale > DEC_SCALE_MAX - SEARCHSCALE_MAX_SCALE) {
+		// We can't scale by 10^19 without exceeding the max scale factor.
+		// See if we can scale to the max.  If not, we'll fall into
+		// standard search for scale factor.
+		//
+		iCurScale = DEC_SCALE_MAX - iScale;	
+		if (ulResHi < PowerOvfl[iCurScale].Hi)
+			goto HaveScale;
+		if (ulResHi == PowerOvfl[iCurScale].Hi)
+			goto UpperEq;
+	}
+
+	// Multiply bit position by log10(2) to figure it's power of 10.
+	// We scale the log by 256.  log(2) = .30103, * 256 = 77.  Doing this 
+	// with a multiply saves a 96-byte lookup table.  The power returned
+	// is <= the power of the number, so we must add one power of 10
+	// to make it's integer part zero after dividing by 256.
+	// 
+	// Note: the result of this multiplication by an approximation of
+	// log10(2) have been exhaustively checked to verify it gives the 
+	// correct result.  (There were only 95 to check...)
+	// 
+	if (ulResHi != 0)
+	{
+		BitScanReverse64(&msb, ulResHi);
+		iCurScale = 63 - msb;
+
+		iCurScale = ((iCurScale * 77) >> 8) + 1;
+
+		if (ulResHi > PowerOvfl[iCurScale].Hi)
+			iCurScale--;
+		else if (ulResHi == PowerOvfl[iCurScale].Hi)
+		{
+		UpperEq:
+			if (rgulQuo[0] > PowerOvfl[iCurScale].Lo)
+				iCurScale--;
+		}
+	}
+	else
+	{
+		iCurScale = SEARCHSCALE_MAX_SCALE;
+	}
+	
+HaveScale:
+
+	//if (iCurScale + iScale > DEC_SCALE_MAX) {
+	//	iCurScale = DEC_SCALE_MAX - iScale;
+	//}
+
+	// iCurScale = largest power of 10 we can scale by without overflow, 
+	// iCurScale < SEARCHSCALE_MAX.  See if this is enough to make scale factor 
+	// positive if it isn't already.
+	// 
+	if (iCurScale + iScale < 0)
+	{
+		if (iCurScale < 9)
+			iCurScale = -1;
+		else
+			iCurScale = 9;
+	}
+
+	return iCurScale;
+}
 
 /***
 * Div128By96
@@ -1277,19 +1365,29 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 			if (IncreaseScale96By32(rgulQuo, ulPwr32) != 0)
 				return DISP_E_OVERFLOW;
+			sdlTmp.int64 = DivMod64by32(UInt32x32To64(rgulRem[0], ulPwr32), rgulDivisor[0]);
+			rgulRem[0] = sdlTmp.u.Hi;
+
+			Add96(rgulQuo, sdlTmp.u.Lo);
 			/*
+			ulPwr64 = rgulPower10_64[iCurScale];
+			iScale += iCurScale;
+
+			if (IncreaseScale96By64(rgulQuo, ulPwr64) != 0)
+				return DISP_E_OVERFLOW;
+
 			if (iCurScale <= 9)
-			{*/
-				sdlTmp.int64 = DivMod64by32(UInt32x32To64(rgulRem[0], ulPwr32), rgulDivisor[0]);
+			{
+				sdlTmp.int64 = DivMod64by32(UInt32x32To64(rgulRem[0], (DWORD32)ulPwr64), rgulDivisor[0]);
 				rgulRem[0] = sdlTmp.u.Hi;
 
 				Add96(rgulQuo, sdlTmp.u.Lo);
-			/*}
+			}
 			else // (iCurScale > 9)  / IncreaseScale for remainder can give 96bit result
 			{
 				DWORD64 hi;
 				rgullRem[0] = _umul128(rgulRem[0], ulPwr64, &hi);
-				//rgullRem[1] = hi; // Actually only need 32bit
+				// Check for <= 64 bit or 96bit  results
 				if (hi == 0)
 				{
 					sdlTmp.int64 = DivMod64by32(rgullRem[0], rgulDivisor[0]);
@@ -1298,7 +1396,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				}
 				else
 				{
-					rgulRem[2] = (DWORD32)hi; // Actually only need 32bit
+					rgullRem[1] = hi; // Max 32bit in hi result, but wr can set all 64
 					auto rem = Div96By32_x64(rgulRem, rgulDivisor[0]);
 					// pwr * remainder
 					Add96(rgulQuo, rgullRem[0]);
