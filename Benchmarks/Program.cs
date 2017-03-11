@@ -2,15 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Horology;
-using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
+using BenchmarkDotNet.Configs;
 
 namespace Benchmarks
 {
@@ -51,12 +47,13 @@ namespace Benchmarks
                 Console.Read();
             }
 
-            var s = new BenchmarkSwitcher(benchmarks);
+            /*var s = new BenchmarkSwitcher(benchmarks);
             s.RunAll();
             //s.Run(args);
-            /*
-            BenchmarkRunner.Run<SimpleMathTests_Decimal>();
-            BenchmarkRunner.Run<SimpleMathTests_Float>();
+            */
+            
+            BenchmarkRunner.Run<SimpleMathTests_Decimal>(DefaultConfig.Instance.KeepBenchmarkFiles());
+            /*BenchmarkRunner.Run<SimpleMathTests_Float>();
 
             BenchmarkRunner.Run<SumArrayFloat>();
             BenchmarkRunner.Run<SumArrayDouble>();

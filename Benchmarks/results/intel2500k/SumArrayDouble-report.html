@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>SumArrayDouble</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.10.1, OS=Microsoft Windows NT 6.2.9200.0
+Processor=Intel(R) Core(TM) i5-2500K CPU 3.30GHz, ProcessorCount=4
+Frequency=14318180 Hz, Resolution=69.8413 ns, Timer=HPET
+  [Host]     : Clr 4.0.30319.42000, 64bit RyuJIT-v4.6.1586.0
+  Job-QTIBDN : Clr 4.0.30319.42000, 64bit LegacyJIT/clrjit-v4.6.1586.0;compatjit-v4.6.1586.0
+  Job-IDHBCW : Clr 4.0.30319.42000, 32bit LegacyJIT-v4.6.1586.0
+  Job-FPOZGJ : Clr 4.0.30319.42000, 64bit RyuJIT-v4.6.1586.0
+</code></pre>
+<pre><code>Runtime=Clr  IterationTime=1.0000 s  LaunchCount=1  
+TargetCount=3  WarmupCount=3  
+</code></pre>
+
+<table>
+<thead><tr><th>                      Method</th><th>Jit</th><th>Platform</th><th>   Mean</th><th>StdDev</th><th>Scaled</th><th>Scaled-StdDev</th><th>Gen 0</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>              ForLoopSumImpl</td><td>LegacyJit</td><td>X64</td><td>71.6351 us</td><td>0.1791 us</td><td>1.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>                     LinqSum</td><td>LegacyJit</td><td>X64</td><td>502.4377 us</td><td>0.0430 us</td><td>7.01</td><td>   0.01</td><td>  -</td><td>32 B</td>
+</tr><tr><td> Generic_Sum_Scalar_Proposal</td><td>LegacyJit</td><td>X64</td><td>238.6133 us</td><td>0.4476 us</td><td>3.33</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>Generic_Sum_ScalarOfT_NoCast</td><td>LegacyJit</td><td>X64</td><td>358.5901 us</td><td>1.2485 us</td><td>5.01</td><td>   0.02</td><td>  -</td><td>0 B</td>
+</tr><tr><td>Generic_Sum_ScalarOfT_ExplicitCast</td><td>LegacyJit</td><td>X64</td><td>386.7098 us</td><td>0.7336 us</td><td>5.40</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>     Generic_Sum_Base_Member</td><td>LegacyJit</td><td>X64</td><td>239.1244 us</td><td>0.2226 us</td><td>3.34</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>       Generic_Sum_IL_Method</td><td>LegacyJit</td><td>X64</td><td>95.2413 us</td><td>0.0077 us</td><td>1.33</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>         Generic_Sum_Dynamic</td><td>LegacyJit</td><td>X64</td><td>1,815.0655 us</td><td>5.9507 us</td><td>25.34</td><td>   0.09</td><td>1458.3333</td><td>4.8 MB</td>
+</tr><tr><td>    Generic_Sum_ScalarHelper</td><td>LegacyJit</td><td>X64</td><td>95.4806 us</td><td>0.3700 us</td><td>1.33</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>     Generic_Sum_Base_Static</td><td>LegacyJit</td><td>X64</td><td>238.0531 us</td><td>0.0149 us</td><td>3.32</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>               VectorSummary</td><td>LegacyJit</td><td>X64</td><td>805.8134 us</td><td>0.1696 us</td><td>11.25</td><td>   0.02</td><td>  -</td><td>0 B</td>
+</tr><tr><td>              ForLoopSumImpl</td><td>LegacyJit</td><td>X86</td><td>71.5934 us</td><td>0.1431 us</td><td>1.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>                     LinqSum</td><td>LegacyJit</td><td>X86</td><td>460.7058 us</td><td>0.7320 us</td><td>6.44</td><td>   0.01</td><td>  -</td><td>22 B</td>
+</tr><tr><td> Generic_Sum_Scalar_Proposal</td><td>LegacyJit</td><td>X86</td><td>238.6205 us</td><td>0.5538 us</td><td>3.33</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>Generic_Sum_ScalarOfT_NoCast</td><td>LegacyJit</td><td>X86</td><td>238.1941 us</td><td>0.0368 us</td><td>3.33</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>Generic_Sum_ScalarOfT_ExplicitCast</td><td>LegacyJit</td><td>X86</td><td>238.1855 us</td><td>0.1127 us</td><td>3.33</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>     Generic_Sum_Base_Member</td><td>LegacyJit</td><td>X86</td><td>238.8232 us</td><td>0.4737 us</td><td>3.34</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>       Generic_Sum_IL_Method</td><td>LegacyJit</td><td>X86</td><td>71.8042 us</td><td>0.0672 us</td><td>1.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>         Generic_Sum_Dynamic</td><td>LegacyJit</td><td>X86</td><td>1,629.8892 us</td><td>3.8233 us</td><td>22.77</td><td>   0.06</td><td>955.0439</td><td>3.2 MB</td>
+</tr><tr><td>    Generic_Sum_ScalarHelper</td><td>LegacyJit</td><td>X86</td><td>71.4405 us</td><td>0.0122 us</td><td>1.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>     Generic_Sum_Base_Static</td><td>LegacyJit</td><td>X86</td><td>238.2840 us</td><td>0.0985 us</td><td>3.33</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>               VectorSummary</td><td>LegacyJit</td><td>X86</td><td>1,179.8006 us</td><td>0.2608 us</td><td>16.48</td><td>   0.03</td><td>  -</td><td>0 B</td>
+</tr><tr><td>              ForLoopSumImpl</td><td>RyuJit</td><td>X64</td><td>71.5141 us</td><td>0.0333 us</td><td>1.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>                     LinqSum</td><td>RyuJit</td><td>X64</td><td>500.3988 us</td><td>0.1912 us</td><td>7.00</td><td>   0.00</td><td>  -</td><td>32 B</td>
+</tr><tr><td> Generic_Sum_Scalar_Proposal</td><td>RyuJit</td><td>X64</td><td>214.6427 us</td><td>0.3543 us</td><td>3.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>Generic_Sum_ScalarOfT_NoCast</td><td>RyuJit</td><td>X64</td><td>457.4098 us</td><td>0.0370 us</td><td>6.40</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>Generic_Sum_ScalarOfT_ExplicitCast</td><td>RyuJit</td><td>X64</td><td>461.7314 us</td><td>0.3836 us</td><td>6.46</td><td>   0.01</td><td>  -</td><td>0 B</td>
+</tr><tr><td>     Generic_Sum_Base_Member</td><td>RyuJit</td><td>X64</td><td>238.6889 us</td><td>0.3592 us</td><td>3.34</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>       Generic_Sum_IL_Method</td><td>RyuJit</td><td>X64</td><td>71.5971 us</td><td>0.1630 us</td><td>1.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>         Generic_Sum_Dynamic</td><td>RyuJit</td><td>X64</td><td>1,459.7833 us</td><td>3.9505 us</td><td>20.41</td><td>   0.05</td><td>1472.3837</td><td>4.8 MB</td>
+</tr><tr><td>    Generic_Sum_ScalarHelper</td><td>RyuJit</td><td>X64</td><td>71.4854 us</td><td>0.0101 us</td><td>1.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>     Generic_Sum_Base_Static</td><td>RyuJit</td><td>X64</td><td>214.2118 us</td><td>0.0178 us</td><td>3.00</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr><tr><td>               VectorSummary</td><td>RyuJit</td><td>X64</td><td>37.6499 us</td><td>0.0067 us</td><td>0.53</td><td>   0.00</td><td>  -</td><td>0 B</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -9,17 +9,17 @@
 #include <stdlib.h>  
 
 using namespace std;
-//#define NO_COMPARE
+#define NO_COMPARE
 //#define TEST_MULTIPLY
 //#define TEST_ADDSUB
 #define TEST_DIV
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
-#define TEST_64bit_with_scale_64bit_result
-#define TEST_64bit_with_0_scale_128bit_result
-#define TEST_64bit_with_scale_128bit_result
-#define TEST_96bit_with_scale_96bit_result_and_overflow
-#define TEST_96bit_with_scale_96bit_result_no_overflow
+//#define TEST_64bit_with_scale_64bit_result
+//#define TEST_64bit_with_0_scale_128bit_result
+//#define TEST_64bit_with_scale_128bit_result
+//#define TEST_96bit_with_scale_96bit_result_and_overflow
+//#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
 void run_benchmarks(int iterations, int elements, int bytes,
@@ -486,10 +486,12 @@ static const DECOVFL2 PowerOvfl[] = {
 int SearchScale32(const ULONG* rgulQuo, int iScale);
 int SearchScale64(const ULONG(&rgulQuo)[4], int iScale);
 int SearchScale64_1(const ULONG(&rgulQuo)[4], int iScale);
+ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
 
 void CompareScaleResult()
 {
 	ULONG input[4];
+	ULONG copy[4];
 	DWORD64 *pHi64 = (DWORD64*)&input[1];
 	DWORD32 *pLo32 = (DWORD32*)&input[0];
 	std::vector<std::vector<int>> all_results(3);
@@ -499,7 +501,7 @@ void CompareScaleResult()
 	all_functions.push_back( (int(*)(ULONG*, int))SearchScale64 );
 	
 
-	for (int i = 1; i <= 19; ++i)
+	for (int i = 0; i <= 19; ++i)
 	{
 		for (int hi = -1000; hi <= 1000; ++hi)
 		{
@@ -523,8 +525,32 @@ void CompareScaleResult()
 						auto control = SearchScale32(input, scale);
 
 
-						if (min(res,9) != control)
+						if (res != control)
 						{
+							// New function can detect overflow faster
+							if (control == 9)
+							{
+								memcpy(copy, input, sizeof(copy));
+								copy[3] = 0;
+								IncreaseScale(copy, 1000000000U); // 10^9
+								int extraScale = 9;
+								control = SearchScale32(copy, scale + extraScale);
+								if (control == 9)
+								{
+									IncreaseScale(copy, 10); // 10^9
+									extraScale += 1;
+									control = SearchScale32(copy, scale + extraScale);
+								}
+
+								// res != -1
+								if ((res == -1 && control == -1) || (res == control + extraScale)) //  || (control + extraScale == res)
+									continue;
+								else
+								{
+									cout << "FAILED extended validation" << endl;
+								}
+							}
+
 							cout << "FAILED control" << endl;
 							cin.get();
 							exit(-1);
@@ -554,9 +580,9 @@ int main()
 	setlocale(LC_ALL, "");
 	//cin.get();
 
-	//for(int i=0; i < 4; ++i)
-	//	CompareScaleResult();
-	//return 0;
+	/*for(int i=0; i < 2; ++i)
+		CompareScaleResult();
+	return 0;*/
 
 	DECIMAL a, b;
 	VarDecFromI4(32, &a);
@@ -575,12 +601,12 @@ int main()
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 4294967295;
-	a.Lo64 = 18446744073709551615;
-	a.scale = 1;
-	b.Hi32 = 2147483647;
-	b.Lo64 = 9223372034707292159;
-	b.scale = 3;
+	a.Hi32 = 0;
+	a.Lo64 = 4294967295;
+	a.scale = 24;
+	b.Hi32 = 0;
+	b.Lo64 = 134217727;
+	b.scale = 24;
 	b.sign = 0;
 
 
@@ -602,8 +628,8 @@ int main()
 	const int iterations = 2;
 	const int elements = 1000;
 #else
-	const int iterations = 2;
-	const int elements = 3000;
+	const int iterations = 3;
+	const int elements = 4000;
 #endif
 	const int bytes = 4;
 

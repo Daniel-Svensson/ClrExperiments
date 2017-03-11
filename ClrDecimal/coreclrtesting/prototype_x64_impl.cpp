@@ -38,48 +38,30 @@ static const DWORD64 rgulPower10_64[POWER10_MAX64 + 1] = {
 10000000000000000000,
 };
 
-// Divides a 64bit ulong by 64bit, returns 64bit remainder
-// This translates to a single div instruction on x64 platforms
-static DWORD64 FullDiv64By64(DWORD64 *pdlNum, DWORD64 ulDen)
-{
-	auto mod = *pdlNum % ulDen;
-	auto res = *pdlNum / ulDen;
-
-	*pdlNum = res;
-	return mod;
-}
-
-static inline DWORD32 FullDiv64By32(DWORD64 pdlNum, DWORD32 ulDen, DWORD64* pRemainder)
+// Divides a 64bit ulong by 64bit, returns 64bit quotient and remainder
+// This results in a single div instruction on x64 platforms
+static inline DWORD64 DivMod64By64_x64(DWORD64 pdlNum, DWORD64 ulDen, DWORD64* pRemainder)
 {
 	auto mod = pdlNum % ulDen;
 	auto res = pdlNum / ulDen;
 
 	*pRemainder = mod;
-	return (DWORD32)res;
+	return res;
 }
-
-// Divides a 64bit ulong by 32bit, returns 32bit remainder
-// This translates to a single div instruction on x64 platforms
-static inline DWORD32 FullDiv64By32_x64(DWORD64* pdlNum, DWORD32 ulDen)
-{
-	auto mod = DWORD32(*pdlNum % ulDen);
-	auto res = *pdlNum / ulDen;
-
-	*pdlNum = res;
-	return mod;
-}
-
 
 // Divides a 96bit ulong by 32bit, returns 32bit remainder
+// quotient is stored inplace using all 96bits
 static DWORD32 Div96By32_x64(ULONG *pdlNum, DWORD32 ulDen)
 {
 	// Upper 64bit
-	DWORD64* hiPtr = (DWORD64*)(pdlNum + 1);
-	DWORD64 lopart = (FullDiv64By64(hiPtr, ulDen) << 32) + *pdlNum;
-	DWORD32 remainder = FullDiv64By32_x64(&lopart, ulDen);
-	*pdlNum = (DWORD32)lopart;
+	DWORD64 *const hi64 = (DWORD64*)(pdlNum + 1);
+	ULONG *const lo32 = pdlNum;
+	DWORD64 remainder;	
 
-	return remainder;
+	*hi64 = DivMod64By64_x64(*hi64, ulDen, &remainder);
+	*lo32 = DivMod64By64_x64((remainder << 32) + *lo32, ulDen, &remainder);
+
+	return (DWORD32)remainder;
 }
 
 /***
@@ -310,7 +292,7 @@ STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 
 				// iScale <= 19 = POWER10_MAX64
 				ullPwr = rgulPower10_64[iScale];
-				ullRem = FullDiv64By64(&lo, ullPwr);
+				lo = DivMod64By64_x64(lo, ullPwr, &ullRem);
 
 				// Round result.  See if remainder >= 1/2 of divisor.
 				// Divisor is a power of 10, so it is always even.
@@ -496,7 +478,7 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 
 				// Dibvide with 10, "carry 1" from overflow
 				DWORD64 remainder;
-				decRes.Hi32 = FullDiv64By32((DWORD64)decRes.Hi32 + (1Ui64 << 32), 10, &remainder);
+				decRes.Hi32 = DivMod64By64_x64((DWORD64)decRes.Hi32 + (1Ui64 << 32), 10, &remainder);
 				//decRes.Lo64 = _udiv128(decRes.Lo64, remainder, 10, &remainder);
 				remainder = _udiv128_v2(&decRes.Lo64, remainder, 10);
 
@@ -699,31 +681,6 @@ RetDec:
 // ********************** DIVIDE **************************************
 // Divides a 96bit ulong by 32bit, returns 32bit remainder
 
-
-struct DECOVFL
-{
-	ULONG Hi;
-	ULONG Mid;
-};
-
-static const DECOVFL PowerOvfl_OLD[] = {
-	// This is a table of the largest values that can be in the upper two
-	// ULONGs of a 96-bit number that will not overflow when multiplied
-	// by a given power.  For the upper word, this is a table of 
-	// 2^32 / 10^n for 1 <= n <= 9.  For the lower word, this is the
-	// remaining fraction part * 2^32.  2^32 = 4294967296.
-	//
-	{ 429496729UL, 2576980377UL }, // 10^1 remainder 0.6
-	{ 42949672UL,  4123168604UL }, // 10^2 remainder 0.16
-	{ 4294967UL,   1271310319UL }, // 10^3 remainder 0.616
-	{ 429496UL,    3133608139UL }, // 10^4 remainder 0.1616
-	{ 42949UL,     2890341191UL }, // 10^5 remainder 0.51616
-	{ 4294UL,      4154504685UL }, // 10^6 remainder 0.551616
-	{ 429UL,       2133437386UL }, // 10^7 remainder 0.9551616
-	{ 42UL,        4078814305UL }, // 10^8 remainder 0.09991616
-								   //  { 4UL,         1266874889UL }, // 10^9 remainder 0.709551616
-};
-
 struct DECOVFL2
 {
 	DWORD64 Hi;
@@ -753,14 +710,8 @@ static const DECOVFL2 PowerOvfl[] = {
 { 1uI64, 3627848955u }, // 10^19 0,844674407370955
 };
 
-#define OVFL_MAX_9_HI   4
-#define OVFL_MAX_9_MID  1266874889
 
-#define OVFL_MAX_5_HI   42949
-#define OVFL_MAX_5_MID  2890341191
-
-#define OVFL_MAX_1_HI   429496729
-
+const DWORD32 OVFL_MAX32_1_HI = 429496729;
 const DWORD64 OVFL_MAX64_1_HI = 1844674407370955161uI64;
 const DWORD64 OVFL_MAX64_10_HI = 1844674407uI64;
 const DWORD64 OVFL_MAX64_19_HI = 1uI64;
@@ -809,7 +760,22 @@ ULONG IncreaseScale96By32(ULONG *rgulNum, ULONG ulPwr)
 	return sdlTmp.u.Hi;
 }
 
+DECLSPEC_NOINLINE
+ULONG IncreaseScale96By32_v2(ULONG *rgulNum, ULONG ulPwr)
+{
+	SPLIT64   sdlTmp;
+	DWORD64 *rgullNum = (DWORD64*)rgulNum;
 
+	DWORD64 hi;
+	rgullNum[0] = _umul128(rgullNum[0], ulPwr, &hi);
+	sdlTmp.int64 = UInt32x32To64(rgulNum[2], ulPwr) + hi;
+	rgulNum[2] = sdlTmp.u.Lo;
+
+	return sdlTmp.u.Hi;
+}
+
+// Add a 64bit number to a 96bit number => 160 bit
+// updates 96bit in place and return the overflow (up to 64 bit)
 DECLSPEC_NOINLINE
 DWORD64 IncreaseScale96By64(ULONG *rgulNum, DWORD64 ulPwr)
 {
@@ -819,16 +785,21 @@ DWORD64 IncreaseScale96By64(ULONG *rgulNum, DWORD64 ulPwr)
 	SPLIT64   sdlTmp;
 
 	DWORD64 hi;
-	SPLIT64 dummy;
+	DWORD64 overflow;
 	rgullNum[0] = _umul128(rgullNum[0], ulPwr, &hi);
-	sdlTmp.int64 = _umul128(rgulNum[2], ulPwr, &dummy.int64);
-	sdlTmp.int64 += hi;
-	assert(sdlTmp.int64 >= hi);
-	// TODO:, get case where dummy != 0
+	sdlTmp.int64 = _umul128(rgulNum[2], ulPwr, &overflow);
+
+	// We will never overflow past 160 bits (32bit stored in overflow)
+	auto carry = _addcarry_u64(0, sdlTmp.int64, hi, &sdlTmp.int64);
+	_addcarry_u64(carry, overflow, 0, &overflow);
 
 	rgulNum[2] = sdlTmp.u.Lo;
-	assert(sdlTmp.int64 + dummy.u.Lo >= dummy.u.Lo);
-	return sdlTmp.u.Hi + dummy.u.Lo;
+
+	// shift [overflow, sdlTemp] 32bit right and return lower 64 bits
+	// we should return bits [160..97] of our 192 bit result 
+	// use lo32 bits of overflow [192..129] by 32 bit left shift
+	// use hi32 bits of sdlTmp   [128..97] by 32 bit left shift
+	return (overflow << 32) + sdlTmp.u.Hi;
 }
 
 // Add a 64bit number to 128bit 
@@ -839,7 +810,6 @@ DWORD64 IncreaseScale128_x64(ULONG *rgulNum, DWORD64 ulPwr)
 	LIMITED_METHOD_CONTRACT;
 
 	DWORD64 *rgullNum = (DWORD64*)rgulNum;
-	SPLIT64   sdlTmp;
 
 	DWORD64 hi;
 	DWORD64 overflow;
@@ -976,13 +946,12 @@ int SearchScale64(const ULONG (&rgulQuo)[4], int iScale)
 	DWORD msb;
 	int iCurScale;
 	DWORD64 ulResHi;
-	//int expected = SearchScale64_1(rgulQuo, iScale);
 
 	auto hi32 = rgulQuo[2];
 	auto mid32 = rgulQuo[1];
 	// Quick check to stop us from trying to scale any more.
 	//
-	if (iScale >= DEC_SCALE_MAX || hi32 > OVFL_MAX_1_HI) {
+	if (iScale >= DEC_SCALE_MAX || hi32 > OVFL_MAX32_1_HI) {
 		iCurScale = 0;
 		goto HaveScale;
 	}
@@ -1041,12 +1010,9 @@ HaveScale:
 	// iCurScale < SEARCHSCALE_MAX.  See if this is enough to make scale factor 
 	// positive if it isn't already.
 	// 
-	if (iCurScale + iScale < 0)
+	if (iCurScale + iScale < 0 && iCurScale != SEARCHSCALE_MAX_SCALE)
 	{
-		if (iCurScale < 9)
 			iCurScale = -1;
-		else
-			iCurScale = 9;
 	}
 
 	return iCurScale;
@@ -1241,7 +1207,6 @@ DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 		sdlNum = rgullNum[1];
 		quotient = 0;
 
-	NegRem:
 		// Remainder went negative.  Add divisor back in until it's positive,
 		// a max of 2 times.
 		//
@@ -1317,7 +1282,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 		for (;;) {
 			if (rgulRem[0] == 0) {
 				if (iScale < 0) {
-					iCurScale = min(9, -iScale);
+					iCurScale = min(POWER10_MAX64, -iScale);
 					goto HaveScale;
 				}
 				break;
@@ -1330,7 +1295,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			// remainder, so now we should increase the scale if possible to 
 			// include more quotient bits.
 			// 
-			// If it doesn't cause overflow, we'll loop scaling by 10^9 and 
+			// If it doesn't cause overflow, we'll loop scaling by 10^19 and 
 			// computing more quotient bits as long as the remainder stays 
 			// non-zero.  If scaling by that much would cause overflow, we'll 
 			// drop out of the loop and scale by as much as we can.
@@ -1342,7 +1307,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			// is the largest value in rgulQuo[1] (when rgulQuo[2] == 4) that is 
 			// assured not to overflow.
 			// 
-			iCurScale = SearchScale32(rgulQuo, iScale);
+			iCurScale = SearchScale64(rgulQuo, iScale);
 			if (iCurScale == 0) {
 				// No more scaling to be done, but remainder is non-zero.
 				// Round quotient.
@@ -1360,50 +1325,30 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				return DISP_E_OVERFLOW;
 
 		HaveScale:
-			ulPwr32 = rgulPower10[iCurScale];
-			iScale += iCurScale;
-
-			if (IncreaseScale96By32(rgulQuo, ulPwr32) != 0)
-				return DISP_E_OVERFLOW;
-			sdlTmp.int64 = DivMod64by32(UInt32x32To64(rgulRem[0], ulPwr32), rgulDivisor[0]);
-			rgulRem[0] = sdlTmp.u.Hi;
-
-			Add96(rgulQuo, sdlTmp.u.Lo);
-			/*
+	
 			ulPwr64 = rgulPower10_64[iCurScale];
 			iScale += iCurScale;
 
 			if (IncreaseScale96By64(rgulQuo, ulPwr64) != 0)
 				return DISP_E_OVERFLOW;
 
+			// TODO: consider removing this is statement for simpler code
+			// perf improvement of it is <1% and could be only noise
+			// if _udiv128 could be inlined then we will definitly get better perf without it
 			if (iCurScale <= 9)
 			{
-				sdlTmp.int64 = DivMod64by32(UInt32x32To64(rgulRem[0], (DWORD32)ulPwr64), rgulDivisor[0]);
-				rgulRem[0] = sdlTmp.u.Hi;
-
-				Add96(rgulQuo, sdlTmp.u.Lo);
+				sdlTmp.int64 = DivMod64By64_x64(UInt32x32To64(rgulRem[0], ulPwr64), rgulDivisor[0], &rgullRem[0]);
+				Add96(rgulQuo, sdlTmp.int64);
 			}
 			else // (iCurScale > 9)  / IncreaseScale for remainder can give 96bit result
 			{
 				DWORD64 hi;
 				rgullRem[0] = _umul128(rgulRem[0], ulPwr64, &hi);
-				// Check for <= 64 bit or 96bit  results
-				if (hi == 0)
-				{
-					sdlTmp.int64 = DivMod64by32(rgullRem[0], rgulDivisor[0]);
-					rgulRem[0] = sdlTmp.u.Hi;
-					Add96(rgulQuo, sdlTmp.u.Lo);
-				}
-				else
-				{
-					rgullRem[1] = hi; // Max 32bit in hi result, but wr can set all 64
-					auto rem = Div96By32_x64(rgulRem, rgulDivisor[0]);
-					// pwr * remainder
-					Add96(rgulQuo, rgullRem[0]);
-					rgullRem[0] = rem;
-				}
+				// upper bits of result is always less than divisor since
+				// rem < divisor && ulPwr64 < 2^64 => (res*ulPwr64) >> 64 < rgulDivisor
+				DWORD64 q = _udiv128(rgullRem[0], hi, rgulDivisor[0], &rgullRem[0]);
+				Add96(rgulQuo, q);
 			}
-			*/
 		} // for (;;)
 	}
 	else {

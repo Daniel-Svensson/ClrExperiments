@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Horology;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Environments;
 
 namespace Benchmarks
 {
@@ -11,8 +11,14 @@ namespace Benchmarks
     {
         public BenchmarkConfig()
         {
+
+
+#if CORE
+            AddJobs(new[] { Job.RyuJitX64});
+            Console.WriteLine("Changed Runtime to Core");
+#else
             AddJobs(new[] { Job.RyuJitX64, Job.LegacyJitX86, Job.LegacyJitX64 });
-            //Add(StatisticColumn.Max);
+#endif
         }
 
         private void AddJobs(Job[] jobs)
@@ -23,14 +29,15 @@ namespace Benchmarks
                     .WithIterationTime(TimeInterval.FromMilliseconds(IterationTime))
                     .WithWarmupCount(3)
                     .WithTargetCount(Iterations)
-                    //.With(JobMode.Throughput)
+#if CORE
+                    .With(Runtime.Core)
+#endif
                     );
+                
             }
         }
 
         public const int IterationTime = 1000;
         public const int Iterations = 3;
-        public const NBench.RunMode RunMode = NBench.RunMode.Throughput;
-        public const NBench.TestMode TestMode = NBench.TestMode.Measurement;
     }
 }
