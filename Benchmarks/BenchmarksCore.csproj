@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>exe</OutputType>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <!-- <EnableDefaultCompileItems>false</EnableDefaultCompileItems> -->
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Properties\AssemblyInfo.cs" />
+    <Compile Include="..\System.Numerics.Scalar\*.cs" Exclude="" />
+    <EmbeddedResource Include="**\*.resx" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.2" />
+    <PackageReference Include="Microsoft.NETCore.Runtime.CoreCLR" Version="1.1.0" />
+  </ItemGroup>
+</Project>
