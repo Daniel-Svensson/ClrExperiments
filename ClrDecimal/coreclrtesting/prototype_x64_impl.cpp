@@ -64,6 +64,24 @@ static DWORD32 Div96By32_x64(ULONG *pdlNum, DWORD32 ulDen)
 	return (DWORD32)remainder;
 }
 
+static inline unsigned char Add96(DECIMAL *pDec, DWORD64 value)
+{
+	auto carry = _addcarry_u64(0, pDec->Lo64, value, &pDec->Lo64);
+	return _addcarry_u32(carry, pDec->Hi32, 0, (DWORD32*)&pDec->Hi32);
+}
+
+static inline unsigned char Add96(ULONG *plVal, DWORD64 value)
+{
+	auto carry = _addcarry_u64(0, *(DWORD64*)&plVal[0], value, (DWORD64*)&plVal[0]);
+	return _addcarry_u32(carry, plVal[2], 0, (DWORD32*)(&plVal[2]));
+}
+
+static inline unsigned char Sub96(ULONG *plVal, DWORD64 value)
+{
+	auto carry = _subborrow_u64(0, *(DWORD64*)&plVal[0], value, (DWORD64*)&plVal[0]);
+	return _subborrow_u32(carry, plVal[2], 0, (DWORD32*)(&plVal[2]));
+}
+
 /***
 * ScaleResult
 *
@@ -386,45 +404,6 @@ STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 	return NOERROR;
 }
 
-
-static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes, char bSign);
-
-STDAPI VarDecAdd_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
-{
-	return DecAddSub_x64(pdecL, pdecR, pdecRes, 0);
-}
-
-
-STDAPI VarDecSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
-{
-	return DecAddSub_x64(pdecL, pdecR, pdecRes, DECIMAL_NEG);
-}
-
-// Add one to the decimal, returns carry
-static inline unsigned char INC96(DECIMAL *pDec)
-{
-	auto carry = _addcarry_u64(0, pDec->Lo64, 1, &pDec->Lo64);
-	return _addcarry_u32(carry, pDec->Hi32, 0, (DWORD32*)&pDec->Hi32);
-}
-
-static inline unsigned char Add(DECIMAL *pDec, DWORD64 value)
-{
-	auto carry = _addcarry_u64(0, pDec->Lo64, value, &pDec->Lo64);
-	return _addcarry_u32(carry, pDec->Hi32, 0, (DWORD32*)&pDec->Hi32);
-}
-
-static inline unsigned char Add96(ULONG *plVal, DWORD64 value)
-{
-	auto carry = _addcarry_u64(0, *(DWORD64*)&plVal[0], value, (DWORD64*)&plVal[0]);
-	return _addcarry_u32(carry, plVal[2], 0, (DWORD32*)(&plVal[2]));
-}
-
-static inline unsigned char Sub96(ULONG *plVal, DWORD64 value)
-{
-	auto carry = _subborrow_u64(0, *(DWORD64*)&plVal[0], value, (DWORD64*)&plVal[0]);
-	return _subborrow_u32(carry, plVal[2], 0, (DWORD32*)(&plVal[2]));
-}
-
 static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes, char bSign)
 {
 	DECIMAL   decTmp;
@@ -486,7 +465,7 @@ static HRESULT DecAddSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes
 				//
 				if (remainder >= 5 && (remainder > 5 || (decRes.Lo32 & 1))) {
 					// Add one, will never overflow since we divided by 10
-					INC96(&decRes);
+					Add96(&decRes, 1);
 				}
 			}
 		}
@@ -678,6 +657,17 @@ RetDec:
 	COPYDEC(*pdecRes, decRes);
 	return NOERROR;
 }
+
+STDAPI VarDecAdd_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
+{
+	return DecAddSub_x64(pdecL, pdecR, pdecRes, 0);
+}
+
+STDAPI VarDecSub_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
+{
+	return DecAddSub_x64(pdecL, pdecR, pdecRes, DECIMAL_NEG);
+}
+
 // ********************** DIVIDE **************************************
 // Divides a 96bit ulong by 32bit, returns 32bit remainder
 
@@ -710,12 +700,7 @@ static const DECOVFL2 PowerOvfl[] = {
 { 1uI64, 3627848955u }, // 10^19 0,844674407370955
 };
 
-
 const DWORD32 OVFL_MAX32_1_HI = 429496729;
-const DWORD64 OVFL_MAX64_1_HI = 1844674407370955161uI64;
-const DWORD64 OVFL_MAX64_10_HI = 1844674407uI64;
-const DWORD64 OVFL_MAX64_19_HI = 1uI64;
-const DWORD32 OVFL_MAX64_19_LO = 3627848955u;
 
 //**********************************************************************
 //
@@ -926,7 +911,6 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 		// Result is zero.  Entire dividend is remainder.
 		//
 		return 0;
-
 
 	quo = DivMod64By64_x64(rgullNum[1], rgulDen[2], &remainder);
 
