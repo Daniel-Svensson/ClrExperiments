@@ -743,37 +743,6 @@ const DWORD32 OVFL_MAX64_19_LO = 3627848955u;
 *
 ***********************************************************************/
 
-
-ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
-
-DECLSPEC_NOINLINE
-ULONG IncreaseScale96By32(ULONG *rgulNum, ULONG ulPwr)
-{
-	SPLIT64   sdlTmp;
-
-	sdlTmp.int64 = UInt32x32To64(rgulNum[0], ulPwr);
-	rgulNum[0] = sdlTmp.u.Lo;
-	sdlTmp.int64 = UInt32x32To64(rgulNum[1], ulPwr) + sdlTmp.u.Hi;
-	rgulNum[1] = sdlTmp.u.Lo;
-	sdlTmp.int64 = UInt32x32To64(rgulNum[2], ulPwr) + sdlTmp.u.Hi;
-	rgulNum[2] = sdlTmp.u.Lo;
-	return sdlTmp.u.Hi;
-}
-
-DECLSPEC_NOINLINE
-ULONG IncreaseScale96By32_v2(ULONG *rgulNum, ULONG ulPwr)
-{
-	SPLIT64   sdlTmp;
-	DWORD64 *rgullNum = (DWORD64*)rgulNum;
-
-	DWORD64 hi;
-	rgullNum[0] = _umul128(rgullNum[0], ulPwr, &hi);
-	sdlTmp.int64 = UInt32x32To64(rgulNum[2], ulPwr) + hi;
-	rgulNum[2] = sdlTmp.u.Lo;
-
-	return sdlTmp.u.Hi;
-}
-
 // Add a 64bit number to a 96bit number => 160 bit
 // updates 96bit in place and return the overflow (up to 64 bit)
 DECLSPEC_NOINLINE
@@ -823,18 +792,6 @@ DWORD64 IncreaseScale128_x64(ULONG *rgulNum, DWORD64 ulPwr)
 	//return;
 }
 
-// Writes up to 128 Bits
-void IncreaseScale64By64(DWORD64 *rgullNum, DWORD64 ulPwr)
-{
-	LIMITED_METHOD_CONTRACT;
-
-	DWORD64 hi;
-	rgullNum[0] = _umul128(rgullNum[0], ulPwr, &hi);
-	rgullNum[1] = hi;
-}
-
-#define IncreaseScale IncreaseScale96By64
-
 /***
 * SearchScale
 *
@@ -851,93 +808,7 @@ void IncreaseScale64By64(DWORD64 *rgullNum, DWORD64 ulPwr)
 *   Returns power of 10 to scale by, -1 if overflow error.
 *
 ***********************************************************************/
-
-int SearchScale(ULONG ulResHi, ULONG ulResMid, ULONG ulResLo, int iScale); // coreclr_impl
-
-int SearchScale32(const ULONG* rgulQuo, int iScale)
-{
-	return SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
-}
-
-// TODO: change to 19
 const int SEARCHSCALE_MAX_SCALE = 19;
-//DECLSPEC_NOINLINE
-int SearchScale64_1(const ULONG (&rgulQuo)[4], int iScale)
-{
-	const DWORD64* rgullQuo = (const DWORD64*)rgulQuo;
-	//DWORD64 ulResHi = *(const DWORD64*)&rgulQuo[1];
-	DWORD64 ulResHi = __shiftright128(rgullQuo[0], rgulQuo[2], 32);
-	ULONG ulResLo = (ULONG)rgullQuo[0];
-	int   iCurScale;
-
-	// Quick check to stop us from trying to scale any more.
-	//
-	if (ulResHi > OVFL_MAX64_1_HI || iScale >= DEC_SCALE_MAX) {
-		iCurScale = 0;
-		goto HaveScale;
-	}
-
-	if (iScale > DEC_SCALE_MAX - SEARCHSCALE_MAX_SCALE) {
-		// We can't scale by 10^19 without exceeding the max scale factor.
-		// See if we can scale to the max.  If not, we'll fall into
-		// standard search for scale factor.
-		//
-		iCurScale = DEC_SCALE_MAX - iScale;
-		if (ulResHi < PowerOvfl[iCurScale].Hi)
-			goto HaveScale;
-
-		if (ulResHi == PowerOvfl[iCurScale].Hi) {
-		UpperEq:
-			if (ulResLo > PowerOvfl[iCurScale].Lo)
-				iCurScale--;
-			goto HaveScale;
-		}
-	}
-	else if (ulResHi < OVFL_MAX64_19_HI || (ulResHi == OVFL_MAX64_19_HI &&
-		ulResLo < OVFL_MAX64_19_LO))
-		return SEARCHSCALE_MAX_SCALE;
-
-	// Search for a power to scale by < 19.  Do a binary search
-	// on PowerOvfl[].
-	//
-	int min = 1, max = SEARCHSCALE_MAX_SCALE;
-	iCurScale = 10;
-
-	do
-	{
-		if (ulResHi > PowerOvfl[iCurScale].Hi)
-		{
-			max = iCurScale-1; // TODO max = iCurScale; ??
-			iCurScale = (min + max +1) / 2;
-		}
-		else if (ulResHi < PowerOvfl[iCurScale].Hi)
-		{
-			min = iCurScale;
-			iCurScale = (min + max + 1) / 2;
-		}
-		else
-		{
-			goto UpperEq;
-		}
-	} while (max > min);
-
-	if (ulResHi == PowerOvfl[iCurScale].Hi)
-		goto UpperEq;
-
-	assert(iCurScale == SEARCHSCALE_MAX_SCALE || ulResHi >= PowerOvfl[iCurScale + 1].Hi);
-	assert(ulResHi < PowerOvfl[iCurScale].Hi);
-	// TODO: assert(ulResHi < PowerOvfl[iCurScale].Hi);
-HaveScale:
-
-	// iCurScale = largest power of 10 we can scale by without overflow, 
-	// iCurScale < SEARCHSCALE_MAX.  See if this is enough to make scale factor 
-	// positive if it isn't already.
-	// 
-	if (iCurScale + iScale < 0)
-		iCurScale = -1;
-
-	return iCurScale;
-}
 
 //DECLSPEC_NOINLINE
 // Assumes input is not 0
@@ -1002,10 +873,6 @@ int SearchScale64(const ULONG (&rgulQuo)[4], int iScale)
 	
 HaveScale:
 
-	//if (iCurScale + iScale > DEC_SCALE_MAX) {
-	//	iCurScale = DEC_SCALE_MAX - iScale;
-	//}
-
 	// iCurScale = largest power of 10 we can scale by without overflow, 
 	// iCurScale < SEARCHSCALE_MAX.  See if this is enough to make scale factor 
 	// positive if it isn't already.
@@ -1061,7 +928,6 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 		return 0;
 
 
-	
 	quo = DivMod64By64_x64(rgullNum[1], rgulDen[2], &remainder);
 
 	// Compute full remainder, rem = dividend - (quo * divisor).
@@ -1075,20 +941,19 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 	// Propagate carries
 	//
 	 if (carry) {
-		// Remainder went negative.  Add divisor back in until it's positive,
+		// Remainder went negative.  Add divisor back in until it's positive (detected by carry),
 		// a max of 2 times.
 		//
 		sdlProd1 = rgullDen[0];
 
-		for (;;) {
+		do {
 			quo--;
 			// sdlNum += sdlProd1;
 			carry = _addcarry_u64(0, sdlNum, sdlProd1, &sdlNum);
 
 			// rgulNum[2] += rgulDen[2];
-			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (DWORD32*)&rgulNum[2]); 
-			if (carry)
-				break; // detected carry
+			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (DWORD32*)&rgulNum[2]);
+
 			//_addcarry_u32(carry, rgulNum[2], 0, (DWORD32*)&rgulNum[2]);
 
 			// OLD ::: -------
@@ -1099,7 +964,8 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 			//// TODO: Look though logic, why should we not break when we overflow due to carry??
 			//if (carry2)
 			//	break; // detected carry
-		}
+
+		} while (carry == 0);
 	}
 
 	rgullNum[0] = sdlNum;
@@ -1107,14 +973,14 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 }
 
 /***
-* Div96By64
+* Div128By64
 *
 * Entry:
-*   rgulNum - Pointer to 96-bit dividend as array of ULONGs, least-sig first
+*   rgulNum - Pointer to 128-bit dividend as array of ULONGs, least-sig first
 *   sdlDen  - 64-bit divisor.
 *
 * Purpose:
-*   Do partial divide, yielding 32-bit result and 64-bit remainder.
+*   Do partial divide, yielding 64-bit result and 64-bit remainder.
 *   Divisor must be larger than upper 64 bits of dividend.
 *
 * Exit:
@@ -1125,68 +991,6 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 *   None.
 *
 ***********************************************************************/
-
-//ULONG Div96By64(ULONG *rgulNum, SPLIT64 sdlDen); // decimal.cpp
-DECLSPEC_NOINLINE
-ULONG Div96By64_x64(ULONG *rgulNum, SPLIT64 sdlDen)
-{
-	LIMITED_METHOD_CONTRACT;
-
-	SPLIT64 sdlQuo;
-	SPLIT64 sdlNum;
-	SPLIT64 sdlProd;
-
-	DWORD64* const rgullNum = (DWORD64*)&rgulNum[0];
-	DWORD64* const pHi64 = (DWORD64*)&rgulNum[1];
-	DWORD64* const pLo64 = (DWORD64*)&rgulNum[0];
-
-	// Hardware divide won't overflow
-	//
-	if (rgulNum[2] == 0 && *pLo64 < sdlDen.int64)
-	{
-		// Result is zero.  Entire dividend is remainder.
-		//
-		return 0;
-	}
-
-	if (*pHi64 >= sdlDen.int64) {
-		// Divide would overflow.  Assume a quotient of 2^32, and set
-		// up remainder accordingly.  Then jump to loop which reduces
-		// the quotient.
-		//
-		sdlNum.u.Hi = rgulNum[1] - sdlDen.u.Lo;
-		sdlNum.u.Lo = rgulNum[0];
-		sdlQuo.u.Lo = 0;
-		goto NegRem;
-	}
-
-	sdlNum.u.Lo = rgulNum[0];
-	// DivMod64by32 returns quotient in Lo, remainder in Hi.
-	//
-	sdlQuo.int64 = DivMod64by32(*pHi64, sdlDen.u.Hi);
-	sdlNum.u.Hi = sdlQuo.u.Hi; // remainder
-
-							   // Compute full remainder, rem = dividend - (quo * divisor).
-							   //
-	sdlProd.int64 = UInt32x32To64(sdlQuo.u.Lo, sdlDen.u.Lo); // quo * lo divisor
-															 //sdlNum.int64 -= sdlProd.int64;
-	auto carry = _subborrow_u64(0, sdlNum.int64, sdlProd.int64, &sdlNum.int64);
-
-	//if (sdlNum.int64 > ~sdlProd.int64) {
-	if (carry != 0) {
-	NegRem:
-		// Remainder went negative.  Add divisor back in until it's positive,
-		// a max of 2 times.
-		//
-		do {
-			sdlQuo.u.Lo--;
-			sdlNum.int64 += sdlDen.int64;
-		} while (sdlNum.int64 >= sdlDen.int64);
-	}
-
-	rgullNum[0] = sdlNum.int64;
-	return sdlQuo.u.Lo;
-}
 
 DECLSPEC_NOINLINE
 DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
@@ -1237,10 +1041,6 @@ DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 	return quotient;
 }
 
-// 0 == 32 bit
-// 1 == 64 bit
-#define DIV96_METHOD 1
-
 STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 {
 	ULONG   rgulQuo[4]; //[3];
@@ -1248,7 +1048,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	ULONG   rgulRem[6]; // [4]
 	ULONG   rgulDivisor[4]; //[3];
 	DWORD64 ulPwr64;
-	DWORD32 ulPwr32;
 	ULONG   ulTmp;
 	ULONG   ulTmp1;
 	SPLIT64 sdlTmp;
@@ -1452,11 +1251,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			for (;;) {
 				if ((rgullRem[0] | rgulRem[2]) == 0) {
 					if (iScale < 0) {
-#if DIV96_METHOD == 0
-						iCurScale = min(9, -iScale);
-#else
 						iCurScale = min(POWER10_MAX64, -iScale);
-#endif
 						goto HaveScale96;
 					}
 					break;
@@ -1468,11 +1263,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				// Remainder is non-zero.  Scale up quotient and remainder by 
 				// powers of 10 so we can compute more significant bits.
 				// 
-#if DIV96_METHOD == 0
-				iCurScale = SearchScale32(rgulQuo, iScale);
-#else
 				iCurScale = SearchScale64(rgulQuo, iScale);
-#endif
 				if (iCurScale == 0) {
 					// No more scaling to be done, but remainder is non-zero.
 					// Round quotient.
@@ -1498,17 +1289,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					return DISP_E_OVERFLOW;
 
 			HaveScale96:
-#if DIV96_METHOD == 0
-				ulPwr32 = rgulPower10[iCurScale];
-				iScale += iCurScale;
-
-				if (IncreaseScale96By32(rgulQuo, ulPwr32) != 0)
-					return DISP_E_OVERFLOW;
-
-				rgulRem[3] = IncreaseScale96By32(rgulRem, ulPwr32);
-				ulTmp = Div128By96_x64(rgulRem, rgulDivisor);
-				Add96(rgulQuo, ulTmp);
-#else
 				ulPwr64 = rgulPower10_64[iCurScale];
 				iScale += iCurScale;
 
@@ -1517,7 +1297,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 				DWORD64 tmp64 = IncreaseScale96By64(rgulRem, ulPwr64);
 				DWORD64 quo;
-				rgulRem[3] = tmp64;
+				rgulRem[3] = (DWORD32)tmp64;
 				if (tmp64 <= UINT32_MAX)
 				{
 					quo = Div128By96_x64(rgulRem, rgulDivisor);
@@ -1528,10 +1308,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					quo = Div128By96_x64(&rgulRem[1], rgulDivisor);
 					quo = (quo << 32) + Div128By96_x64(&rgulRem[0], rgulDivisor);
 				}
-				Add96(rgulQuo, quo);
-#endif
-
-				
+				Add96(rgulQuo, quo);			
 			} // for (;;)
 		}
 	}
@@ -1598,7 +1375,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 	pdecRes->Hi32 = rgulQuo[2];
 	pdecRes->Lo64 = rgullQuo[0];
-	pdecRes->scale = iScale;
+	pdecRes->scale = (BYTE)iScale;
 	pdecRes->sign = pdecL->sign ^ pdecR->sign;
 	pdecRes->wReserved = 0; // not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl
 	return NOERROR;

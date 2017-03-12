@@ -9,17 +9,17 @@
 #include <stdlib.h>  
 
 using namespace std;
-#define NO_COMPARE
+//#define NO_COMPARE
 //#define TEST_MULTIPLY
 //#define TEST_ADDSUB
 #define TEST_DIV
-#define TEST_32bit_with_0_scale
-#define TEST_32bit_with_scale
+//#define TEST_32bit_with_0_scale
+//#define TEST_32bit_with_scale
 //#define TEST_64bit_with_scale_64bit_result
 //#define TEST_64bit_with_0_scale_128bit_result
 //#define TEST_64bit_with_scale_128bit_result
-//#define TEST_96bit_with_scale_96bit_result_and_overflow
-//#define TEST_96bit_with_scale_96bit_result_no_overflow
+#define TEST_96bit_with_scale_96bit_result_and_overflow
+#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
 void run_benchmarks(int iterations, int elements, int bytes,
@@ -43,7 +43,7 @@ void TestMultiply(DECIMAL a, DECIMAL b)
 
 BYTE random_scale(int min, int max)
 {
-	return (BYTE)(rand() % (max - min)) + min;
+	return (BYTE)((rand() % (max - min)) + min);
 }
 
 // Runs a single benchmark pass and records the timing when calling func
@@ -406,7 +406,7 @@ void AdditionalTests(const int &iterations)
 		current.sign = sign;
 		for (size_t scale = 0; scale <= DEC_SCALE_MAX; scale++)
 		{
-			current.scale = scale;
+			current.scale = (BYTE)scale;
 			current.Lo64 = MAXDWORD64;
 			current.Hi32 = 0;
 
@@ -483,9 +483,15 @@ static const DECOVFL2 PowerOvfl[] = {
 	{ 1uI64, 3627848955u }, // 10^19 0,844674407370955
 };
 
+
+int SearchScale(ULONG ulResHi, ULONG ulResMid, ULONG ulResLo, int iScale); // coreclr_impl
+int SearchScale32(const ULONG* rgulQuo, int iScale)
+{
+	return SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
+}
+
 int SearchScale32(const ULONG* rgulQuo, int iScale);
 int SearchScale64(const ULONG(&rgulQuo)[4], int iScale);
-int SearchScale64_1(const ULONG(&rgulQuo)[4], int iScale);
 ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
 
 void CompareScaleResult()
@@ -494,11 +500,7 @@ void CompareScaleResult()
 	ULONG copy[4];
 	DWORD64 *pHi64 = (DWORD64*)&input[1];
 	DWORD32 *pLo32 = (DWORD32*)&input[0];
-	std::vector<std::vector<int>> all_results(3);
-	std::vector<int(*)(ULONG*, int)> all_functions;
-	//all_functions[0] = (int(*)(ULONG*, int))SearchScale32;
-	all_functions.push_back( (int(*)(ULONG*, int))SearchScale64_1);
-	all_functions.push_back( (int(*)(ULONG*, int))SearchScale64 );
+	std::vector<int> result;
 	
 
 	for (int i = 0; i <= 19; ++i)
@@ -517,10 +519,6 @@ void CompareScaleResult()
 					//for (int func = 0; func < all_functions.size(); ++func)
 					const int func = 1;
 					{
-						auto &result = all_results[func];
-						auto funcion = all_functions[func];
-
-						auto expected = SearchScale64_1(input, scale);
 						auto res = SearchScale64(input, scale);
 						auto control = SearchScale32(input, scale);
 
@@ -601,12 +599,12 @@ int main()
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 0;
-	a.Lo64 = 4294967295;
-	a.scale = 24;
-	b.Hi32 = 0;
-	b.Lo64 = 134217727;
-	b.scale = 24;
+	a.Hi32 = 2147483647;
+	a.Lo64 = 9223372034707292159;
+	a.scale = 1;
+	b.Hi32 = 2851480405;
+	b.Lo64 = 12247015087511315285;
+	b.scale = 2;
 	b.sign = 0;
 
 
@@ -628,8 +626,8 @@ int main()
 	const int iterations = 2;
 	const int elements = 1000;
 #else
-	const int iterations = 3;
-	const int elements = 4000;
+	const int iterations = 2;
+	const int elements = 3000;
 #endif
 	const int bytes = 4;
 
