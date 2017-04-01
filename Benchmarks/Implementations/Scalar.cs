@@ -42,16 +42,11 @@ namespace Benchmarks
 
             return MyClass.AddGeneric(a, b);
         }
-
-        public static bool IsPrimitive<T>() => typeof(T).IsPrimitive;
     }
 
     struct ScalarStruct<T>
         where T : struct
     {
-        private readonly static bool _isPrimitive = typeof(T).IsPrimitive;
-        public static bool IsPrimitive => _isPrimitive;
-
         /// <summary>
         /// Concept DOES NOT WORK. 
         /// It seems to be at JIT time that EE exceptions are raised. 
@@ -79,10 +74,7 @@ namespace Benchmarks
     class ScalarClass<T>
         where T : struct
     {
-        private readonly bool _isPrimitive = typeof(T).IsPrimitive;
         private readonly static ScalarClass<T> _instance = new ScalarClass<T>();
-
-        public bool IsPrimitive => _isPrimitive;
         public static ScalarClass<T> Instance => _instance;
 
         private ScalarClass()

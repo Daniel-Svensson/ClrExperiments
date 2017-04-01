@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Numerics;
 using BenchmarkDotNet.Attributes;
-using NBench;
 
 namespace Benchmarks
 {

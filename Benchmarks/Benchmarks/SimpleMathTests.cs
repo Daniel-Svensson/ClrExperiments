@@ -2,6 +2,8 @@
 using System.Linq;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
+using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace Benchmarks
 {
@@ -55,6 +57,7 @@ namespace Benchmarks
 
         public float GenericSumImpl()
         {
+            Debugger.Break();
             var sum = Zero;
             for (int i = 0; i < _values.Length; ++i)
                 sum = MathHelper.Add(sum, _values[i]);
@@ -63,6 +66,7 @@ namespace Benchmarks
 
         public float MethodSumImpl()
         {
+            Debugger.Break();
             var sum = Zero;
             for (int i = 0; i < _values.Length; ++i)
                 sum = MathHelper.AddFloat(sum, _values[i]);
@@ -71,6 +75,7 @@ namespace Benchmarks
 
         public float MethodRefSumImpl()
         {
+            Debugger.Break();
             var sum = Zero;
             for (int i = 0; i < _values.Length; ++i)
                 sum = MathHelper.AddFloatRef(ref sum, ref _values[i]);
@@ -79,6 +84,7 @@ namespace Benchmarks
 
         public float MethodSumIncImpl()
         {
+            Debugger.Break();
             var sum = Zero;
             for (int i = 0; i < _values.Length; ++i)
                 MathHelper.IncFloat(ref sum, _values[i]);
