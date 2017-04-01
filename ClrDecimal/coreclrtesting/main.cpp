@@ -9,17 +9,18 @@
 #include <stdlib.h>  
 
 using namespace std;
-#define NO_COMPARE
-//#define TEST_MULTIPLY
-//#define TEST_ADDSUB
+//#define NO_COMPARE
+#define TEST_MULTIPLY
+#define TEST_ADDSUB
 #define TEST_DIV
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
 #define TEST_64bit_with_scale_64bit_result
-#define TEST_96bit_with_scale_96bit_result_and_overflow
 #define TEST_64bit_with_0_scale_128bit_result
 #define TEST_64bit_with_scale_128bit_result
+#define TEST_96bit_with_scale_96bit_result_and_overflow
 #define TEST_96bit_with_scale_96bit_result_no_overflow
+#define TEST_Bitpatterns_with_all_scales
 
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
@@ -29,57 +30,6 @@ void test_round_to_nearest();
 
 void AdditionalTests(const int &iterations);
 
-extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, DWORD64 *remainder);
-// In _x64 file
-DWORD64 FullDiv64By64(DWORD64* pdlNum, DWORD64 ulDen);
-
-// The following functions are defined in the classlibnative\bcltype\decimal.cpp
-
-DWORD32 FullDiv64By32_x64(DWORD64* pdlNum, DWORD32 ulDen)
-{
-	auto mod = DWORD32(*pdlNum % ulDen);
-	auto res = *pdlNum / ulDen;
-
-	*pdlNum = res;
-	return mod;
-}
-
-// Divides a 96bit ulong by 32bit, returns 32bit remainder
-DWORD32 Div96By32_x64(DWORD32 *pdlNum, DWORD32 ulDen)
-{
-	// Upper 64bit
-	DWORD64* hiPtr = (DWORD64*)(pdlNum + 1);
-	DWORD64 lopart = (FullDiv64By64(hiPtr, ulDen) << 32) + *pdlNum;
-	DWORD32 remainder = FullDiv64By32_x64(&lopart, ulDen);
-	*pdlNum = (DWORD32)lopart;
-
-	return remainder;
-}
-
-ULONG FullDiv64By32_ORI(DWORDLONG *pdlNum, ULONG ulDen)
-{
-	SPLIT64  sdlTmp;
-	SPLIT64  sdlRes;
-
-	sdlTmp.int64 = *pdlNum;
-	sdlRes.u.Hi = 0;
-
-	if (sdlTmp.u.Hi >= ulDen) {
-		// DivMod64by32 returns quotient in Lo, remainder in Hi.
-		//
-		sdlRes.u.Lo = sdlTmp.u.Hi;
-		sdlRes.int64 = DivMod64by32(sdlRes.int64, ulDen);
-		sdlTmp.u.Hi = sdlRes.u.Hi;
-		sdlRes.u.Hi = sdlRes.u.Lo;
-	}
-
-	sdlTmp.int64 = DivMod64by32(sdlTmp.int64, ulDen);
-	sdlRes.u.Lo = sdlTmp.u.Lo;
-	*pdlNum = sdlRes.int64;
-	return sdlTmp.u.Hi;
-}
-
-
 void TestMultiply(DECIMAL a, DECIMAL b)
 {
 	DECIMAL prod, prod2;
@@ -88,29 +38,12 @@ void TestMultiply(DECIMAL a, DECIMAL b)
 
 	printf("Original DecMul %lu %lu %lu sign %i scale %i\n (RETURN %li)", prod.Hi32, prod.Mid32, prod.Lo32, (int)prod.sign, (int)prod.scale, res1);
 	printf("Ny DecMul %lu %lu %lu sign %i scale %i (RETURN %li)\n", prod2.Hi32, prod2.Mid32, prod2.Lo32, (int)prod2.sign, (int)prod2.scale, res2);
-
-	DWORD64 dividend = prod.Lo64;
-	DWORD64 divisor64 = b.Lo64 + 2;
-	DWORD32 divisor32 = static_cast<DWORD32>(b.Lo64 + 2);
-
-	auto minRes = dividend;
-	auto min = FullDiv64By32_x64(&minRes, divisor32);
-	auto derasRes = dividend;
-	auto deras = FullDiv64By32_ORI(&derasRes, divisor32);
-	auto min64Res = dividend;
-	auto min64 = FullDiv64By64(&min64Res, divisor64);
-
-	auto dummy = FullDiv64By64(&min64Res, divisor64);
-
-	printf("Original Div6432  %I64u %lu\n", derasRes, deras);
-	printf("Ny Div6432        %I64u %i \n", minRes, min);
-	printf("Ny FullDiv64By64  %I64u %I64u \n", min64Res, min64);
 }
 
 
 BYTE random_scale(int min, int max)
 {
-	return (BYTE)(rand() % (max - min)) + min;
+	return (BYTE)((rand() % (max - min)) + min);
 }
 
 // Runs a single benchmark pass and records the timing when calling func
@@ -149,10 +82,11 @@ void CompareResult(
 	size_t errors = 0;
 
 
+	size_t result_idx = -1;
 	for (int i = 0; i < lhs.size(); ++i)
 		for (int j = 0; j < rhs.size(); ++j)
 		{
-			auto result_idx = (i * lhs.size()) + j;
+			++result_idx;
 
 			if (expected_result[result_idx] != actual_result[result_idx]
 				|| (expected[result_idx].Lo64 != actual[result_idx].Lo64)
@@ -174,7 +108,7 @@ void CompareResult(
 				{
 					if (++errors < 10)
 					{
-						printf("[%i]x[%i]  -- (%i) %lu %I64u /10^%i  * (%i) %lu %I64u / 10^%i: \n",
+						printf("[%i]x[%i]  -- (%i) %lu %I64u / 10^%i  * (%i) %lu %I64u / 10^%i: \n",
 							i, j,
 							lhs[i].sign, lhs[i].Hi32, lhs[i].Lo64, lhs[i].scale,
 							rhs[j].sign, rhs[j].Hi32, rhs[j].Lo64, rhs[j].scale);
@@ -276,7 +210,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 }
 
 void run_benchmarks(int iterations, int elements, int bytes,
-	 const char *const baseline_name, const char *const func_name,
+	const char *const baseline_name, const char *const func_name,
 	HRESULT(*baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), HRESULT(*func)(const DECIMAL *, const DECIMAL *, DECIMAL *))
 {
 	std::vector<DECIMAL> numbers(elements);
@@ -472,7 +406,7 @@ void AdditionalTests(const int &iterations)
 		current.sign = sign;
 		for (size_t scale = 0; scale <= DEC_SCALE_MAX; scale++)
 		{
-			current.scale = scale;
+			current.scale = (BYTE)scale;
 			current.Lo64 = MAXDWORD64;
 			current.Hi32 = 0;
 
@@ -489,22 +423,152 @@ void AdditionalTests(const int &iterations)
 	vector<DECIMAL> expected(numbers.size()*numbers.size()), actual(numbers.size()*numbers.size());
 	vector<HRESULT> expected_res(numbers.size()*numbers.size()), actual_res(numbers.size()*numbers.size());
 
-	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+#ifdef TEST_MULTIPLY
+	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
 	);
+#endif
 
-	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+#ifdef TEST_ADDSUB
+	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
 	);
-	compare_benchmark("all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
 	);
+#endif
+
+#ifdef TEST_DIV
+	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+		numbers, expected, expected_res, actual, actual_res,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv,
+		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
+	);
+#endif
+
+}
+
+struct DECOVFL2
+{
+	DWORD64 Hi;
+	DWORD32 Lo;
+};
+
+static const DECOVFL2 PowerOvfl[] = {
+	{ ULLONG_MAX, ULONG_MAX }, // 
+	{ 1844674407370955161uI64, 2576980377u }, // 10^1 0,6
+	{ 184467440737095516uI64, 687194767u }, // 10^2 0,16
+	{ 18446744073709551uI64, 2645699854u }, // 10^3 0,616
+	{ 1844674407370955uI64, 694066715u }, // 10^4 0,1616
+	{ 184467440737095uI64, 2216890319u }, // 10^5 0,51616
+	{ 18446744073709uI64, 2369172679u }, // 10^6 0,551616
+	{ 1844674407370uI64, 4102387834u }, // 10^7 0,9551616
+	{ 184467440737uI64, 410238783u }, // 10^8 0,09551616
+	{ 18446744073uI64, 3047500985u }, // 10^9 0,709551616 
+	{ 1844674407uI64, 1593240287u }, // 10^10 0,3709551616
+	{ 184467440uI64, 3165801135u }, // 10^11 0,73709551616
+	{ 18446744uI64, 316580113u }, // 10^12 0,073709551616
+	{ 1844674uI64, 1749644929u }, // 10^13 0,4073709551616
+	{ 184467uI64, 1892951411u }, // 10^14 0,44073709551616
+	{ 18446uI64, 3195772248u }, // 10^15 0,744073709551616
+	{ 1844uI64, 2896557602u }, // 10^16 0,674407370955162
+	{ 184uI64, 2007642678u }, // 10^17 0,467440737095516
+	{ 18uI64, 1918751186u }, // 10^18 0,446744073709552
+	{ 1uI64, 3627848955u }, // 10^19 0,844674407370955
+};
+
+
+int SearchScale(ULONG ulResHi, ULONG ulResMid, ULONG ulResLo, int iScale); // coreclr_impl
+int SearchScale32(const ULONG* rgulQuo, int iScale)
+{
+	return SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
+}
+
+int SearchScale32(const ULONG* rgulQuo, int iScale);
+int SearchScale64(const ULONG(&rgulQuo)[4], int iScale);
+ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
+
+void CompareScaleResult()
+{
+	ULONG input[4];
+	ULONG copy[4];
+	DWORD64 *pHi64 = (DWORD64*)&input[1];
+	DWORD32 *pLo32 = (DWORD32*)&input[0];
+	std::vector<int> result;
+	
+
+	for (int i = 0; i <= 19; ++i)
+	{
+		for (int hi = -1000; hi <= 1000; ++hi)
+		{
+			for (int lo = -100; lo <= 100; ++lo)
+			//for (int lo = 0; lo <= 0; ++lo)
+			{
+				*pHi64 = PowerOvfl[i].Hi + hi;
+				*pLo32 = PowerOvfl[i].Lo + lo;
+
+				//for (int scale = -10; scale <= 30; ++scale)
+				for (int scale = -DEC_SCALE_MAX; scale <= DEC_SCALE_MAX; ++scale)
+				{
+					//for (int func = 0; func < all_functions.size(); ++func)
+					const int func = 1;
+					{
+						auto res = SearchScale64(input, scale);
+						auto control = SearchScale32(input, scale);
+
+
+						if (res != control)
+						{
+							// New function can detect overflow faster
+							if (control == 9)
+							{
+								memcpy(copy, input, sizeof(copy));
+								copy[3] = 0;
+								IncreaseScale(copy, 1000000000U); // 10^9
+								int extraScale = 9;
+								control = SearchScale32(copy, scale + extraScale);
+								if (control == 9)
+								{
+									IncreaseScale(copy, 10); // 10^9
+									extraScale += 1;
+									control = SearchScale32(copy, scale + extraScale);
+								}
+
+								// res != -1
+								if ((res == -1 && control == -1) || (res == control + extraScale)) //  || (control + extraScale == res)
+									continue;
+								else
+								{
+									cout << "FAILED extended validation" << endl;
+								}
+							}
+
+							cout << "FAILED control" << endl;
+							cin.get();
+							exit(-1);
+						}
+					
+						//cout << "Function " << func << " item " << i << " => " << res;
+						/*
+						if (func != 0)
+						{
+							bool ok = res == all_results[0].at(result.size() - 1);
+							//cout << (ok ? " OK" : " FAIL");
+							assert(ok);
+						}
+						*/
+						//cout << endl;
+					}
+				}
+			}
+		}
+	}
 }
 
 
@@ -512,6 +576,11 @@ int main()
 {
 	// Use system formatting
 	setlocale(LC_ALL, "");
+	//cin.get();
+
+	/*for(int i=0; i < 2; ++i)
+		CompareScaleResult();
+	return 0;*/
 
 	DECIMAL a, b;
 	VarDecFromI4(32, &a);
@@ -520,29 +589,29 @@ int main()
 	DECIMAL expected, actual;
 
 
+	/*
+	[0]x[9]  -- (0) 0 18446744073709551615 / 10^3  * (0) 0 18446251492500307960 / 10^6:
+ PRODUCT expected (0) 542115562 5349999624952008190 / 10^25 but got (0) 0 0 / 10^0
+	*/
 	//a.Hi32 = 1;
 	//a.Lo64 = 18446744073709551615;
 	//a.scale = 0;
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 0;
-	a.Lo64 = MAXDWORD64 >> 4;
-	a.scale = 0;
-	b.Hi32 = MAXDWORD32;
-	b.Lo64 = MAXDWORD64;
-	b.scale = 10;
-	b.sign = DECIMAL_NEG;
+	a.Hi32 = 2147483647;
+	a.Lo64 = 9223372034707292159;
+	a.scale = 1;
+	b.Hi32 = 2851480405;
+	b.Lo64 = 12247015087511315285;
+	b.scale = 2;
+	b.sign = 0;
 
 
-	VarDecAdd(&a, &b, &expected);
-	VarDecAdd_x64(&a, &b, &actual);
+	VarDecDiv_PALRT(&a, &b, &expected);
+	VarDecDiv_x64(&a, &b, &actual);
 	//VarDecMul_x64(&a, &b, &sum);
 
-	//assert(actual.Hi32 == 2000000000);
-	//assert(actual.Lo64 == 2689348815);
-	//assert(actual.scale == 9);
-	//assert(actual.sign == 0);
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
 	assert(actual.Hi32 == expected.Hi32);
 	assert(actual.Lo64 == expected.Lo64);
@@ -557,8 +626,8 @@ int main()
 	const int iterations = 2;
 	const int elements = 1000;
 #else
-	const int iterations = 3;
-	const int elements = 2000;
+	const int iterations = 2;
+	const int elements = 3000;
 #endif
 	const int bytes = 4;
 
@@ -569,6 +638,9 @@ int main()
 
 #ifdef TEST_DIV
 	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", "x64", VarDecDiv, VarDecDiv_x64);
+#ifndef NO_COMPARE
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecDiv", "x64", VarDecDiv_PALRT, VarDecDiv_x64);
+#endif // NO_COMPARE
 #endif
 
 #ifdef TEST_ADDSUB
@@ -579,7 +651,9 @@ int main()
 	run_benchmarks(iterations, elements, bytes, "coreclr-VarDecSub", "x64", VarDecSub_PALRT, VarDecSub_x64);
 #endif
 
+#ifdef TEST_Bitpatterns_with_all_scales
 	AdditionalTests(iterations);
+#endif
 
 	return 0;
 }

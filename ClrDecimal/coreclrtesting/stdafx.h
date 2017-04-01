@@ -71,6 +71,7 @@ inline DWORDLONG DivMod64by32(DWORDLONG num, ULONG den)
 STDAPI VarDecMul_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 STDAPI VarDecAdd_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 STDAPI VarDecSub_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
+STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 
 
 // Prototype X64 Implementations
@@ -78,7 +79,7 @@ STDAPI VarDecMul_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
 STDAPI VarDecAdd_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
 STDAPI VarDecSub_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
 STDAPI VarDecDiv_x64(DECIMAL* l, DECIMAL *r, DECIMAL *res);
-DWORD64 FullDiv64By64(DWORD64 *pdlNum, DWORD64 ulDen);
+
 
 
 // TODO: reference additional headers your program requires here

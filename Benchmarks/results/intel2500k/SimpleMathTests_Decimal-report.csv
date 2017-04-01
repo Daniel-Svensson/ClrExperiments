@@ -1,0 +1,16 @@
+Method;Job;AnalyzeLaunchVariance;EvaluateOverhead;MaxStdErrRelative;MinInvokeCount;MinIterationTime;RemoveOutliers;Affinity;Jit;Platform;Runtime;AllowVeryLargeObjects;Concurrent;CpuGroups;Force;Server;Clock;EngineFactory;Toolchain;InvocationCount;IterationTime;LaunchCount;RunStrategy;TargetCount;UnrollFactor;WarmupCount;Mean;StdDev;Scaled;Scaled-StdDev;Allocated
+NormalSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.6913 ms;0.0054 ms;1.00;0.00;0 B
+MethodSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.8115 ms;0.0060 ms;1.04;0.00;0 B
+MethodRefSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.8455 ms;0.0117 ms;1.06;0.00;0 B
+MethodIncSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;3.1797 ms;0.0002 ms;1.18;0.00;0 B
+GenericSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;3.0389 ms;0.0094 ms;1.13;0.00;0 B
+NormalSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X86;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.2301 ms;0.0061 ms;1.00;0.00;0 B
+MethodSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X86;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.5651 ms;0.0069 ms;1.15;0.00;0 B
+MethodRefSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X86;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.2953 ms;0.0327 ms;1.03;0.01;0 B
+MethodIncSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X86;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.4805 ms;0.0081 ms;1.11;0.00;0 B
+GenericSum;Default;False;Default;Default;Default;Default;Default;15;LegacyJit;X86;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.7370 ms;0.0064 ms;1.23;0.00;0 B
+NormalSum;Default;False;Default;Default;Default;Default;Default;15;RyuJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.2210 ms;0.0052 ms;1.00;0.00;0 B
+MethodSum;Default;False;Default;Default;Default;Default;Default;15;RyuJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.4181 ms;0.0100 ms;1.09;0.00;0 B
+MethodRefSum;Default;False;Default;Default;Default;Default;Default;15;RyuJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.2684 ms;0.0093 ms;1.02;0.00;0 B
+MethodIncSum;Default;False;Default;Default;Default;Default;Default;15;RyuJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.3030 ms;0.0061 ms;1.04;0.00;0 B
+GenericSum;Default;False;Default;Default;Default;Default;Default;15;RyuJit;X64;Clr;False;True;False;True;False;Default;Default;Default;1;1.0000 s;1;Default;3;16;3;2.4125 ms;0.0015 ms;1.09;0.00;0 B

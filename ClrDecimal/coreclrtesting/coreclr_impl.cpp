@@ -54,33 +54,36 @@ struct DECOVFL
 {
 	ULONG Hi;
 	ULONG Mid;
+	ULONG Lo;
 };
 
-static DECOVFL PowerOvfl[] = {
+const DECOVFL PowerOvfl[] = {
 	// This is a table of the largest values that can be in the upper two
 	// ULONGs of a 96-bit number that will not overflow when multiplied
 	// by a given power.  For the upper word, this is a table of 
 	// 2^32 / 10^n for 1 <= n <= 9.  For the lower word, this is the
 	// remaining fraction part * 2^32.  2^32 = 4294967296.
-	//
-	{ 429496729UL, 2576980377UL }, // 10^1 remainder 0.6
-	{ 42949672UL,  4123168604UL }, // 10^2 remainder 0.16
-	{ 4294967UL,   1271310319UL }, // 10^3 remainder 0.616
-	{ 429496UL,    3133608139UL }, // 10^4 remainder 0.1616
-	{ 42949UL,     2890341191UL }, // 10^5 remainder 0.51616
-	{ 4294UL,      4154504685UL }, // 10^6 remainder 0.551616
-	{ 429UL,       2133437386UL }, // 10^7 remainder 0.9551616
-	{ 42UL,        4078814305UL }, // 10^8 remainder 0.09991616
-								   //  { 4UL,         1266874889UL }, // 10^9 remainder 0.709551616
+	// 
+	{ 429496729u, 2576980377u, 2576980377u }, // 10^1 remainder 0.6
+	{ 42949672u,  4123168604u, 687194767u }, // 10^2 remainder 0.16
+	{ 4294967u,   1271310319u, 2645699854u }, // 10^3 remainder 0.616
+	{ 429496u,    3133608139u, 694066715u }, // 10^4 remainder 0.1616
+	{ 42949u,     2890341191u, 2216890319u }, // 10^5 remainder 0.51616
+	{ 4294u,      4154504685u, 2369172679u }, // 10^6 remainder 0.551616
+	{ 429u,       2133437386u, 4102387834u }, // 10^7 remainder 0.9551616
+	{ 42u,        4078814305u, 410238783u }, // 10^8 remainder 0.09991616
+	{ 4u,         1266874889u, 3047500985u }, // 10^9 remainder 0.709551616
 };
 
-#define OVFL_MAX_9_HI   4
-#define OVFL_MAX_9_MID  1266874889
+#define OVFL_MAX_1_HI   429496729
+#define DEC_SCALE_MAX   28
+#define POWER10_MAX 9
+
+#define OVFL_MAX_9_HI   4u
+#define OVFL_MAX_9_MID  1266874889u
+#define OVFL_MAX_9_LO   3047500985u
 
 #define OVFL_MAX_5_HI   42949
-#define OVFL_MAX_5_MID  2890341191
-
-#define OVFL_MAX_1_HI   429496729
 
 
 
@@ -331,8 +334,9 @@ static ULONG FullDiv64By32(DWORDLONG *pdlNum, ULONG ulDen)
 *
 ***********************************************************************/
 
-int SearchScale(ULONG ulResHi, ULONG ulResLo, int iScale)
+int SearchScale(ULONG ulResHi, ULONG ulResMid, ULONG ulResLo, int iScale)
 {
+
 	int   iCurScale;
 
 	// Quick check to stop us from trying to scale any more.
@@ -353,13 +357,15 @@ int SearchScale(ULONG ulResHi, ULONG ulResLo, int iScale)
 
 		if (ulResHi == PowerOvfl[iCurScale - 1].Hi) {
 		UpperEq:
-			if (ulResLo >= PowerOvfl[iCurScale - 1].Mid)
+			if (ulResMid > PowerOvfl[iCurScale - 1].Mid ||
+				(ulResMid == PowerOvfl[iCurScale - 1].Mid && ulResLo > PowerOvfl[iCurScale - 1].Lo)) {
 				iCurScale--;
+			}
 			goto HaveScale;
 		}
 	}
 	else if (ulResHi < OVFL_MAX_9_HI || (ulResHi == OVFL_MAX_9_HI &&
-		ulResLo < OVFL_MAX_9_MID))
+		ulResMid < OVFL_MAX_9_MID) || (ulResHi == OVFL_MAX_9_HI && ulResMid == OVFL_MAX_9_MID && ulResLo <= OVFL_MAX_9_LO))
 		return 9;
 
 	// Search for a power to scale by < 9.  Do a binary search
@@ -939,8 +945,8 @@ RetDec:
 // VarDecDiv - Decimal Divide
 //
 //**********************************************************************
-#if 0
-STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
+
+STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 {
 	ULONG   rgulQuo[3];
 	ULONG   rgulQuoSave[3];
@@ -953,8 +959,14 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	SPLIT64 sdlDivisor;
 	int     iScale;
 	int     iCurScale;
+	// not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl
+	// TODO: Determine if this it improves x64 impl or not
+	// for original code the perf diff is -1% - +4% (64bit / 64bit where 64bit*64it -> 64bit)
+	// most other scenarios has a small perf inpact from it
+	BOOL    fUnscale;
 
 	iScale = pdecL->scale - pdecR->scale;
+	fUnscale = FALSE;
 	rgulDivisor[0] = pdecR->Lo32;
 	rgulDivisor[1] = pdecR->Mid32;
 	rgulDivisor[2] = pdecR->Hi32;
@@ -978,6 +990,8 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				}
 				break;
 			}
+			// We need to unscale if and only if we have a non-zero remainder
+			fUnscale = TRUE;
 
 			// We have computed a quotient based on the natural scale 
 			// ( <dividend scale> - <divisor scale> ).  We have a non-zero 
@@ -996,7 +1010,7 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			// is the largest value in rgulQuo[1] (when rgulQuo[2] == 4) that is 
 			// assured not to overflow.
 			// 
-			iCurScale = SearchScale(rgulQuo[2], rgulQuo[1], iScale);
+			iCurScale = SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
 			if (iCurScale == 0) {
 				// No more scaling to be done, but remainder is non-zero.
 				// Round quotient.
@@ -1102,10 +1116,13 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					break;
 				}
 
+				// We need to unscale if and only if we have a non-zero remainder
+				fUnscale = TRUE;
+
 				// Remainder is non-zero.  Scale up quotient and remainder by 
 				// powers of 10 so we can compute more significant bits.
 				// 
-				iCurScale = SearchScale(rgulQuo[2], rgulQuo[1], iScale);
+				iCurScale = SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
 				if (iCurScale == 0) {
 					// No more scaling to be done, but remainder is non-zero.
 					// Round quotient.
@@ -1166,10 +1183,13 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					break;
 				}
 
+				// We need to unscale if and only if we have a non-zero remainder
+				fUnscale = TRUE;
+
 				// Remainder is non-zero.  Scale up quotient and remainder by 
 				// powers of 10 so we can compute more significant bits.
 				// 
-				iCurScale = SearchScale(rgulQuo[2], rgulQuo[1], iScale);
+				iCurScale = SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
 				if (iCurScale == 0) {
 					// No more scaling to be done, but remainder is non-zero.
 					// Round quotient.
@@ -1212,67 +1232,71 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 		}
 	}
 
-	// No more remainder.  Try extracting any extra powers of 10 we may have 
-	// added.  We do this by trying to divide out 10^8, 10^4, 10^2, and 10^1.
-	// If a division by one of these powers returns a zero remainder, then
-	// we keep the quotient.  If the remainder is not zero, then we restore
-	// the previous value.
-	// 
-	// Since 10 = 2 * 5, there must be a factor of 2 for every power of 10
-	// we can extract.  We use this as a quick test on whether to try a
-	// given power.
-	// 
-	while ((rgulQuo[0] & 0xFF) == 0 && iScale >= 8) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+	// We need to unscale if and only if we have a non-zero remainder
+	if (fUnscale) {
 
-		if (Div96By32(rgulQuoSave, 100000000) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 8;
+		// No more remainder.  Try extracting any extra powers of 10 we may have 
+		// added.  We do this by trying to divide out 10^8, 10^4, 10^2, and 10^1.
+		// If a division by one of these powers returns a zero remainder, then
+		// we keep the quotient.  If the remainder is not zero, then we restore
+		// the previous value.
+		// 
+		// Since 10 = 2 * 5, there must be a factor of 2 for every power of 10
+		// we can extract.  We use this as a quick test on whether to try a
+		// given power.
+		// 
+		while ((rgulQuo[0] & 0xFF) == 0 && iScale >= 8) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
+
+			if (Div96By32(rgulQuoSave, 100000000) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 8;
+			}
+			else
+				break;
 		}
-		else
-			break;
-	}
 
-	if ((rgulQuo[0] & 0xF) == 0 && iScale >= 4) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+		if ((rgulQuo[0] & 0xF) == 0 && iScale >= 4) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
 
-		if (Div96By32(rgulQuoSave, 10000) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 4;
+			if (Div96By32(rgulQuoSave, 10000) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 4;
+			}
 		}
-	}
 
-	if ((rgulQuo[0] & 3) == 0 && iScale >= 2) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+		if ((rgulQuo[0] & 3) == 0 && iScale >= 2) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
 
-		if (Div96By32(rgulQuoSave, 100) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 2;
+			if (Div96By32(rgulQuoSave, 100) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 2;
+			}
 		}
-	}
 
-	if ((rgulQuo[0] & 1) == 0 && iScale >= 1) {
-		rgulQuoSave[0] = rgulQuo[0];
-		rgulQuoSave[1] = rgulQuo[1];
-		rgulQuoSave[2] = rgulQuo[2];
+		if ((rgulQuo[0] & 1) == 0 && iScale >= 1) {
+			rgulQuoSave[0] = rgulQuo[0];
+			rgulQuoSave[1] = rgulQuo[1];
+			rgulQuoSave[2] = rgulQuo[2];
 
-		if (Div96By32(rgulQuoSave, 10) == 0) {
-			rgulQuo[0] = rgulQuoSave[0];
-			rgulQuo[1] = rgulQuoSave[1];
-			rgulQuo[2] = rgulQuoSave[2];
-			iScale -= 1;
+			if (Div96By32(rgulQuoSave, 10) == 0) {
+				rgulQuo[0] = rgulQuoSave[0];
+				rgulQuo[1] = rgulQuoSave[1];
+				rgulQuo[2] = rgulQuoSave[2];
+				iScale -= 1;
+			}
 		}
 	}
 
@@ -1281,9 +1305,9 @@ STDAPI VarDecDiv(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	pdecRes->Lo32 = rgulQuo[0];
 	pdecRes->scale = iScale;
 	pdecRes->sign = pdecL->sign ^ pdecR->sign;
+	pdecRes->wReserved = 0; // not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl 
 	return NOERROR;
 }
-#endif
 
 //**********************************************************************
 //
