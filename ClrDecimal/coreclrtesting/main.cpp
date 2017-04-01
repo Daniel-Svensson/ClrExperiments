@@ -10,14 +10,14 @@
 
 using namespace std;
 //#define NO_COMPARE
-//#define TEST_MULTIPLY
-//#define TEST_ADDSUB
+#define TEST_MULTIPLY
+#define TEST_ADDSUB
 #define TEST_DIV
-//#define TEST_32bit_with_0_scale
-//#define TEST_32bit_with_scale
-//#define TEST_64bit_with_scale_64bit_result
-//#define TEST_64bit_with_0_scale_128bit_result
-//#define TEST_64bit_with_scale_128bit_result
+#define TEST_32bit_with_0_scale
+#define TEST_32bit_with_scale
+#define TEST_64bit_with_scale_64bit_result
+#define TEST_64bit_with_0_scale_128bit_result
+#define TEST_64bit_with_scale_128bit_result
 #define TEST_96bit_with_scale_96bit_result_and_overflow
 #define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
