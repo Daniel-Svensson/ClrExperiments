@@ -445,7 +445,7 @@ void AdditionalTests(const int &iterations)
 #endif
 
 #ifdef TEST_DIV
-	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv,
 		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
@@ -626,8 +626,8 @@ int main()
 	const int iterations = 2;
 	const int elements = 1000;
 #else
-	const int iterations = 2;
-	const int elements = 3000;
+	const int iterations = 3;
+	const int elements = 5000;
 #endif
 	const int bytes = 4;
 

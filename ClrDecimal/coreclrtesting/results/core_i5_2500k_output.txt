@@ -1,0 +1,600 @@
+
+
+Starting Scenario 32bit x 32bit with scale 0
+oleauto-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+948827;0,0662673;806731;0,0563431;;85,024035%;17,613802%
+948070;0,0662144;807207;0,0563764;;85,142131%;17,450666%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+oleauto-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+5120586;0,357628;2248843;0,157062;;43,917688%;127,698688%
+5116631;0,357352;2243420;0,156683;;43,845648%;128,072808%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+oleauto-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+753995;0,05266;254812;0,0177964;;33,794919%;195,902469%
+753534;0,0526278;256172;0,0178914;;33,996077%;194,151586%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+59880 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+oleauto-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2838578;0,19825;1157566;0,0808459;;40,779785%;145,219538%
+2838295;0,19823;1157400;0,0808343;;40,778002%;145,230257%
+
+19341 out of 9000000 results was successfull, expected 19341, ratio is 0,214900%
+59494 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+oleauto-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+10990266;0,767574;4913726;0,343181;;44,709800%;123,664608%
+10993718;0,767815;4913561;0,343169;;44,694261%;123,742373%
+
+5998951 out of 9000000 results was successfull, expected 5998951, ratio is 66,655011%
+23995 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+oleauto-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+4282715;0,29911;1317325;0,0920037;;30,759110%;225,106940%
+4281729;0,299041;1317111;0,0919887;;30,761195%;225,084902%
+
+5999 out of 9000000 results was successfull, expected 5999, ratio is 0,066656%
+17997 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+oleauto-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+40278625;2,81311;12677904;0,885441;;31,475513%;217,707288%
+40286035;2,81363;12676249;0,885325;;31,465616%;217,807224%
+
+7602032 out of 9000000 results was successfull, expected 7602032, ratio is 84,467022%
+2380 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale 0
+palrt-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+874988;0,0611103;807866;0,0564224;;92,328809%;8,308556%
+875390;0,0611384;807000;0,0563619;;92,187482%;8,474597%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+palrt-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+4423914;0,308972;2246101;0,156871;;50,771805%;96,959709%
+4424101;0,308985;2244658;0,15677;;50,737042%;97,094658%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+palrt-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+740613;0,0517254;254811;0,0177963;;34,405418%;190,651895%
+740597;0,0517242;254865;0,0178001;;34,413453%;190,584035%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+59880 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+palrt-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2424846;0,169354;1157766;0,0808599;;47,745960%;109,441804%
+2425010;0,169366;1157819;0,0808636;;47,744917%;109,446382%
+
+19341 out of 9000000 results was successfull, expected 19341, ratio is 0,214900%
+59494 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+palrt-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+10919845;0,762656;4914595;0,343242;;45,006088%;122,192164%
+10920932;0,762732;4916030;0,343342;;45,014748%;122,149417%
+
+5998951 out of 9000000 results was successfull, expected 5998951, ratio is 66,655011%
+23995 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+palrt-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+3971670;0,277387;1317232;0,0919972;;33,165696%;201,516362%
+3972283;0,277429;1317078;0,0919864;;33,156701%;201,598159%
+
+5999 out of 9000000 results was successfull, expected 5999, ratio is 0,066656%
+17997 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+palrt-VarDecMul;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+40135202;2,80309;12676274;0,885327;;31,583930%;216,616712%
+40135797;2,80314;12676946;0,885374;;31,585136%;216,604622%
+
+7602032 out of 9000000 results was successfull, expected 7602032, ratio is 84,467022%
+2380 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale 0
+oleauto-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+16917547;1,18154;11034292;0,770649;;65,223948%;53,317920%
+16920273;1,18173;11038180;0,770921;;65,236418%;53,288613%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+oleauto-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+15866502;1,10814;11475739;0,80148;;72,326837%;38,261266%
+15863768;1,10795;11475806;0,801485;;72,339724%;38,236635%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+3051 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+oleauto-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1910759;0,13345;1057429;0,0738522;;55,340783%;80,698562%
+1910884;0,133459;1058055;0,0738959;;55,369923%;80,603466%
+
+8931962 out of 9000000 results was successfull, expected 8931962, ratio is 99,244022%
+18895 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+oleauto-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+25627527;1,78986;11746176;0,820368;;45,834216%;118,177618%
+25630555;1,79007;11746076;0,820361;;45,828411%;118,205254%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+5 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+oleauto-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+24388172;1,7033;12086742;0,844154;;49,559852%;101,776227%
+24389000;1,70336;12086750;0,844154;;49,558202%;101,782944%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+1686 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+oleauto-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+27463569;1,91809;13306474;0,929341;;48,451365%;106,392535%
+27464468;1,91815;13303734;0,92915;;48,439802%;106,441800%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+203 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+oleauto-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+26702485;1,86494;13163599;0,919363;;49,297281%;102,850945%
+26701287;1,86485;13163012;0,919322;;49,297294%;102,850890%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+838 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale 0
+palrt-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+17074415;1,1925;11033351;0,770583;;64,619204%;54,752758%
+17075571;1,19258;11031561;0,770458;;64,604346%;54,788348%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+palrt-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+16069938;1,12235;11474747;0,801411;;71,405048%;40,046120%
+16071470;1,12245;11473236;0,801305;;71,388840%;40,077917%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+palrt-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1844401;0,128815;1058056;0,073896;;57,365833%;74,319790%
+1859726;0,129886;1063891;0,0743035;;57,206868%;74,804186%
+
+8931962 out of 9000000 results was successfull, expected 8931962, ratio is 99,244022%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+palrt-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+25139307;1,75576;11796304;0,823869;;46,923744%;113,111726%
+25148161;1,75638;11806959;0,824613;;46,949592%;112,994396%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+palrt-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+23960584;1,67344;12145798;0,848278;;50,690743%;97,274679%
+24018072;1,67745;12162238;0,849426;;50,637861%;97,480694%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+palrt-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+27780774;1,94024;13393749;0,935437;;48,212296%;107,415967%
+27788949;1,94082;13385395;0,934853;;48,168051%;107,606492%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+palrt-VarDecDiv;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+27009665;1,88639;13254912;0,92574;;49,074700%;103,770987%
+27012182;1,88657;13246029;0,92512;;49,037242%;103,926641%
+
+8997000 out of 9000000 results was successfull, expected 8997000, ratio is 99,966667%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale 0
+oleauto-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1127837;0,0787696;1012105;0,0706867;;89,738588%;11,434782%
+1128649;0,0788263;1012243;0,0706963;;89,686253%;11,499808%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+oleauto-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2116230;0,1478;1736448;0,121276;;82,053841%;21,871199%
+2116157;0,147795;1740134;0,121533;;82,230855%;21,608853%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+oleauto-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+462129;0,0322757;287513;0,0200803;;62,214879%;60,733254%
+462406;0,032295;287927;0,0201092;;62,267142%;60,598346%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+oleauto-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1329641;0,0928638;1011873;0,0706705;;76,101218%;31,403941%
+1325060;0,0925439;1016511;0,0709944;;76,714337%;30,353730%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+oleauto-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2214660;0,154675;1560747;0,109005;;70,473436%;41,897438%
+2215255;0,154716;1559211;0,108897;;70,385170%;42,075383%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+oleauto-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+10360454;0,723587;6186327;0,432061;;59,710964%;67,473430%
+10347122;0,722656;6140550;0,428864;;59,345488%;68,504808%
+
+8761672 out of 9000000 results was successfull, expected 8761672, ratio is 97,351911%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+oleauto-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+13827006;0,965696;7305884;0,510252;;52,837787%;89,258494%
+13814913;0,964851;7307871;0,510391;;52,898422%;89,041555%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale 0
+oleauto-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1351624;0,0943991;1329477;0,0928524;;98,361453%;1,665843%
+1351708;0,094405;1329390;0,0928463;;98,348904%;1,678815%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+oleauto-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2095090;0,146324;1743655;0,121779;;83,225780%;20,155077%
+2095252;0,146335;1744297;0,121824;;83,249986%;20,120140%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+oleauto-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+495427;0,0346013;299975;0,0209506;;60,548779%;65,156096%
+495272;0,0345904;300056;0,0209563;;60,584083%;65,059855%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+oleauto-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1354097;0,0945719;1331812;0,0930155;;98,354254%;1,673284%
+1353412;0,094524;1333349;0,0931228;;98,517598%;1,504707%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+oleauto-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2191195;0,153036;1600163;0,111757;;73,026956%;36,935737%
+2191440;0,153053;1599514;0,111712;;72,989176%;37,006616%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+oleauto-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+9554839;0,667322;5575281;0,389385;;58,350340%;71,378609%
+9601475;0,670579;5617983;0,392367;;58,511666%;70,906089%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+oleauto-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+13643613;0,952887;7118514;0,497166;;52,174699%;91,663780%
+13645697;0,953033;7120599;0,497312;;52,182010%;91,636925%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale 0
+coreclr-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1109734;0,0775052;1012278;0,0706988;;91,218076%;9,627395%
+1108890;0,0774463;1012405;0,0707077;;91,298957%;9,530277%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+coreclr-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2155540;0,150546;1738299;0,121405;;80,643319%;24,002833%
+2152677;0,150346;1736616;0,121287;;80,672391%;23,958146%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+coreclr-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+475421;0,033204;287171;0,0200564;;60,403516%;65,553277%
+476063;0,0332488;287653;0,0200901;;60,423305%;65,499056%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+coreclr-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1348065;0,0941506;1010376;0,070566;;74,950095%;33,422112%
+1349110;0,0942236;1011872;0,0706704;;75,002928%;33,328128%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+coreclr-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2251542;0,157251;1564367;0,109257;;69,479805%;43,926713%
+2248982;0,157072;1560645;0,108997;;69,393397%;44,105931%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+coreclr-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+10251556;0,715982;6179999;0,431619;;60,283522%;65,882810%
+10251768;0,715997;6187010;0,432109;;60,350663%;65,698261%
+
+8761672 out of 9000000 results was successfull, expected 8761672, ratio is 97,351911%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+coreclr-VarDecAdd;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+13710131;0,957533;7357490;0,513857;;53,664622%;86,342503%
+13719836;0,958211;7343607;0,512887;;53,525472%;86,826937%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale 0
+coreclr-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1466202;0,102401;1341183;0,0936699;;91,473276%;9,321547%
+1466057;0,102391;1340606;0,0936296;;91,442966%;9,357783%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 32bit x 32bit with scale in range [10,26]
+coreclr-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2202167;0,153802;1757963;0,122778;;79,828778%;25,268109%
+2202715;0,15384;1757128;0,12272;;79,771010%;25,358824%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 64bit results with varying scale
+coreclr-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+510599;0,0356609;301640;0,0210669;;59,075713%;69,274300%
+508436;0,0355098;301752;0,0210747;;59,349063%;68,494658%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and no scale
+coreclr-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+1469542;0,102635;1342955;0,0937937;;91,385956%;9,426005%
+1469278;0,102616;1342980;0,0937954;;91,404077%;9,404310%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 64bit values -> 65-128 bit results and scale
+coreclr-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+2288823;0,159854;1613477;0,112687;;70,493743%;41,856562%
+2289864;0,159927;1613219;0,112669;;70,450428%;41,943778%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with high overflow probablility
+coreclr-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+9526432;0,665338;5607023;0,391602;;58,857534%;69,901782%
+9523395;0,665126;5608355;0,391695;;58,890291%;69,807279%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario 96bit values with no overflow
+coreclr-VarDecSub;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+13430958;0,938035;7104452;0,496184;;52,896093%;89,049880%
+13431678;0,938086;7106866;0,496353;;52,911230%;88,995796%
+
+9000000 out of 9000000 results was successfull, expected 9000000, ratio is 100,000000%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario VarDecMul all 0..111 patterns for all signs and scales
+oleaut;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+9272957;0,647635;3537797;0,247084;;38,151768%;162,111054%
+9274305;0,647729;3539689;0,247216;;38,166623%;162,009035%
+
+2548816 out of 3444736 results was successfull, expected 2548816, ratio is 73,991621%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario VarDecAdd all 0..111 patterns for all signs and scales
+oleaut;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+5288601;0,369363;2514632;0,175625;;47,548151%;110,313119%
+5286265;0,3692;2516423;0,17575;;47,603043%;110,070604%
+
+3441542 out of 3444736 results was successfull, expected 3441542, ratio is 99,907279%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario VarDecSub all 0..111 patterns for all signs and scales
+oleaut;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+5288656;0,369366;2518523;0,175897;;47,621229%;109,990379%
+5289310;0,369412;2511537;0,175409;;47,483263%;110,600521%
+
+3441542 out of 3444736 results was successfull, expected 3441542, ratio is 99,907279%
+0 equal results with different scale (FALSE POSITIVE)
+
+
+Starting Scenario VarDecMul all 0..111 patterns for all signs and scales
+oleaut;;x64;;;% time;speedup
+ticks;sec;ticks;sec;;;
+8327834;0,581627;4167274;0,291048;;50,040311%;99,838887%
+8328570;0,581678;4167641;0,291073;;50,040295%;99,838950%
+
+3428200 out of 3444736 results was successfull, expected 3428200, ratio is 99,519963%
+0 equal results with different scale (FALSE POSITIVE)
