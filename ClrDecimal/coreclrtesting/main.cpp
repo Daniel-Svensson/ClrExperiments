@@ -3,16 +3,20 @@
 
 #include "stdafx.h"
 //#include <vector>
-//#include <functional>
+#include <functional>
+#include <oleauto.h>
 
 #define _CRT_RAND_S  
 #include <stdlib.h>  
+#include <array>
+#include <vector>
+#include <iostream>
 
 using namespace std;
 //#define NO_COMPARE
-#define TEST_MULTIPLY
+//#define TEST_MULTIPLY
 #define TEST_ADDSUB
-#define TEST_DIV
+//#define TEST_DIV
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
 #define TEST_64bit_with_scale_64bit_result
@@ -627,7 +631,7 @@ int main()
 	const int elements = 1000;
 #else
 	const int iterations = 3;
-	const int elements = 5000;
+	const int elements = 3000;
 #endif
 	const int bytes = 4;
 

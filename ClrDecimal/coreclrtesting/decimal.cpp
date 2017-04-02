@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "coreclr_helpers.h"
 
 /***
 * Div96By32

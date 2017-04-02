@@ -18,6 +18,7 @@
 *****************************************************************************/
 
 #include "stdafx.h"
+#include "coreclr_helpers.h"
 
 static const ULONG ulTenToTenDiv4 = 2500000000U;
 static const ULONG ulTenToNine = 1000000000U;
