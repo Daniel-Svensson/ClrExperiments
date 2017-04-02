@@ -14,9 +14,9 @@
 
 using namespace std;
 //#define NO_COMPARE
-//#define TEST_MULTIPLY
+#define TEST_MULTIPLY
 #define TEST_ADDSUB
-//#define TEST_DIV
+#define TEST_DIV
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
 #define TEST_64bit_with_scale_64bit_result
@@ -496,6 +496,7 @@ int SearchScale32(const ULONG* rgulQuo, int iScale)
 
 int SearchScale32(const ULONG* rgulQuo, int iScale);
 int SearchScale64(const ULONG(&rgulQuo)[4], int iScale);
+void Div160By96_x64(DWORD64 &quo, ULONG  rgulRem[6], ULONG  rgulDivisor[4]);
 ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
 
 void CompareScaleResult()

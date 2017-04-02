@@ -979,6 +979,30 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 }
 
 /***
+* Div160By96
+*
+* Entry:
+*   rgulNum - Pointer to 160-bit dividend as array of ULONGs, least-sig first
+*   rgulDen - Pointer to 96-bit divisor.
+*
+* Purpose:
+*   Do partial divide, yielding 64-bit result and 96-bit remainder.
+*
+* Exit:
+*   Remainder overwrites lower 128-bits of dividend.
+*   Returns quotient.
+*
+* Exceptions:
+*   None.
+*
+***********************************************************************/
+inline DWORD64 Div160By96_x64(ULONG rgulRem[6], ULONG rgulDivisor[4])
+{
+	DWORD64 quo = Div128By96_x64(&rgulRem[1], rgulDivisor);
+	return (quo << 32) + Div128By96_x64(&rgulRem[0], rgulDivisor);
+}
+
+/***
 * Div128By64
 *
 * Entry:
@@ -1063,7 +1087,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	ULONG   rgulDivisor[4]; //[3];
 	DWORD64 ullPwr64;
 	ULONG   ulTmp;
-	ULONG   ulTmp1;
 	DWORD64 ullTmp64;
 	DWORD64 ullDivisor;
 	int     iScale;
@@ -1285,16 +1308,15 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					if (rgulRem[2] >= 0x80000000)
 						goto RoundUp;
 
-					ulTmp = rgulRem[0] > 0x80000000;
-					ulTmp1 = rgulRem[1] > 0x80000000;
-					rgulRem[0] <<= 1;
-					rgulRem[1] = (rgulRem[1] << 1) + ulTmp;
-					rgulRem[2] = (rgulRem[2] << 1) + ulTmp1;
+					// TODO: Consider using add instead, amd reference manual 2006 reccommeded it and it 
+					// multiply reminder by 2, was "shift 1" but add/adc instruction is faster for a wider range of CPU's
+					// and is recommended especially for older CPUs
+					auto carry = _addcarry_u64(0, rgullRem[0], rgullRem[0], &rgullRem[0]);
+					_addcarry_u32(carry, rgulRem[2], rgulRem[2], (unsigned int*)&rgulRem[2]);
 
 					if (rgulRem[2] > rgulDivisor[2] || (rgulRem[2] == rgulDivisor[2] &&
-						(rgulRem[1] > rgulDivisor[1] || (rgulRem[1] == rgulDivisor[1] &&
-						(rgulRem[0] > rgulDivisor[0] || (rgulRem[0] == rgulDivisor[0] &&
-							(rgulQuo[0] & 1)))))))
+						(rgullRem[0] > rgullDivisor[0] || (rgullRem[0] == rgullDivisor[0] &&
+							(rgulQuo[0] & 1)))))
 						goto RoundUp;
 					break;
 				}
@@ -1312,15 +1334,14 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				DWORD64 tmp64 = IncreaseScale96By64(rgulRem, ullPwr64);
 				DWORD64 quo;
 				rgulRem[3] = (DWORD32)tmp64;
-				if (tmp64 <= UINT32_MAX)
+				if (FitsIn32Bit(&tmp64))
 				{
 					quo = Div128By96_x64(rgulRem, rgulDivisor);
 				}
 				else
 				{
 					rgulRem[4] = (tmp64 >> 32);
-					quo = Div128By96_x64(&rgulRem[1], rgulDivisor);
-					quo = (quo << 32) + Div128By96_x64(&rgulRem[0], rgulDivisor);
+					quo = Div160By96_x64(rgulRem, rgulDivisor);
 				}
 				Add96(rgulQuo, quo);
 			} // for (;;)
