@@ -14,9 +14,9 @@
 
 using namespace std;
 //#define NO_COMPARE
-#define TEST_MULTIPLY
+//#define TEST_MULTIPLY
 #define TEST_ADDSUB
-#define TEST_DIV
+//#define TEST_DIV
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
 #define TEST_64bit_with_scale_64bit_result
@@ -26,9 +26,16 @@ using namespace std;
 #define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
+
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
-	HRESULT(*baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), HRESULT(*func)(const DECIMAL *, const DECIMAL *, DECIMAL *));
+	HRESULT(STDAPICALLTYPE *baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *),
+	HRESULT(STDAPICALLTYPE *func)(const DECIMAL *, const DECIMAL *, DECIMAL *));
+void run_benchmarks(int iterations, int elements, int bytes,
+	const char *const baseline_name, const char *const func_name,
+	HRESULT(STDAPICALLTYPE *baseline)(DECIMAL *, DECIMAL *, DECIMAL *),
+	HRESULT(STDAPICALLTYPE *func)(DECIMAL *, DECIMAL *, DECIMAL *));
+
 void InitializeTestData(std::vector<DECIMAL>& numbers, int bytes);
 void test_round_to_nearest();
 
@@ -56,7 +63,7 @@ long long run_benchmark(
 	const std::vector<DECIMAL>& lhs,
 	const std::vector<DECIMAL>& rhs,
 	std::vector<DECIMAL>& target, std::vector<HRESULT>& result,
-	HRESULT(*func)(const DECIMAL*, const DECIMAL*, DECIMAL*))
+	HRESULT(STDAPICALLTYPE *func)(const DECIMAL*, const DECIMAL*, DECIMAL*))
 {
 	LARGE_INTEGER start, end;
 	QueryPerformanceCounter(&start);
@@ -144,8 +151,8 @@ void compare_benchmark(
 	const std::vector<DECIMAL>& rhs,
 	std::vector<DECIMAL>& first_target, std::vector<HRESULT>& first_result,
 	std::vector<DECIMAL>& second_target, std::vector<HRESULT>& second_result,
-	HRESULT(*first_func)(const DECIMAL*, const DECIMAL*, DECIMAL*),
-	HRESULT(*second_func)(const DECIMAL*, const DECIMAL*, DECIMAL*))
+	HRESULT(STDAPICALLTYPE *first_func)(const DECIMAL*, const DECIMAL*, DECIMAL*),
+	HRESULT(STDAPICALLTYPE *second_func)(const DECIMAL*, const DECIMAL*, DECIMAL*))
 {
 	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
@@ -203,19 +210,23 @@ long long run_benchmark(const char *const name,
 	return elapsed;
 }
 
+
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
-	HRESULT(*baseline)(DECIMAL *, DECIMAL *, DECIMAL *), HRESULT(*func)(DECIMAL *, DECIMAL *, DECIMAL *))
+	HRESULT (STDAPICALLTYPE *baseline)(DECIMAL *, DECIMAL *, DECIMAL *),
+	HRESULT (STDAPICALLTYPE *func)(DECIMAL *, DECIMAL *, DECIMAL *))
 {
 	run_benchmarks(iterations, elements, bytes,
 		baseline_name, func_name,
-		(HRESULT(*)(const DECIMAL *, const DECIMAL *, DECIMAL *))baseline,
-		(HRESULT(*)(const DECIMAL *, const DECIMAL *, DECIMAL *))func);
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL *, const DECIMAL *, DECIMAL *))baseline,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL *, const DECIMAL *, DECIMAL *))func);
 }
 
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
-	HRESULT(*baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), HRESULT(*func)(const DECIMAL *, const DECIMAL *, DECIMAL *))
+	HRESULT(STDAPICALLTYPE *baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), 
+	HRESULT(STDAPICALLTYPE *func)(const DECIMAL *, const DECIMAL *, DECIMAL *)
+)
 {
 	std::vector<DECIMAL> numbers(elements);
 	std::vector<DECIMAL> targetA(elements*elements);
@@ -430,29 +441,34 @@ void AdditionalTests(const int &iterations)
 #ifdef TEST_MULTIPLY
 	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
+	);
+	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "palrt", "x64", iterations, numbers,
+		numbers, expected, expected_res, actual, actual_res,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_PALRT,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
 	);
 #endif
 
 #ifdef TEST_ADDSUB
 	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
 	);
 	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
 	);
 #endif
 
 #ifdef TEST_DIV
 	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv,
-		(HRESULT(*)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
 	);
 #endif
 
@@ -604,24 +620,21 @@ int main()
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 2147483647;
-	a.Lo64 = 9223372034707292159;
-	a.scale = 1;
-	b.Hi32 = 2851480405;
-	b.Lo64 = 12247015087511315285;
-	b.scale = 2;
+	a.Hi32 = 0;
+	a.Lo64 = 18446744073709551615;
+	a.scale = 2;
+	b.Hi32 = 0;
+	b.Lo64 = 140737488355330;
+	b.scale = 7;
 	b.sign = 0;
 
-
-	VarDecDiv_PALRT(&a, &b, &expected);
-	VarDecDiv_x64(&a, &b, &actual);
-	//VarDecMul_x64(&a, &b, &sum);
+	VarDecMul_PALRT(&a, &b, &expected);
+	VarDecMul_x64(&a, &b, &actual);
 
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
 	assert(actual.Hi32 == expected.Hi32);
 	assert(actual.Lo64 == expected.Lo64);
 	assert(actual.signscale == expected.signscale);
-
 	//test_round_to_nearest();
 
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS /* or ABOVE_NORMAL_PRIORITY_CLASS */);
@@ -649,11 +662,11 @@ int main()
 #endif
 
 #ifdef TEST_ADDSUB
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecAdd", "x64", VarDecAdd, VarDecAdd_x64);
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecSub", "x64", VarDecSub, VarDecSub_x64);
+	//run_benchmarks(iterations, elements, bytes, "oleauto-VarDecAdd", "x64", VarDecAdd, VarDecAdd_x64);
+	//run_benchmarks(iterations, elements, bytes, "oleauto-VarDecSub", "x64", VarDecSub, VarDecSub_x64);
 
-	run_benchmarks(iterations, elements, bytes, "coreclr-VarDecAdd", "x64", VarDecAdd_PALRT, VarDecAdd_x64);
-	run_benchmarks(iterations, elements, bytes, "coreclr-VarDecSub", "x64", VarDecSub_PALRT, VarDecSub_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecAdd", "x64", VarDecAdd_PALRT, VarDecAdd_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecSub", "x64", VarDecSub_PALRT, VarDecSub_x64);
 #endif
 
 #ifdef TEST_Bitpatterns_with_all_scales

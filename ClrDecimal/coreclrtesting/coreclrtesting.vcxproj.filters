@@ -27,6 +27,9 @@
     <ClInclude Include="coreclr_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="x86_64bit_emulation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -46,6 +49,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="asm.masm" />
+    <MASM Include="udiv128.masm" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="udiv64.masm" />
   </ItemGroup>
 </Project>
