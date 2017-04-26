@@ -1,8 +1,11 @@
 #include "stdafx.h"
-
 #include <assert.h>
 #include <functional> // swap
 #include <intrin.h>
+
+// Switches to test
+// #define TEST_UDIV_FASTCALL // fastcall calling convention on x86
+// #define INLINE_ASM // Enable or disable inline asm for x86
 
 // ------------------------- INSTRINCTS AND SIMPLE HELPERS ------------------------
 
@@ -29,16 +32,14 @@ inline const unsigned int & hi32(const unsigned __int64 &value)
 // Determine if 64 bit value can be stored in 32 bits without loss (upper 32 bits are 0)
 static inline unsigned char FitsIn32Bit(const DWORD64* pValue)
 {
-#ifdef _TARGET_AMD64_
+#ifdef _AMD64_
 	return *pValue <= (DWORD64)(MAXDWORD32);
 #else
 	return hi32(*pValue) == 0;
 #endif
 }
 
-
-
-#ifdef _TARGET_AMD64_
+#ifdef _AMD64_
 // Performs division of a 128bit number with 
 // requires that hi < ulDen in order to not loose precision
 // so it is best to set it to 0 unless when chaining calls in which case 
@@ -49,20 +50,125 @@ extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, __out DWOR
 // so it is best to set it to 0 unless when chaining calls in which case 
 // the remainder from a previus devide should be used
 extern "C" DWORD64 _udiv128_v2(__inout DWORD64* pLow, DWORD64 hi, DWORD64 ulDen);
+// Performs inplace division of a 64bit number with 
+// requires that hi < ulDen in order to not loose precision
+// so it is best to set it to 0 unless when chaining calls in which case 
+// the remainder from a previus devide should be used
+extern "C" DWORD32 _udiv64(DWORD32 low, DWORD32 hi, DWORD32 divisor, __out DWORD32 *remainder);
+// Performs inplace division of a 64bit number with 
+// requires that hi < ulDen in order to not loose precision
+// so it is best to set it to 0 unless when chaining calls in which case 
+// the remainder from a previus devide should be used
+extern "C" DWORD32 _udiv64_v2(__inout DWORD32* pLow, DWORD32 hi, DWORD32 ulDen);
 #else
 
-//#define UDIV_FASTCALL 1
+// TODO: Define addcaryy etc for ARM 
+// CLANG builtins availible 
+/*
+unsigned char      __builtin_addcb (unsigned char x, unsigned char y, unsigned char carryin, unsigned char *carryout);
+unsigned short     __builtin_addcs (unsigned short x, unsigned short y, unsigned short carryin, unsigned short *carryout);
+unsigned           __builtin_addc  (unsigned x, unsigned y, unsigned carryin, unsigned *carryout);
+unsigned long      __builtin_addcl (unsigned long x, unsigned long y, unsigned long carryin, unsigned long *carryout);
+unsigned long long __builtin_addcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
+unsigned char      __builtin_subcb (unsigned char x, unsigned char y, unsigned char carryin, unsigned char *carryout);
+unsigned short     __builtin_subcs (unsigned short x, unsigned short y, unsigned short carryin, unsigned short *carryout);
+unsigned           __builtin_subc  (unsigned x, unsigned y, unsigned carryin, unsigned *carryout);
+unsigned long      __builtin_subcl (unsigned long x, unsigned long y, unsigned long carryin, unsigned long *carryout);
+unsigned long long __builtin_subcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
+*/
 
-#ifdef UDIV_FASTCALL
+inline unsigned char _addcarry_u64(unsigned char carry, unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 *pRes)
+{
+	carry = _addcarry_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
+	return _addcarry_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
+}
+
+inline unsigned char _subborrow_u64(unsigned char carry, unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 *pRes)
+{
+	carry = _subborrow_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
+	return _subborrow_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
+}
+
+inline unsigned char _BitScanReverse64(unsigned long * Index, unsigned __int64 Mask)
+{
+	unsigned char res = _BitScanReverse(Index, hi32(Mask));
+	if (res)
+	{
+		*Index += 32;
+	}
+	else
+	{
+		res = _BitScanReverse(Index, low32(Mask));
+	}
+
+	return res;
+}
+
+// Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
+static unsigned __int64 __fastcall _umul128(unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 * _HighProduct)
+{
+	unsigned __int64 lowRes, sdltmp1, sdltmp2;
+	unsigned __int64 &hiRes = *_HighProduct;
+
+	unsigned char carry = 0;
+
+	lowRes = UInt32x32To64(low32(lhs), low32(rhs));
+	if ((hi32(lhs) | hi32(rhs)) == 0)
+	{
+		*_HighProduct = 0;
+		return lowRes;
+	}
+
+	sdltmp1 = UInt32x32To64(hi32(lhs), low32(rhs));
+	carry = _addcarry_u32(0, low32(sdltmp1), hi32(lowRes), &hi32(lowRes));
+
+	hiRes = UInt32x32To64(hi32(lhs), hi32(rhs));
+	carry = _addcarry_u32(carry, hi32(sdltmp1), low32(hiRes), &low32(hiRes));
+	_addcarry_u32(carry, hi32(hiRes), 0, &hi32(hiRes));
+
+	sdltmp2 = UInt32x32To64(low32(lhs), hi32(rhs)); 
+	carry = _addcarry_u32(0, low32(sdltmp2), hi32(lowRes), &hi32(lowRes));
+	carry = _addcarry_u32(carry, hi32(sdltmp2), low32(hiRes), &low32(hiRes));
+	_addcarry_u32(carry, hi32(hiRes), 0, &hi32(hiRes));
+
+	return lowRes;
+}
+
+unsigned __int64 ShiftLeft128(unsigned __int64 _LowPart, unsigned __int64 _HighPart, unsigned char _Shift)
+{
+	return (_HighPart << _Shift) + (_LowPart >> (64 - _Shift));
+}
+
+
+#ifdef TEST_UDIV_FASTCALL
 inline unsigned int __fastcall _udiv64(unsigned int lo, unsigned int hi, unsigned int ulDen, __out unsigned int *remainder)
 #else
 inline unsigned int _udiv64(unsigned int lo, unsigned int hi, unsigned int ulDen, __out unsigned int *remainder)
 #endif
 {
+#ifndef INLINE_ASM
+	if (hi == 0)
+	{
+		auto mod = lo % ulDen;
+		auto quo = lo / ulDen;
+		*remainder = mod;
+		return quo;
+	}
+	else
+	{
+		SPLIT64 sdl;
+		sdl.u.Hi = hi;
+		sdl.u.Lo = lo;
+
+		auto mod = sdl.int64 % ulDen;
+		auto quo = sdl.int64 / ulDen;
+		*remainder = mod;
+		return quo;
+	}
+#elif TEST_UDIV_FASTCALL
 	// DX:AX = DX:AX / r/m; resulting 
 	// 
 	// DX == remainder
-#ifdef UDIV_FASTCALL
 	_asm
 	{
 		// edx is already hi
@@ -83,7 +189,7 @@ inline unsigned int _udiv64(unsigned int lo, unsigned int hi, unsigned int ulDen
 #endif
 }
 
-#ifdef UDIV_FASTCALL
+#ifdef TEST_UDIV_FASTCALL
 inline unsigned int __fastcall _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
 #else
 inline unsigned int _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
@@ -96,7 +202,26 @@ inline unsigned int _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsi
 	// DX:AX = DX:AX / r/m; resulting 
 	// 
 	// DX == remainder
-#ifdef UDIV_FASTCALL
+#ifndef INLINE_ASM
+	if (hi == 0)
+	{
+		auto mod = *pLow % ulDen;
+		auto res = *pLow / ulDen;
+		*pLow = res;
+		return mod;
+	}
+	else
+	{
+		SPLIT64 sdl;
+		sdl.u.Hi = hi;
+		sdl.u.Lo = *pLow;
+
+		auto mod = sdl.int64 % ulDen;
+		auto res = sdl.int64 / ulDen;
+		*pLow = res;
+		return mod;
+	}
+#elif TEST_UDIV_FASTCALL
 	_asm
 	{
 		// ecx = pLow
@@ -127,103 +252,12 @@ inline unsigned int _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsi
 #endif
 }
 
-inline unsigned char _addcarry_u64(unsigned char carry, unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 *pRes)
-{
-	carry = _addcarry_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
-	return _addcarry_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
-}
-
-inline unsigned char _subborrow_u64(unsigned char carry, unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 *pRes)
-{
-	carry = _subborrow_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
-	return _subborrow_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
-}
-
-inline unsigned char _BitScanReverse64(unsigned long * Index, unsigned __int64 Mask)
-{
-	unsigned char res = _BitScanReverse(Index, hi32(Mask));
-	if (res)
-	{
-		*Index += 32;
-	}
-	else
-	{
-		res = _BitScanReverse(Index, low32(Mask));
-	}
-
-	return res;
-}
-
-static unsigned __int64 __fastcall _umul128(unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 * _HighProduct)
-{
-	unsigned __int64 lowRes, sdltmp1, sdltmp2;
-	unsigned __int64 &hiRes = *_HighProduct;
-
-	unsigned char carry = 0;
-
-	lowRes = UInt32x32To64(low32(lhs), low32(rhs));
-#if 0
-	if ((hi32(lhs) | hi32(rhs)) == 0)
-	{
-		*_HighProduct = 0;
-		return lowRes;
-	}
-#else
-	if (hi32(lhs) == 0)
-	{
-		if (hi32(rhs) == 0)
-		{
-			*_HighProduct = 0;
-			return lowRes;
-		}
-		else
-		{
-			sdltmp1 = UInt32x32To64(low32(lhs), hi32(rhs));
-			carry = _addcarry_u32(0, low32(sdltmp1), hi32(lowRes), &hi32(lowRes));
-			carry = _addcarry_u32(carry, hi32(sdltmp1), 0, &low32(hiRes));
-			_addcarry_u32(carry, 0, 0, &hi32(hiRes));
-			return lowRes;
-		}
-	}
-	else if (hi32(rhs) == 0)
-	{
-		// lhs != 0
-		sdltmp1 = UInt32x32To64(hi32(lhs), low32(rhs));
-		carry = _addcarry_u32(0, low32(sdltmp1), hi32(lowRes), &hi32(lowRes));
-		carry = _addcarry_u32(carry, hi32(sdltmp1), 0, &low32(hiRes));
-		_addcarry_u32(carry, 0, 0, &hi32(hiRes));
-		return lowRes;
-	}
-#endif
-
-
-	hiRes = UInt32x32To64(hi32(lhs), hi32(rhs));
-
-	sdltmp1 = UInt32x32To64(hi32(lhs), low32(rhs));
-	sdltmp2 = UInt32x32To64(low32(lhs), hi32(rhs));
-
-	carry = _addcarry_u32(0, low32(sdltmp1), hi32(lowRes), &hi32(lowRes));
-	carry = _addcarry_u32(carry, hi32(sdltmp1), low32(hiRes), &low32(hiRes));
-	_addcarry_u32(carry, hi32(hiRes), 0, &hi32(hiRes));
-
-	carry = _addcarry_u32(0, low32(sdltmp2), hi32(lowRes), &hi32(lowRes));
-	carry = _addcarry_u32(carry, hi32(sdltmp2), low32(hiRes), &low32(hiRes));
-	_addcarry_u32(carry, hi32(hiRes), 0, &hi32(hiRes));
-
-	return lowRes;
-}
-
-unsigned __int64 ShiftLeft128(unsigned __int64 _LowPart, unsigned __int64 _HighPart, unsigned char _Shift)
-{
-	return (_HighPart << _Shift) + (_LowPart >> (64 - _Shift));
-}
-
 extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, __out DWORD64 *remainder)
 {
 	assert(hi < divisor);
 	assert(divisor <= MAXDWORD32);
 	assert(false);
-	exit(-1);
+	FatalExit(-1);
 
 	return 0;
 }
@@ -231,7 +265,7 @@ extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, __out DWOR
 extern "C" DWORD64 _udiv128_v2(__inout DWORD64* pLow, DWORD64 hi, DWORD64 ulDen)
 {
 	assert(false);
-	exit(-1);
+	FatalExit(-1);
 
 	return 0;
 }
@@ -306,7 +340,7 @@ const DWORD32 OVFL_MAX32_1_HI = 429496729;
 // This results in a single div instruction on x64 platforms
 static inline DWORD64 DivMod64By64_x64(DWORD64 ullNum, DWORD64 ullDen, __out DWORD64* pRemainder)
 {
-#ifndef _TARGET_AMD64_
+#ifndef _AMD64_
 	if (FitsIn32Bit(&ullDen))
 	{
 		SPLIT64 res;
@@ -352,7 +386,7 @@ static inline unsigned char Add96(ULONG *plVal, DWORD64 value)
 static inline unsigned char Add96(DWORD64 *pllVal, DWORD64 value)
 {
 	auto carry = _addcarry_u64(0, pllVal[0], value, &pllVal[0]);
-	return _addcarry_u32(carry, (DWORD32)pllVal[1], 0, (unsigned int*)&((SPLIT64*)&pllVal[1])->u.Lo);
+	return _addcarry_u32(carry, (DWORD32)pllVal[1], 0, &low32(pllVal[1]));
 }
 
 static inline unsigned char Sub96(ULONG *plVal, DWORD64 value)
@@ -379,17 +413,39 @@ static inline unsigned char Sub96(ULONG *plVal, DWORD64 value)
 *   None.
 *
 ***********************************************************************/
-static DWORD32 Div96By32_x64(__inout ULONG *pdlNum, DWORD32 ulDen)
+inline static DWORD32 Div96By32_x64(__inout ULONG *pdlNum, DWORD32 ulDen)
 {
 	// Upper 64bit
+#if 1
 	DWORD64 *const hi64 = (DWORD64*)(pdlNum + 1);
 	ULONG *const lo32 = pdlNum;
 	DWORD64 remainder;
 
 	*hi64 = DivMod64By64_x64(*hi64, ulDen, &remainder);
 	*lo32 = (DWORD32)DivMod64By64_x64((remainder << 32) + *lo32, ulDen, &remainder);
-
 	return (DWORD32)remainder;
+#else
+
+	DWORD32 & hi32 = *(DWORD32*)(pdlNum + 2);
+	DWORD32 & mid32 = *(DWORD32*)(pdlNum + 1);
+	DWORD32 & lo32 = *(DWORD32*)pdlNum;
+	DWORD32 remainder;
+
+	if (hi32 < ulDen)
+	{
+		remainder = hi32;
+		hi32 = 0;
+	}
+	else
+	{
+		remainder = hi32 % ulDen;
+		hi32 = hi32 / ulDen;
+	}
+		
+	remainder = _udiv64_v2(&mid32, remainder, ulDen);
+	remainder = _udiv64_v2(&lo32, remainder, ulDen);
+	return remainder;
+#endif
 }
 
 static inline DWORD32 Div96By32_x64(__inout DWORD64 *pdllNum, DWORD32 ulDen)
@@ -397,14 +453,14 @@ static inline DWORD32 Div96By32_x64(__inout DWORD64 *pdllNum, DWORD32 ulDen)
 	return Div96By32_x64((ULONG*)pdllNum, ulDen);
 }
 
-#ifndef _TARGET_AMD64_
+//DECLSPEC_NOINLINE
 DWORD32 InplaceDivide_32(DWORD64 * rgullRes, int iHiRes, DWORD32 ulDen)
 {
 	int iCur = iHiRes * 2 + 1; // convert from 64bit to 32bit indicec (+1 == always point to upper 32 bits at start)
 	DWORD32 *const rgulRes = (DWORD32*)rgullRes;
 	DWORD32 ulRemainder = 0;
 
-	while (iCur >= 0 && rgulRes[iCur] == 0)
+	while (iCur > 0 && rgulRes[iCur] == 0)
 		iCur--;
 
 	while (iCur >= 0) {
@@ -416,14 +472,15 @@ DWORD32 InplaceDivide_32(DWORD64 * rgullRes, int iHiRes, DWORD32 ulDen)
 
 	return ulRemainder;
 }
-#endif
 
+DECLSPEC_NOINLINE
 DWORD64 ReduceScale(DWORD64 * rgullRes, int &iHiRes, DWORD64 &ullDen, int &iNewScale)
 {
-#ifndef _TARGET_AMD64_
+#if 1
+//#ifndef _AMD64_
 	// Handle up to POWER10_MAX32 scale at a time
 	int iCurScale;
-	DWORD32 remainder;
+	DWORD64 remainder;
 	DWORD32 ulDen;
 	
 	if (iNewScale < POWER10_MAX32)
@@ -440,15 +497,44 @@ DWORD64 ReduceScale(DWORD64 * rgullRes, int &iHiRes, DWORD64 &ullDen, int &iNewS
 	iNewScale -= iCurScale;
 	remainder = InplaceDivide_32(rgullRes, iHiRes, ulDen);
 
+	/*
+	if (iNewScale > 0)
+	{
+		if (iNewScale < POWER10_MAX32)
+		{
+			iCurScale = iNewScale;
+			ulDen = (DWORD32)rgulPower10_64[iNewScale];
+		}
+		else
+		{
+			iCurScale = POWER10_MAX32;
+			ulDen = POWER10_MAX_VALUE32;
+		}
+		iNewScale -= iCurScale;
+		remainder = UInt32x32To64(InplaceDivide_32(rgullRes, iHiRes, ulDen), POWER10_MAX_VALUE32) + remainder;
+		ullDen = UInt32x32To64(ulDen, POWER10_MAX_VALUE32);
+	}
+	*/
+
 	if (iHiRes > 0 && rgullRes[iHiRes] == 0)
 		iHiRes--;
 	return remainder;
 #else
 	if (iNewScale < POWER10_MAX64)
+	{
 		ullDen = rgulPower10_64[iNewScale];
+		//if (iNewScale <= POWER10_MAX32)
+		//{
+		//	iNewScale = 0;
+		//	return InplaceDivide_32(rgullRes, iHiRes, (DWORD32)ullDen);
+		//}
+	}
 	else
 		ullDen = POWER10_MAX_VALUE64;
 	iNewScale -= POWER10_MAX64;
+
+	
+
 	int iCur;
 	DWORD64 ullRemainder;
 	// TODO: Check again if extra check is improvement or not
@@ -591,11 +677,11 @@ int ScaleResult_x64(__inout DWORD64 *rgullRes, int iHiRes, int iScale)
 				if (carry != 0) {
 					// The rounding caused us to carry beyond 96 bits. 
 					// Scale by 10 more.
-					// We know that (SPLIT64*)&rgulRes[1])->u.Hi == 0 before rounding up
+					// We know that hi32(rgullRes[1]) == 0 before rounding up
 					// so adding the carry results in 1.
 					//
 					assert(iHiRes == 1);
-					((SPLIT64*)&rgullRes[1])->u.Hi = 1;
+					hi32(rgullRes[1]) = 1;
 					ullSticky = 0;  // no sticky bit
 					ullRemainder = 0; // or remainder
 					iNewScale = 1;
@@ -652,7 +738,18 @@ STDAPI VarDecMul_x64(DECIMAL* pdecL, DECIMAL *pdecR, DECIMAL *res)
 					return NOERROR;
 				}
 				ullPwr = rgulPower10_64[iScale];
-				lo = DivMod64By64_x64(lo, ullPwr, &ullRem);
+
+#ifndef _AMD64_
+				if (iScale <= POWER10_MAX32 && FitsIn32Bit(&lo))
+				{
+					ullRem = low32(lo) % (DWORD32)ullPwr;
+					lo = low32(lo) / (DWORD32)ullPwr;
+				}
+				else
+#endif // !_AMD64_
+				{
+					lo = DivMod64By64_x64(lo, ullPwr, &ullRem);
+				}				
 
 				// Round result towards even.  See if remainder >= 1/2 of divisor.
 				ullPwr >>= 1; // Divisor is a power of 10, so it is always even.
@@ -801,7 +898,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 				decRes.scale--;
 
 				// Dibvide with 10, "carry 1" from overflow
-#ifdef _TARGET_AMD64_
+#ifdef _AMD64_
 				DWORD64 remainder;
 				decRes.Hi32 = (DWORD32)DivMod64By64_x64((DWORD64)decRes.Hi32 + (1Ui64 << 32), 10, &remainder);
 				//decRes.Lo64 = _udiv128(decRes.Lo64, remainder, 10, &remainder);
@@ -852,7 +949,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 		// so final result will be at most log2(10^28) + 96  < 190 bits without overflow
 		//
 
-#if defined(_TARGET_AMD64_)
+#if defined(_AMD64_)
 		if (iScale <= POWER10_MAX64) {
 #else
 		if (iScale <= 9) {
@@ -866,7 +963,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			DWORD64 hi;
 			rgulNum[0] = _umul128(pdecL->Lo64, ullPwr, &hi);
 
-#if defined(_TARGET_AMD64_)
+#if defined(_AMD64_)
 			rgulNum[1] = _umul128(pdecL->Hi32, ullPwr, &rgulNum[2]);
 			auto carry = _addcarry_u64(0, rgulNum[1], hi, &rgulNum[1]);
 			_addcarry_u64(carry, rgulNum[2], 0, &rgulNum[2]);
@@ -1293,6 +1390,8 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 	return quo;
 }
 
+
+
 /***
 * Div160By96
 *
@@ -1423,7 +1522,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	rgullDivisor[0] = pdecR->Lo64;
 	rgulDivisor[2] = pdecR->Hi32;
 
-	if (rgulDivisor[1] == 0 && rgulDivisor[2] == 0) {
+	if (rgulDivisor[2] == 0 && FitsIn32Bit(&rgullDivisor[0])) {
 		// Divisor is only 32 bits.  Easy divide.
 		//
 		if (rgulDivisor[0] == 0)
@@ -1440,7 +1539,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			if (rgulRem[0] == 0) {
 				if (iScale < 0) {
 					iCurScale = min(POWER10_MAX64, -iScale);
-					goto HaveScale;
+					goto HaveScale32;
 				}
 				break;
 			}
@@ -1470,8 +1569,8 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				// Round quotient.
 				//
 				ulTmp = rgulRem[0] << 1;
-				if (ulTmp < rgulRem[0] || (ulTmp >= rgulDivisor[0] &&
-					(ulTmp > rgulDivisor[0] || (rgulQuo[0] & 1)))) {
+				if (ulTmp < rgulRem[0] || 
+					(ulTmp > rgulDivisor[0] || (ulTmp == rgulDivisor[0] && (rgulQuo[0] & 1)))) {
 				RoundUp:
 					Add96(rgulQuo, 1);
 				}
@@ -1481,7 +1580,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			if (iCurScale == -1)
 				return DISP_E_OVERFLOW;
 
-		HaveScale:
+		HaveScale32:
 
 			ullPwr64 = rgulPower10_64[iCurScale];
 			iScale += iCurScale;
@@ -1492,9 +1591,11 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 			// TODO: consider removing this is statement for simpler code
 			// perf improvement of it is <1% and could be only noise
 			// if _udiv128 could be inlined then we will definitly get better perf without it
-			if (iCurScale <= 9)
+			if (iCurScale <= POWER10_MAX32)
 			{
-				ullTmp64 = DivMod64By64_x64(UInt32x32To64(rgulRem[0], ullPwr64), rgulDivisor[0], &rgullRem[0]);
+				// NOTE: We could use a single _udiv64 here since upper 32bits must be less than rgulDivisor<<2^32
+				// since ullPwr < 2^32 and remainder < divisor
+				ullTmp64 = DivMod64By64_x64(UInt32x32To64(rgulRem[0], (DWORD32)ullPwr64), rgulDivisor[0], &rgullRem[0]);
 				Add96(rgulQuo, ullTmp64);
 			}
 			else // (iCurScale > 9)  / IncreaseScale for remainder can give 96bit result
@@ -1580,7 +1681,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 				// Reminder is at most 64bits, a single multiply is needed to IncreaseScale
 				// result is up to 128 bits
-				// TODO: Use this
 				rgullRem[0] = _umul128(rgullRem[0], ullPwr64, &rgullRem[1]);
 				DWORD64 tmp64 = Div128By64_x64(rgullRem, ullDivisor);
 				Add96(rgulQuo, tmp64);
@@ -1623,7 +1723,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					if (rgulRem[2] >= 0x80000000)
 						goto RoundUp;
 
-					// TODO: Consider using add instead, amd reference manual 2006 reccommeded it and it 
 					// multiply reminder by 2, was "shift 1" but add/adc instruction is faster for a wider range of CPU's
 					// and is recommended especially for older CPUs
 					auto carry = _addcarry_u64(0, rgullRem[0], rgullRem[0], &rgullRem[0]);
