@@ -24,10 +24,11 @@ using namespace std;
 //#define NO_COMPARE
 //#define COMPARE_OLEAUT
 //#define COMPARE_CORECLR
-#define TEST_MULTIPLY
+//#define TEST_MULTIPLY
 //#define TEST_ADD
-//#define TEST_SUB
+#define TEST_SUB
 //#define TEST_DIV
+
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
 #define TEST_64bit_with_scale_64bit_result

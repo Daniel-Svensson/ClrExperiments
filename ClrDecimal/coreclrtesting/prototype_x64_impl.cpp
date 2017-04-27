@@ -160,8 +160,8 @@ inline unsigned int _udiv64(unsigned int lo, unsigned int hi, unsigned int ulDen
 		sdl.u.Hi = hi;
 		sdl.u.Lo = lo;
 
-		auto mod = sdl.int64 % ulDen;
-		auto quo = sdl.int64 / ulDen;
+		auto mod = static_cast<unsigned int>(sdl.int64 % ulDen);
+		auto quo = static_cast<unsigned int>(sdl.int64 / ulDen);
 		*remainder = mod;
 		return quo;
 	}
@@ -425,6 +425,9 @@ inline static DWORD32 Div96By32_x64(__inout ULONG *pdlNum, DWORD32 ulDen)
 	*lo32 = (DWORD32)DivMod64By64_x64((remainder << 32) + *lo32, ulDen, &remainder);
 	return (DWORD32)remainder;
 #else
+	// The following code might perform better
+	// when denominator is unknown, but it prevents the compiler
+	// from optimizing avay division by 10 which otherwise use mul
 
 	DWORD32 & hi32 = *(DWORD32*)(pdlNum + 2);
 	DWORD32 & mid32 = *(DWORD32*)(pdlNum + 1);
@@ -960,23 +963,33 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			// fit in 128+32 bits (3*DWORD64) for 64bit platfrms
 			//
 			ullPwr = rgulPower10_64[iScale];
+
+			// Below is very similar to IncreaseScale
+#if defined(_AMD64_)
 			DWORD64 hi;
 			rgulNum[0] = _umul128(pdecL->Lo64, ullPwr, &hi);
-
-#if defined(_AMD64_)
 			rgulNum[1] = _umul128(pdecL->Hi32, ullPwr, &rgulNum[2]);
 			auto carry = _addcarry_u64(0, rgulNum[1], hi, &rgulNum[1]);
 			_addcarry_u64(carry, rgulNum[2], 0, &rgulNum[2]);
 #else
+			rgulNum[0] = UInt32x32To64(pdecL->Lo32, ullPwr);
+			auto midResult = UInt32x32To64(pdecL->Mid32, ullPwr);
 			rgulNum[1] = UInt32x32To64(pdecL->Hi32, ullPwr);
-			rgulNum[1] += hi;
-			rgulNum[2] = 0;
+			auto carry = _addcarry_u32(0, low32(midResult), hi32(rgulNum[0]), &hi32(rgulNum[0]));
+			carry = _addcarry_u32(carry, hi32(midResult), low32(rgulNum[1]), &low32(rgulNum[1]));
+			_addcarry_u32(carry, 0, hi32(rgulNum[1]), &hi32(rgulNum[1]));
 #endif
 
+// TO REVIEW: we can set rgulNum[2] to 0 above for non _AMD64_
+// by adding that extra write we can remove this condition
+// and the compiler will skip this check, but write will impacte cache
+#if defined(_AMD64_)
 			if (rgulNum[2] != 0) {
 				iHiProd = 2;
 			}
-			else {
+			else 
+#endif
+			{
 				if (FitsIn32Bit(&rgulNum[1])) {
 					// Result fits in 96 bits.  Use standard aligned add.
 					//
