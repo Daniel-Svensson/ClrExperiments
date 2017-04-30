@@ -14,6 +14,9 @@
 
 using namespace std;
 
+//#define NO_COMPARE
+//#define COMPARE_OLEAUT
+//#define COMPARE_CORECLR
 // default compare
 #ifdef _AMD64_
 #define COMPARE_OLEAUT
@@ -21,11 +24,9 @@ using namespace std;
 #define COMPARE_CORECLR
 #endif
 
-//#define NO_COMPARE
-//#define COMPARE_OLEAUT
-//#define COMPARE_CORECLR
-//#define TEST_MULTIPLY
-//#define TEST_ADD
+
+#define TEST_MULTIPLY
+#define TEST_ADD
 #define TEST_SUB
 //#define TEST_DIV
 
@@ -637,6 +638,8 @@ void CompareScaleResult()
 	}
 }
 
+void TestDivideByTen32(DWORD32);
+void TestDivideByTen64(DWORD64);
 
 int __cdecl main()
 {
@@ -644,6 +647,11 @@ int __cdecl main()
 	setlocale(LC_ALL, "");
 	//cin.get();
 
+#if 0
+	int r = rand();
+
+	TestDivideByTen32(r);
+	TestDivideByTen64(((DWORD64)r)<<32 + (DWORD64)rand());
 	//for(int i=0; i < 2; ++i)
 	//	CompareScaleResult();
 	//return 0;
@@ -677,6 +685,8 @@ int __cdecl main()
 	assert(actual.signscale == expected.signscale);
 	//test_round_to_nearest();
 
+#endif // ! NO_COMPARE
+
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS /* or ABOVE_NORMAL_PRIORITY_CLASS */);
 
 	//run_benchmarks(30000, 4, 5);
@@ -685,7 +695,7 @@ int __cdecl main()
 	const int elements = 1000;
 #else
 	const int iterations = 3;
-	const int elements = 3000;
+	const int elements = 4000;
 #endif
 	const int bytes = 4;
 

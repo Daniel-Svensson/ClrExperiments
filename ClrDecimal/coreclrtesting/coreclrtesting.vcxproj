@@ -63,7 +63,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-	  <!-- <AdditionalOptions>/guard:cf %(AdditionalOptions)</AdditionalOptions>  -->
+      <!-- <AdditionalOptions>/guard:cf %(AdditionalOptions)</AdditionalOptions>  -->
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -118,6 +118,7 @@
     <ClCompile Include="decimal.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="coreclr_impl.cpp" />
+    <ClCompile Include="Source.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
