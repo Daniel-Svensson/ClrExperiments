@@ -54,7 +54,4 @@
   <ItemGroup>
     <MASM Include="udiv128.masm" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="udiv64.masm" />
-  </ItemGroup>
 </Project>

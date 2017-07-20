@@ -6,8 +6,8 @@
 
 // Switches to test
 #define INLINE_ASM // Enable or disable inline asm for x86
-#define PROFILE_NOINLINE DECLSPEC_NOINLINE
-//#define PROFILE_NOINLINE
+//#define PROFILE_NOINLINE DECLSPEC_NOINLINE
+#define PROFILE_NOINLINE
 //#define NO_UDIV128
 #ifndef _AMD64_
 #define NO_UDIV128
@@ -347,41 +347,6 @@ static inline DWORD64 DivMod64By64_x64(DWORD64 ullNum, DWORD64 ullDen, __out DWO
 
 	*pRemainder = mod;
 	return res;
-}
-
-// Divides a 64bit number (ullNum) by 64bit value (ullDen)
-// returns 64bit quotient with remainder in *pRemainder
-// This results in a single div instruction on x64 platforms
-static inline DWORD32 DivMod64By32_x64(DWORD64 ullNum, DWORD32 ulDen, __out DWORD32* pRemainder)
-{
-#if !defined(_AMD64_) && defined(INLINE_ASM)
-	SPLIT64 res;
-	DWORD32 ulRem;
-	DWORD32 remainder = 0;
-
-	// TODO TEST TO REMOVE this, upper 32bits are assumed to always be 0
-	if (!FitsIn32Bit(&ullNum))
-	{
-		auto hi = hi32(ullNum);
-		ulRem = hi % ulDen;
-		res.u.Hi = hi / ulDen;
-	}
-	else
-	{
-		ulRem = 0;
-		res.u.Hi = 0;
-	}
-	// 32 by 32 div mod
-	res.u.Lo = _udiv64(low32(ullNum), ulRem, ulDen, &remainder);
-	*pRemainder = remainder;
-	return res.int64;
-#else
-	auto mod =(DWORD32)(ullNum % ulDen);
-	auto res = (DWORD32)(ullNum / ulDen);
-
-	*pRemainder = (DWORD32)mod;
-	return (DWORD32)res;
-#endif
 }
 
 static inline unsigned char Add96(DECIMAL *pDec, DWORD64 value)
@@ -902,6 +867,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 				decRes.scale--;
 
 				// Dibvide with 10, "carry 1" from overflow
+				// TODO: See if 32bit version is as fast or faster than 64bit (to simplify code)
 #ifdef _AMD64_
 				DWORD64 remainder;
 				decRes.Hi32 = (DWORD32)DivMod64By64_x64((DWORD64)decRes.Hi32 + (1Ui64 << 32), 10, &remainder);
@@ -1010,7 +976,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			//
 			rgulNum[0] = pdecL->Lo64;
 			rgulNum[1] = pdecL->Hi32;
-			// TODO: rgulNum[2] = 0 to simplify rest of the logic
+			// TODO?: rgulNum[2] = 0 to simplify rest of the logic
 			iHiProd = 1;
 
 			// Scan for zeros in the upper words.
@@ -1052,6 +1018,11 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 				if (mul_carry != 0 || add_carry != 0)
 					_addcarry_u64(add_carry, mul_carry, 0, &rgulNum[++iHiProd]);
 			}
+
+			// Scaling by 10^28 (DEC_MAX_SCALE) adds upp to 94bits to the result
+			// so result will be at most 190 = 96+94 bits (so will always in fit in 3*64 = 192 bits)
+			// => iHiProd vill be at most 2
+			__analysis_assume(iHiProd <= 2);
 		}
 
 		// Scaling complete, do the add.  Could be subtract if signs differ.
@@ -1325,9 +1296,10 @@ HaveScale:
 *
 * Purpose:
 *   Do partial divide, yielding 32-bit result and 96-bit remainder.
+* 
 *   Top divisor ULONG must be larger than top dividend ULONG.  This is
 *   assured in the initial call because the divisor is normalized
-*   and the dividend can't be.  In subsequent calls, the remainder
+*   and the dividend can't be. In subsequent calls, the remainder
 *   is multiplied by 10^9 (max), so it can be no more than 1/4 of
 *   the divisor which is effectively multiplied by 2^32 (4 * 10^9).
 *
@@ -1349,6 +1321,8 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 
 	DWORD64 sdlNum;
 	DWORD64 sdlProd1;
+	DWORD32 remainder;
+	DWORD32 hi;
 
 	if (rgulNum[3] == 0 && rgulNum[2] < rgulDen[2])
 		// TODO: TEST
@@ -1357,28 +1331,13 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 			//
 		return 0;
 
-	// When scaling by 32bit rgulNum will be at most 
-	// 
-#ifdef _AMD64_
-	DWORD64 remainder, quo;
-	quo = DivMod64By64_x64(rgullNum[1], rgulDen[2], &remainder);
+	
+	DWORD32 quo = _udiv64(rgulNum[2], rgulNum[3], rgulDen[2], &remainder);
 
 	// Compute full remainder, rem = dividend - (quo * divisor).
-	DWORD64 hi;
-	sdlProd1 = _umul128(rgullDen[0], quo, &hi);
-#else
-	DWORD32 remainder, quo;
-	quo = DivMod64By32_x64(rgullNum[1], rgulDen[2], &remainder);
-
-	// Compute full remainder, rem = dividend - (quo * divisor).
-	DWORD32 hi;
 	sdlProd1 = _umul64by32(rgullDen[0], quo, &hi);
-#endif
-
 
 	auto carry = _subborrow_u64(0, rgullNum[0], sdlProd1, &sdlNum);
-
-	// Since hi is at most 32bit since (quo * divisor) is (32bit * 64bit) => 96bit
 	carry = _subborrow_u32(carry, remainder, hi, (DWORD32*)&rgulNum[2]);
 
 	// Propagate carries
@@ -1442,14 +1401,14 @@ inline DWORD64 Div160By96_x64(ULONG rgulRem[6], ULONG rgulDivisor[4])
 }
 
 /***
-* Div128By64
+* Div96By64
 *
 * Entry:
-*   rgulNum - Pointer to 128-bit dividend as array of ULONGs, least-sig first
+*   rgulNum - Pointer to 96-bit dividend as array of ULONGs, least-sig first
 *   sdlDen  - 64-bit divisor.
 *
 * Purpose:
-*   Do partial divide, yielding 64-bit result and 64-bit remainder.
+*   Do partial divide, yielding 32-bit result and 64-bit remainder.
 *   Divisor must be larger than upper 64 bits of dividend.
 *
 * Exit:
@@ -1483,14 +1442,13 @@ DWORD32 Div96By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 	}
 
 	// Hardware divide won't overflow
-	//
+	// Check for 0 result, else do hardware divide
+
 	if (rgulNum[2] == 0 && rgullNum[0] < ullDen)
 		// Result is zero.  Entire dividend is remainder.
 		//
 		return 0;
 
-	// DivMod64by32 returns quotient in Lo, remainder in Hi.
-	//
 	quo = _udiv64(rgulNum[1], rgulNum[2], hi32(ullDen), &hi32(sdlNum));
 
 	// Compute full remainder, rem = dividend - (quo * divisor).
@@ -1512,6 +1470,25 @@ DWORD32 Div96By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 	return quo;
 }
 
+/***
+* Div128By64
+*
+* Entry:
+*   rgulNum - Pointer to 128-bit dividend as array of ULONGs, least-sig first
+*   sdlDen  - 64-bit divisor.
+*
+* Purpose:
+*   Do partial divide, yielding 64-bit result and 64-bit remainder.
+*   Divisor must be larger than upper 64 bits of dividend.
+*
+* Exit:
+*   Remainder overwrites lower 64-bits of dividend.
+*   Returns quotient.
+*
+* Exceptions:
+*   None.
+*
+***********************************************************************/
 PROFILE_NOINLINE
 DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 {
@@ -1523,9 +1500,6 @@ DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 
 	DWORD64 sdlNum;
 	DWORD64 quotient;
-
-	// When called the divisor always have the MSB set
-	// ?
 
 	DWORD64 hi64 = rgullNum[1];
 
@@ -1549,10 +1523,9 @@ DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 		return quotient;
 	}
 
-
-	DWORD64 lo64 = rgullNum[0];
 	// Hardware divide won't overflow
-	//
+	// Check for 0 result, else do hardware divide
+	DWORD64 lo64 = rgullNum[0];
 	if (hi64 == 0 && lo64 < ullDen)
 	{
 		// Result is zero.  Entire dividend is remainder.
@@ -1560,7 +1533,6 @@ DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 		return 0;
 	}
 
-	// hi64 < ullDen && ullDen >= (1<<63) so we can do divide without overflow
 	quotient = _udiv128(lo64, hi64, ullDen, &rgullNum[0]);
 	return quotient;
 #endif
@@ -1581,7 +1553,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 	DWORD64 rgullQuoSave[2];
 	ULONG   rgulRem[6]; // [4]
 	ULONG   rgulDivisor[4]; //[3];
-	DWORD64 ullPwr64;
 	ULONG   ulTmp;
 	DWORD64 ullTmp64;
 	DWORD64 ullDivisor;
@@ -1717,7 +1688,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					break;
 				}
 
-
 				// We need to unscale if and only if we have a non-zero remainder
 				fUnscale = TRUE;
 
@@ -1740,7 +1710,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					return DISP_E_OVERFLOW;
 
 			HaveScale64:
-#ifdef NO_UDIV128
 				iCurScale = min(iCurScale, POWER10_MAX32);
 				DWORD32 ullPwr32 = (DWORD32)rgulPower10_64[iCurScale];
 				iScale += iCurScale;
@@ -1753,19 +1722,6 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 				rgullRem[0] = _umul64by32(rgullRem[0], ullPwr32, &low32(rgullRem[1]));
 				DWORD32 tmp32 = Div96By64_x64(rgullRem, ullDivisor);
 				Add96(rgulQuo, tmp32);
-#else
-				ullPwr64 = rgulPower10_64[iCurScale];
-				iScale += iCurScale;
-
-				if (IncreaseScale96By64(rgulQuo, ullPwr64) != 0)
-					return DISP_E_OVERFLOW;
-
-				// Reminder is at most 64bits, a single multiply is needed to IncreaseScale
-				// result is up to 128 bits
-				rgullRem[0] = _umul128(rgullRem[0], ullPwr64, &rgullRem[1]);
-				DWORD64 tmp64 = Div128By64_x64(rgullRem, ullDivisor);
-				Add96(rgulQuo, tmp64);
-#endif // !NO_UDIV128
 			} // for (;;)
 		}
 		else {
@@ -1821,6 +1777,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					return DISP_E_OVERFLOW;
 
 			HaveScale96:
+				DWORD64 quo;
 #ifdef NO_UDIV128
 				iCurScale = min(iCurScale, POWER10_MAX32);
 				DWORD32 ullPwr32 = (DWORD32)rgulPower10_64[iCurScale];
@@ -1830,24 +1787,22 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 					return DISP_E_OVERFLOW;
 
 				rgulRem[3] = IncreaseScale96By32(rgulRem, ullPwr32);
-				DWORD64 quo = Div128By96_x64(rgulRem, rgulDivisor);
+				quo = Div128By96_x64(rgulRem, rgulDivisor);
 #else
-				ullPwr64 = rgulPower10_64[iCurScale];
+				DWORD64 ullPwr64 = rgulPower10_64[iCurScale];
 				iScale += iCurScale;
 
 				if (IncreaseScale96By64(rgulQuo, ullPwr64) != 0)
 					return DISP_E_OVERFLOW;
 
 				DWORD64 tmp64 = IncreaseScale96By64(rgulRem, ullPwr64);
-				DWORD64 quo;
-				rgulRem[3] = (DWORD32)tmp64;
-				if (FitsIn32Bit(&tmp64))
+				*(DWORD64*)(&rgulRem[3]) = tmp64;
+				if (tmp64 < rgulDivisor[2])
 				{
 					quo = Div128By96_x64(rgulRem, rgulDivisor);
 				}
 				else
 				{
-					rgulRem[4] = (tmp64 >> 32);
 					quo = Div160By96_x64(rgulRem, rgulDivisor);
 				}
 #endif

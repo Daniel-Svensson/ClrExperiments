@@ -14,6 +14,7 @@
 
 using namespace std;
 
+//#define NO_VALIDATE
 //#define NO_COMPARE
 //#define COMPARE_OLEAUT
 //#define COMPARE_CORECLR
@@ -25,18 +26,18 @@ using namespace std;
 #endif
 
 
-#define TEST_MULTIPLY
-#define TEST_ADD
-#define TEST_SUB
-//#define TEST_DIV
+//#define TEST_MULTIPLY
+//#define TEST_ADD
+//#define TEST_SUB
+#define TEST_DIV
 
-#define TEST_32bit_with_0_scale
-#define TEST_32bit_with_scale
-#define TEST_64bit_with_scale_64bit_result
-#define TEST_64bit_with_0_scale_128bit_result
-#define TEST_64bit_with_scale_128bit_result
-#define TEST_96bit_with_scale_96bit_result_and_overflow
-#define TEST_96bit_with_scale_96bit_result_no_overflow
+//#define TEST_32bit_with_0_scale
+//#define TEST_32bit_with_scale
+//#define TEST_64bit_with_scale_64bit_result
+//#define TEST_64bit_with_0_scale_128bit_result
+//#define TEST_64bit_with_scale_128bit_result
+//#define TEST_96bit_with_scale_96bit_result_and_overflow
+//#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
 
@@ -194,7 +195,7 @@ void compare_benchmark(
 	}
 	printf("\n");
 
-#ifndef NO_COMPARE
+#ifndef NO_VALIDATE
 	int first_hres0 = (int)std::count(first_result.begin(), first_result.end(), 0);
 	int second_hres0 = (int)std::count(second_result.begin(), second_result.end(), 0);
 	//cout << second_hres0 << " out of " << first_target.size() << " resuts was successfull, expected " << first_hres0 << " => ratio " << 100.0 * (double)second_hres0 / (double)(first_target.size()) << "%" << endl;
@@ -647,15 +648,7 @@ int __cdecl main()
 	setlocale(LC_ALL, "");
 	//cin.get();
 
-#if 0
-	int r = rand();
-
-	TestDivideByTen32(r);
-	TestDivideByTen64(((DWORD64)r)<<32 + (DWORD64)rand());
-	//for(int i=0; i < 2; ++i)
-	//	CompareScaleResult();
-	//return 0;
-
+#if 1
 	DECIMAL a, b;
 	DECIMAL expected, actual;
 	/*
@@ -668,16 +661,16 @@ int __cdecl main()
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 4294967294;
-	a.Lo64 = 18446744069414584318;
-	a.scale = 14;
-	b.Hi32 = 2863725811;
-	b.Lo64 = 12299608705819802867;
-	b.scale = 24;
+	a.Hi32 = 2147483647;
+	a.Lo64 = 9223372034707292159;
+	a.scale = 0;
+	b.Hi32 = 2851480405;
+	b.Lo64 = 12247015087511315285;
+	b.scale = 1;
 	b.sign = 0;
 
-	VarDecAdd_PALRT(&a, &b, &expected);
-	VarDecAdd_x64(&a, &b, &actual);
+	VarDecDiv_PALRT(&a, &b, &expected);
+	VarDecDiv_x64(&a, &b, &actual);
 
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
 	assert(actual.Hi32 == expected.Hi32);

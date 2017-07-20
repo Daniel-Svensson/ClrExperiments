@@ -5,7 +5,7 @@
 
 #pragma once
 
-#define WINDOWS_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <oleauto.h>
 #include <assert.h>
