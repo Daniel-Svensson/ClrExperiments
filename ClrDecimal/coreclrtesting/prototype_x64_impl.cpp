@@ -1346,12 +1346,10 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 		// Remainder went negative.  Add divisor back in until it's positive (detected by carry),
 		// a max of 2 times.
 		//
-		sdlProd1 = rgullDen[0];
-
 		do {
 			quo--;
-			// sdlNum += sdlProd1;
-			carry = _addcarry_u64(0, sdlNum, sdlProd1, &sdlNum);
+			// sdlNum += rgullDen[0];
+			carry = _addcarry_u64(0, sdlNum, rgullDen[0], &sdlNum);
 
 			// rgulNum[2] += rgulDen[2];
 			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (DWORD32*)&rgulNum[2]);
@@ -1394,10 +1392,93 @@ DWORD64 Div128By96_x64(ULONG *rgulNum, ULONG *rgulDen)
 *   None.
 *
 ***********************************************************************/
-inline DWORD64 Div160By96_x64(ULONG rgulRem[6], ULONG rgulDivisor[4])
+inline DWORD64 Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
 {
-	DWORD64 quo = Div128By96_x64(&rgulRem[1], rgulDivisor);
-	return (quo << 32) + Div128By96_x64(&rgulRem[0], rgulDivisor);
+#if 1
+	//* (DWORD64*)(&rgulRem[3]) = tmp64;
+	DWORD64 quo;
+	if (*(DWORD64*)(&rgulNum[3]) >= rgulDen[2])
+	{
+		quo = Div128By96_x64(&rgulNum[1], rgulDen) << 32;
+	}
+	else
+	{
+		quo = 0;
+	}
+
+	return quo + Div128By96_x64(&rgulNum[0], rgulDen);
+#else
+	This is experimental (non-working) code !
+
+
+	if (*(DWORD64*)(&rgulNum[3]) < rgulDen[2])
+	{
+		return Div128By96_x64(&rgulNum[0], rgulDen);
+	}
+
+	DWORD64* const rgullNum = (DWORD64*)(&rgulNum[0]);
+	DWORD64* const rgullDen = (DWORD64*)(&rgulDen[0]);
+
+	DWORD64 sdlNum;
+	DWORD64 sdlProd1;
+	DWORD64 remainder;
+	DWORD32 hi;
+
+	if (rgulNum[4] == 0 && rgullNum[1] < (DWORD64)rgulDen[2])
+		// TODO: TEST
+		//if (rgulNum[3] == 0 && *rgullNumMid64 < *rgullDenHi64)
+		// Result is zero.  Entire dividend is remainder.
+		//
+		return 0;
+
+
+	DWORD64 quo =_udiv128(*(DWORD64*)&rgulNum[1], *(DWORD64*)&rgulNum[3], *(DWORD64*)&rgulDen[1], &remainder);
+
+	// Compute full remainder, rem = dividend - (quo * divisor).
+	sdlProd1 = _umul64by32(quo, rgulDen[0], &hi);
+
+	auto carry = _subborrow_u64(0, rgullNum[0], sdlProd1, &sdlNum);
+
+	carry = _subborrow_u64(carry, remainder, hi, &rgullNum[1]);
+
+	// Propagate carries
+	//
+	if (carry) {
+		// Remainder went negative.  Add divisor back in until it's positive (detected by carry),
+		// a max of 2 times.
+		//
+		if ((MAXDWORD64 - rgullNum[1]) > rgulDen[2])
+		{
+			auto scale = (MAXDWORD64 - rgullNum[1]) / rgulDen[2];
+			assert(scale <= MAXDWORD32);
+
+			// determine number of times rgulDen[2] must be added to wrap rgullNum[1] around
+			// must scale * rgulDen >= (DWORD64_MAX - rgullNum[1]) 
+			// sca
+			quo -= scale;
+
+			// sdlNum += rgullDen[0]*scale;
+			sdlProd1 = _umul128(rgullDen[0], scale, &hi);
+			carry = _addcarry_u64(0, sdlNum, sdlProd1, &sdlNum);
+			carry = _addcarry_u64(carry, rgullNum[1], hi, &rgullNum[1]);
+
+			// rgulNum[2] += rgulDen[2]*scale;
+			carry |= _addcarry_u64(0, rgullNum[1], rgulDen[2] * scale, &rgullNum[1]);
+		}
+
+		// Remainder went negative.  Add divisor back in until it's positive (detected by carry),
+		// a max of 2 times.
+		//
+		while (carry == 0) {
+			quo--;
+			carry = _addcarry_u64(0, sdlNum, rgullDen[0], &sdlNum);
+			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (DWORD32*)&rgulNum[2]);
+		};
+	}
+
+	rgullNum[0] = sdlNum;
+	return quo;
+#endif
 }
 
 /***
@@ -1797,14 +1878,7 @@ STDAPI VarDecDiv_x64(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes)
 
 				DWORD64 tmp64 = IncreaseScale96By64(rgulRem, ullPwr64);
 				*(DWORD64*)(&rgulRem[3]) = tmp64;
-				if (tmp64 < rgulDivisor[2])
-				{
-					quo = Div128By96_x64(rgulRem, rgulDivisor);
-				}
-				else
-				{
-					quo = Div160By96_x64(rgulRem, rgulDivisor);
-				}
+				quo = Div160By96_x64(rgulRem, rgulDivisor);
 #endif
 				Add96(rgulQuo, quo);
 			} // for (;;)
