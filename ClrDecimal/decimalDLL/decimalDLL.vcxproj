@@ -20,15 +20,16 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{A4D02353-CCD4-4BAE-A297-FEB00631FEB5}</ProjectGuid>
-    <RootNamespace>decimal</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <ProjectGuid>{C2402A7E-9009-47B3-BCCB-D41360F0D3E0}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>decimalDLL</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -48,17 +49,25 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
-      <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;_USRDLL;DECIMALDLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
+    <Link>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_USRDLL;DECIMALDLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <Optimization>Full</Optimization>
     </ClCompile>
@@ -69,22 +78,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <MASM Include="udiv128.masm">
-      <FileType>Document</FileType>
-      <ExcludedFromBuild Condition="'$(Platform)'!='x64'">true</ExcludedFromBuild>
-    </MASM>
+    <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\coreclrtesting\prototype_x64_impl.cpp" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="prototype_x64_impl.h" />
+    <ClCompile Include="dllmain.cpp">
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\decimal\decimal.vcxproj">
+      <Project>{a4d02353-ccd4-4bae-a297-feb00631feb5}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
 </Project>

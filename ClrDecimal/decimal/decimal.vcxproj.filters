@@ -15,11 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <MASM Include="udiv128.masm" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="..\coreclrtesting\prototype_x64_impl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="udiv128.masm" />
+    <ClInclude Include="prototype_x64_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source.def">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

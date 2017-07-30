@@ -1,66 +1,60 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{6D006CF8-5BC8-42F4-82F4-A8714CF29140}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>Benchmarks</RootNamespace>
-    <AssemblyName>Benchmarks</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <!--<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>-->
+    <OutputType>exe</OutputType>
+    <!--<TargetFramework>netcoreapp1.1</TargetFramework>-->
+    <!--<TargetFrameworks>netcoreapp2.0</TargetFrameworks>-->
+    <TargetFrameworks>net47;netcoreapp2.0</TargetFrameworks>
+    <!--<TargetFrameworks>net47</TargetFrameworks>-->
+    <OutputTypeEx>exe</OutputTypeEx>
+    <!--<RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>-->
+    <RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>
+    <Platforms>AnyCPU;x64;x86</Platforms>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>x64</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
+    <Compile Remove="BenchmarkDotNet.Artifacts\**" />
+    <EmbeddedResource Remove="BenchmarkDotNet.Artifacts\**" />
+    <None Remove="BenchmarkDotNet.Artifacts\**" />
+  </ItemGroup>
+  <!-- Nuget Packages-->
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.9" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)'=='net47'">
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.10.9" />
+  </ItemGroup>
+  <!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">-->
+  <ItemGroup Condition="'$(TargetFramework)'!='net47' and '$(RuntimeIdentifier)'=='win10-x64'">
+    <PackageReference Include="Microsoft.NETCore.Runtime.CoreCLR" Version="2.1.0-preview2-25623-0" />
+    <PackageReference Include="Microsoft.NETCore.Jit" Version="2.1.0-preview2-25623-0" />
+  </ItemGroup>
+  <!-- dll -->
+  <ItemGroup>
+    <!--<None Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">-->
+    <None Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Content Condition="'$(Platform)'=='x64'" Include="..\x64\$(Configuration)\decimalDLL.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Add96by96.cs" />
-    <Compile Include="Div96by96.cs" />
-    <Compile Include="Mul96by96.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows">
-      <Version>0.10.8</Version>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ClrClassLibrary\ClrClassLibrary.vcxproj">
-      <Project>{802238c0-8279-48aa-8c39-beaf835e72ca}</Project>
-      <Name>ClrClassLibrary</Name>
+    <ProjectReference Include="..\CoreRT\CoreRT.csproj">
+      <Project>{6d69d031-f439-4aef-a3f9-57b8fe1fe4ab}</Project>
+      <Name>CoreRT</Name>
     </ProjectReference>
+    <!--<ProjectReference Include="..\decimalDLL\decimalDLL.vcxproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </ProjectReference>-->
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  
 </Project>

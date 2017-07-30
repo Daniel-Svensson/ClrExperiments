@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,11 +13,21 @@ namespace Benchmarks
     {
         readonly decimal a;
         readonly decimal b;
+        readonly CoreRT.Decimal a2;
+        readonly CoreRT.Decimal b2;
 
         public Add96by96()
         {
-            a = new decimal(1023, 345, 321, false, 0);
+            a = new decimal(1023, 345, 321, false, 3);
             b = new decimal(32, 23, 2, false, 0);
+            a2 = a;
+            b2 = b;
+        }
+
+        [Benchmark]
+        public decimal Negate()
+        {
+            return Decimal.Negate(a);
         }
 
         [Benchmark]
@@ -35,6 +46,12 @@ namespace Benchmarks
         public decimal Ole32()
         {
             return ClrClassLibrary.Methods.AddOle32(a, b);
+        }
+
+        [Benchmark]
+        public CoreRT.Decimal CoreCRTManaged()
+        {
+            return ClrClassLibrary.Methods.AddCoreRTManaged(a2, b2);
         }
     }
 }

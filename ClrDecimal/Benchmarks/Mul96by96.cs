@@ -12,11 +12,15 @@ namespace Benchmarks
     {
         readonly decimal a;
         readonly decimal b;
+        readonly CoreRT.Decimal a2;
+        readonly CoreRT.Decimal b2;
 
         public Mul96by96()
         {
-            a = new decimal(1023, 1, 1, false, 0);
-            b = new decimal(3, 0, 0, false, 0);
+            a = new decimal(1023, 1, 1, false, 10);
+            b = new decimal(3, 1, 21, false, 8);
+            a2 = a;
+            b2 = b;
         }
 
         [Benchmark]
@@ -35,6 +39,12 @@ namespace Benchmarks
         public decimal Ole32()
         {
             return ClrClassLibrary.Methods.MulOle32(a, b);
+        }
+
+        [Benchmark]
+        public CoreRT.Decimal CoreCRTManaged()
+        {
+            return ClrClassLibrary.Methods.MulCoreRTManaged(a2, b2);
         }
     }
 }

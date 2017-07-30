@@ -1,0 +1,6 @@
+LIBRARY decimalDLL
+EXPORTS
+	VarDecMul_x64
+	VarDecAdd_x64
+	VarDecSub_x64
+	VarDecDiv_x64
