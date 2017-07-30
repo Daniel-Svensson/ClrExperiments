@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Diagnosers;
+using BenchmarkDotNet.Horology;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Toolchains;
@@ -33,6 +35,7 @@ namespace Benchmarks
             Debug.Assert(expected == pinvoke);
             Console.WriteLine(dummy.NetFramework());
             Console.WriteLine(dummy.CoreCRTManaged());
+            Console.WriteLine(dummy.CoreCRTManaged2());
             Console.WriteLine(dummy.Ole32());
             Console.WriteLine(dummy.Native());
 
@@ -43,18 +46,30 @@ namespace Benchmarks
             var config = DefaultConfig.Instance
                 .With(Job.Default
                         .With(InProcessToolchain.Instance)
+                        //.WithLaunchCount(1)
+                        //.WithWarmupCount(1)
+                        //.WithMinIterationTime(TimeInterval.Millisecond*10)
                         )
                 .With(BenchmarkDotNet.Validators.ExecutionValidator.FailOnError)
+#if NET47
+                .With(MemoryDiagnoser.Default)
+                //.With(HardwareCounter.BranchInstructions,
+                //HardwareCounter.BranchMispredictions,
+                //HardwareCounter.TotalIssues,
+                //HardwareCounter.CacheMisses,
+                //HardwareCounter.LlcMisses,
+                //HardwareCounter.LlcReference)
+#endif
                 //.With(Job.Core)
                 //.With(Job.RyuJitX64, Job.LegacyJitX86)
                 ;
 
-#if NET47
-            if (Is64Bit)
-            {
-                config = config.With(Job.RyuJitX64, Job.LegacyJitX64);
-            }
-#endif
+//#if NET47
+//            if (Is64Bit)
+//            {
+//                config = config.With(Job.RyuJitX64, Job.LegacyJitX64);
+//            }
+//#endif
 
             BenchmarkRunner.Run<Add96by96>(config);
             BenchmarkRunner.Run<Mul96by96>(config);

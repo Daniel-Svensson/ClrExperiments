@@ -29,6 +29,12 @@ namespace Benchmarks.ClrClassLibrary
             return CoreRT.Decimal.Add(a2, b2);
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static CoreRT.Decimal2 AddCoreRTManaged(CoreRT.Decimal2 a2, CoreRT.Decimal2 b2)
+        {
+            return CoreRT.Decimal2.Add(a2, b2);
+        }
+
         internal static decimal MulManaged(decimal a, decimal b)
         {
             return System.Decimal.Multiply(a, b);
@@ -48,9 +54,15 @@ namespace Benchmarks.ClrClassLibrary
         {
             return Decimal.Divide(a, b);
         }
+
         internal static CoreRT.Decimal MulCoreRTManaged(CoreRT.Decimal a2, CoreRT.Decimal b2)
         {
             return CoreRT.Decimal.Multiply(a2, b2);
+        }
+
+        internal static CoreRT.Decimal2 MulCoreRTManaged(CoreRT.Decimal2 a2, CoreRT.Decimal2 b2)
+        {
+            return CoreRT.Decimal2.Multiply(a2, b2);
         }
 
         internal static decimal DivNative(decimal a, decimal b)
@@ -66,6 +78,11 @@ namespace Benchmarks.ClrClassLibrary
         internal static CoreRT.Decimal DivCoreRTManaged(CoreRT.Decimal a2, CoreRT.Decimal b2)
         {
             return CoreRT.Decimal.Divide(a2, b2);
+        }
+
+        internal static CoreRT.Decimal2 DivCoreRTManaged(CoreRT.Decimal2 a2, CoreRT.Decimal2 b2)
+        {
+            return CoreRT.Decimal2.Divide(a2, b2);
         }
     }
 }

@@ -23,5 +23,20 @@ namespace CoreRT
         {
             throw new NotImplementedException();
         }
+
+        internal static string FormatDecimal(Decimal2 decimal2, string format, IFormatProvider provider)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal static Decimal2 ParseDecimal2(string s, NumberStyles number, IFormatProvider provider)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal static bool TryParseDecimal2(string s, NumberStyles number, object p, out Decimal2 result)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

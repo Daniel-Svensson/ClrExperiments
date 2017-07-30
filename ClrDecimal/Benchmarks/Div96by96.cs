@@ -14,6 +14,8 @@ namespace Benchmarks
         readonly decimal b;
         readonly CoreRT.Decimal a2;
         readonly CoreRT.Decimal b2;
+        readonly CoreRT.Decimal2 a3;
+        readonly CoreRT.Decimal2 b3;
 
         public Div96by96()
         {
@@ -21,6 +23,8 @@ namespace Benchmarks
             b = new decimal(32, 32, 1, false, 0);
             a2 = a;
             b2 = b;
+            a3 = a;
+            b3 = b;
         }
 
         [Benchmark]
@@ -45,6 +49,12 @@ namespace Benchmarks
         public CoreRT.Decimal CoreCRTManaged()
         {
             return ClrClassLibrary.Methods.DivCoreRTManaged(a2, b2);
+        }
+
+        [Benchmark]
+        public CoreRT.Decimal2 CoreCRTManaged2()
+        {
+            return ClrClassLibrary.Methods.DivCoreRTManaged(a3, b3);
         }
     }
 }
