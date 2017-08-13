@@ -21,6 +21,12 @@
     <ClCompile Include="..\coreclrtesting\prototype_x64_impl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\coreclrtesting\coreclr_impl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\coreclrtesting\decimal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="prototype_x64_impl.h">

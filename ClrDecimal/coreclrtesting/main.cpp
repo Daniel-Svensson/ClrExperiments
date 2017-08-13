@@ -5,6 +5,7 @@
 //#include <vector>
 #include <functional>
 #include <oleauto.h>
+#include <emmintrin.h>
 
 #define _CRT_RAND_S  
 #include <stdlib.h>  
@@ -18,26 +19,28 @@ using namespace std;
 //#define NO_COMPARE
 //#define COMPARE_OLEAUT
 //#define COMPARE_CORECLR
-// default compare
+#define COMPARE_DEFAULT 
+
+#if defined(COMPARE_DEFAULT)
 #ifdef _AMD64_
 #define COMPARE_OLEAUT
 #else
 #define COMPARE_CORECLR
 #endif
-
+#endif 
 
 //#define TEST_MULTIPLY
 //#define TEST_ADD
 //#define TEST_SUB
 #define TEST_DIV
-
-//#define TEST_32bit_with_0_scale
-//#define TEST_32bit_with_scale
-//#define TEST_64bit_with_scale_64bit_result
-//#define TEST_64bit_with_0_scale_128bit_result
-//#define TEST_64bit_with_scale_128bit_result
-//#define TEST_96bit_with_scale_96bit_result_and_overflow
-//#define TEST_96bit_with_scale_96bit_result_no_overflow
+//
+#define TEST_32bit_with_0_scale
+#define TEST_32bit_with_scale
+#define TEST_64bit_with_scale_64bit_result
+#define TEST_64bit_with_0_scale_128bit_result
+#define TEST_64bit_with_scale_128bit_result
+#define TEST_96bit_with_scale_96bit_result_and_overflow
+#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
 
@@ -70,6 +73,7 @@ BYTE random_scale(int min, int max)
 {
 	return (BYTE)((rand() % (max - min)) + min);
 }
+
 
 // Runs a single benchmark pass and records the timing when calling func
 // with for all combination ov values from lhs and rhs.
@@ -195,7 +199,7 @@ void compare_benchmark(
 	}
 	printf("\n");
 
-#ifndef NO_VALIDATE
+#if !(defined(NO_VALIDATE) || defined(NO_COMPARE))
 	int first_hres0 = (int)std::count(first_result.begin(), first_result.end(), 0);
 	int second_hres0 = (int)std::count(second_result.begin(), second_result.end(), 0);
 	//cout << second_hres0 << " out of " << first_target.size() << " resuts was successfull, expected " << first_hres0 << " => ratio " << 100.0 * (double)second_hres0 / (double)(first_target.size()) << "%" << endl;
@@ -227,8 +231,8 @@ long long run_benchmark(const char *const name,
 
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
-	HRESULT (STDAPICALLTYPE *baseline)(DECIMAL *, DECIMAL *, DECIMAL *),
-	HRESULT (STDAPICALLTYPE *func)(DECIMAL *, DECIMAL *, DECIMAL *))
+	HRESULT(STDAPICALLTYPE *baseline)(DECIMAL *, DECIMAL *, DECIMAL *),
+	HRESULT(STDAPICALLTYPE *func)(DECIMAL *, DECIMAL *, DECIMAL *))
 {
 	run_benchmarks(iterations, elements, bytes,
 		baseline_name, func_name,
@@ -238,15 +242,26 @@ void run_benchmarks(int iterations, int elements, int bytes,
 
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
+	HRESULT(STDAPICALLTYPE *baseline)(DECIMAL *, DECIMAL *, DECIMAL *),
+	HRESULT(STDAPICALLTYPE *func)(const DECIMAL *, const DECIMAL *, DECIMAL *))
+{
+	run_benchmarks(iterations, elements, bytes,
+		baseline_name, func_name,
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL *, const DECIMAL *, DECIMAL *))baseline,
+		func);
+}
+
+void run_benchmarks(int iterations, int elements, int bytes,
+	const char *const baseline_name, const char *const func_name,
 	HRESULT(STDAPICALLTYPE *baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), 
 	HRESULT(STDAPICALLTYPE *func)(const DECIMAL *, const DECIMAL *, DECIMAL *)
 )
 {
 	std::vector<DECIMAL> numbers(elements);
-	std::vector<DECIMAL> targetA(elements*elements);
-	std::vector<DECIMAL> targetC(elements*elements);
-	std::vector<HRESULT> hresultA(elements*elements);
-	std::vector<HRESULT> hresultC(elements*elements);
+	std::vector<DECIMAL> targetA(elements*max(elements, 435));
+	std::vector<DECIMAL> targetC(elements*max(elements, 435));
+	std::vector<HRESULT> hresultA(elements*max(elements, 435));
+	std::vector<HRESULT> hresultC(elements*max(elements, 435));
 	InitializeTestData(numbers, bytes);
 
 	// Change scale
@@ -642,15 +657,68 @@ void CompareScaleResult()
 void TestDivideByTen32(DWORD32);
 void TestDivideByTen64(DWORD64);
 
+__declspec(noinline)
+inline DWORD64 __fastcall fastcall64(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
+{
+	SPLIT64 result;
+	result.u.Hi = hi;
+	result.u.Lo = *pLow + ulDen;
+	return result.int64;
+}
+
+__declspec(noinline)
+inline DWORD64 __fastcall fastcall64_2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
+{
+	DWORD64 res = hi;
+	return (res << 32) | (*pLow + ulDen);
+}
+
+__declspec(noinline)
+inline __m128i testcall1(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
+{
+	__m128i result = _mm_setr_epi32(hi, *pLow + ulDen, 0, 0);
+	return result;
+}
+
+__declspec(noinline)
+inline __m128i testcall2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
+{
+	__m128i result = _mm_set_epi64x(hi, *pLow + ulDen);
+	return result;
+}
+
+
+DECLSPEC_NOINLINE
+void printData(__m128i a, __m128i b, DWORD64 d)
+{
+	std::cout << "fastcall res is " << d << endl;
+	std::cout << "fastcall res is " << a.m128i_u32[0] << ", " << a.m128i_u32[1] << endl;
+	std::cout << "fastcall res is " << b.m128i_u64[0] << ", " << b.m128i_u64[1] << endl;
+}
+#pragma optimize("",off)
+#pragma optimize("",on)
+
 int __cdecl main()
 {
 	// Use system formatting
 	setlocale(LC_ALL, "");
 	//cin.get();
 
+	//unsigned int a = rand() , b = rand(), c = rand();
+	//
+	//auto res1 = testcall1(&a, b, c);
+	//auto res2 = testcall2(&a, b, c);
+	//auto d = fastcall64(&a, res1.m128i_u32[0], res1.m128i_u32[1]);
+	//d = fastcall64_2(&a, res2.m128i_u64[0], res2.m128i_u64[1]);
+
+//	printData(res1, res2, d);
+
 #if 1
 	DECIMAL a, b;
 	DECIMAL expected, actual;
+
+	*((__m128*)&expected) = _mm_setzero_ps();
+	ZeroMemory(&actual, sizeof(DECIMAL));
 	/*
 	[0]x[9]  -- (0) 0 18446744073709551615 / 10^3  * (0) 0 18446251492500307960 / 10^6:
  PRODUCT expected (0) 542115562 5349999624952008190 / 10^25 but got (0) 0 0 / 10^0
@@ -661,16 +729,19 @@ int __cdecl main()
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 2147483647;
-	a.Lo64 = 9223372034707292159;
+	a.Hi32 = 1;
+	a.Lo64 = 18446744073709551615;
 	a.scale = 0;
-	b.Hi32 = 2851480405;
-	b.Lo64 = 12247015087511315285;
-	b.scale = 1;
-	b.sign = 0;
+	a.sign = 0;
+	b.Hi32 = 1;
+	//b.Mid32 = 23;
+	b.Lo64 = 18446744073709551615;
+	b.scale = 20;
+	b.sign = 0; // DECIMAL_NEG;
 
-	VarDecDiv_PALRT(&a, &b, &expected);
-	VarDecDiv_x64(&a, &b, &actual);
+
+	VarDecAdd_PALRT(&a, &b, &expected);
+	VarDecAdd_x64(&a, &b, &actual);
 
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
 	assert(actual.Hi32 == expected.Hi32);
@@ -685,12 +756,15 @@ int __cdecl main()
 	//run_benchmarks(30000, 4, 5);
 #ifdef DEBUG
 	const int iterations = 2;
-	const int elements = 1000;
+	const int elements = 106;
 #else
-	const int iterations = 3;
+	const int iterations = 2;
 	const int elements = 4000;
+	//const int elements = 4000;
 #endif
 	const int bytes = 4;
+
+	static_assert(elements >= 106, "Must fit special elements");
 
 #ifdef TEST_MULTIPLY
 #ifdef COMPARE_OLEAUT

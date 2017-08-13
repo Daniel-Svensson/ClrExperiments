@@ -75,6 +75,8 @@
     </MASM>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\coreclrtesting\coreclr_impl.cpp" />
+    <ClCompile Include="..\coreclrtesting\decimal.cpp" />
     <ClCompile Include="..\coreclrtesting\prototype_x64_impl.cpp" />
   </ItemGroup>
   <ItemGroup>

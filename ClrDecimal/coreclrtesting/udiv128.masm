@@ -48,4 +48,24 @@ _udiv128_v2 proc
     ret     ; Return the remainder
 _udiv128_v2 endp
 
+_udiv64_impl_sse proc
+    mov rax, rcx    ; Put the low digit in place (hi is already there)
+    div r8d         ; 64 bit divide edx:eax/r8d = edx remainder, eax quotient
+
+	; put remainder in hi 32 bits and move bits into rax
+	movd xmm1, edx
+	movd xmm0, eax
+	punpcklqdq  xmm0, xmm1
+    ret     ; Return the quotient, already in rax
+_udiv64_impl_sse endp
+
+_udiv128_impl_sse proc
+    mov rax, rcx    ; Put the low digit in place (hi is already there)
+    div r8      ; 128 bit divide rdx:rax/r8 = rdx remainder, rax quotient
+    movq xmm1, rdx
+	movq xmm0, rax
+	punpcklqdq  xmm0, xmm1
+    ret     ; Return the quotient, already in rax
+_udiv128_impl_sse endp
+
 end

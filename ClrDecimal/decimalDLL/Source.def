@@ -4,3 +4,7 @@ EXPORTS
 	VarDecAdd_x64 @2
 	VarDecSub_x64 @3
 	VarDecDiv_x64 @4
+	VarDecMul_PALRT @5
+	VarDecAdd_PALRT @6
+	VarDecSub_PALRT @7
+	VarDecDiv_PALRT @8
