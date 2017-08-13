@@ -38,6 +38,12 @@ namespace Benchmarks
         {
             return ClrClassLibrary.Methods.MulNative(a, b);
         }
+        
+        [Benchmark]
+        public decimal PalRT()
+        {
+            return ClrClassLibrary.Methods.MulPalRT(a, b);
+        }
 
         [Benchmark(Baseline = true)]
         public decimal Ole32()

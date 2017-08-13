@@ -18,6 +18,12 @@ namespace Benchmarks.ClrClassLibrary
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static decimal AddPalRT(decimal a, decimal b)
+        {
+            return PalRT.Add(a, b);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
         internal static decimal AddOle32(decimal a, decimal b)
         {
             return Oleaut32.Add(a, b);
@@ -45,6 +51,11 @@ namespace Benchmarks.ClrClassLibrary
             return DecimalDLL.Mul(a, b);
         }
 
+        internal static decimal MulPalRT(decimal a, decimal b)
+        {
+            return PalRT.Mul(a, b);
+        }
+
         internal static decimal MulOle32(decimal a, decimal b)
         {
             return Oleaut32.Mul(a, b);
@@ -68,6 +79,11 @@ namespace Benchmarks.ClrClassLibrary
         internal static decimal DivNative(decimal a, decimal b)
         {
             return DecimalDLL.Div(a, b);
+        }
+
+        internal static decimal DivPalRT(decimal a, decimal b)
+        {
+            return PalRT.Div(a, b);
         }
 
         internal static decimal DivOle32(decimal a, decimal b)

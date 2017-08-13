@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,7 +9,7 @@ using BenchmarkDotNet.Attributes.Jobs;
 
 namespace Benchmarks
 {
-    public class Div96by96
+    public class Add96by96
     {
         readonly decimal a;
         readonly decimal b;
@@ -17,44 +18,49 @@ namespace Benchmarks
         readonly CoreRT.Decimal2 a3;
         readonly CoreRT.Decimal2 b3;
 
-        public Div96by96()
+        public Add96by96()
         {
-            a = new decimal(1023, 412, 213, false, 0);
-            b = new decimal(32, 32, 1, false, 0);
+            // TODO: test bort 3 and 10 
+            a = new decimal(1023, 345, 321, false, 3);
+            b = new decimal(32, 23, 2, false, 0);
             a2 = a;
             b2 = b;
             a3 = a;
             b3 = b;
         }
 
-        [Benchmark]
+        //[Benchmark]
         public decimal NetFramework()
         {
-            return ClrClassLibrary.Methods.DivManaged(a, b);
+            return ClrClassLibrary.Methods.AddManaged(a, b);
         }
 
         [Benchmark]
         public decimal Native()
         {
-            return ClrClassLibrary.Methods.DivNative(a, b);
+            return ClrClassLibrary.Methods.AddNative(a, b);
+        }
+        [Benchmark]
+        public decimal PalRT()
+        {
+            return ClrClassLibrary.Methods.AddPalRT(a, b);
         }
 
         [Benchmark(Baseline = true)]
         public decimal Ole32()
         {
-            return ClrClassLibrary.Methods.DivOle32(a, b);
+            return ClrClassLibrary.Methods.AddOle32(a, b);
         }
 
         [Benchmark]
         public CoreRT.Decimal CoreCRTManaged()
         {
-            return ClrClassLibrary.Methods.DivCoreRTManaged(a2, b2);
+            return ClrClassLibrary.Methods.AddCoreRTManaged(a2, b2);
         }
-
         [Benchmark]
         public CoreRT.Decimal2 CoreCRTManaged2()
         {
-            return ClrClassLibrary.Methods.DivCoreRTManaged(a3, b3);
+            return ClrClassLibrary.Methods.AddCoreRTManaged(a3, b3);
         }
     }
 }

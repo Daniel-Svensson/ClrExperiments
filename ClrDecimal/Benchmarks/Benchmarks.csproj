@@ -1,21 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!--<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>-->
     <OutputType>exe</OutputType>
-    <!--<TargetFramework>netcoreapp1.1</TargetFramework>-->
-    <!--<TargetFrameworks>netcoreapp2.0</TargetFrameworks>-->
+    <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>   
     <TargetFrameworks>net47;netcoreapp2.0</TargetFrameworks>
     <!--<TargetFrameworks>net47</TargetFrameworks>-->
     <OutputTypeEx>exe</OutputTypeEx>
-    <!--<RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>-->
+    <!--<RuntimeIdentifier>win10-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>
+    <!--<RuntimeIdentifiers>win7-x64;win7-x86</RuntimeIdentifiers>-->
     <Platforms>AnyCPU;x64;x86</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
+  <PropertyGroup Condition="'$(TargetFramework)'=='net47'">
+    <RuntimeIdentifier>win10-$(Platform)</RuntimeIdentifier>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net47|x64'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Remove="BenchmarkDotNet.Artifacts\**" />
     <EmbeddedResource Remove="BenchmarkDotNet.Artifacts\**" />
@@ -29,16 +34,14 @@
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.10.9" />
   </ItemGroup>
   <!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">-->
-  <ItemGroup Condition="'$(TargetFramework)'!='net47' and '$(RuntimeIdentifier)'=='win10-x64'">
-    <PackageReference Include="Microsoft.NETCore.Runtime.CoreCLR" Version="2.1.0-preview2-25623-0" />
-    <PackageReference Include="Microsoft.NETCore.Jit" Version="2.1.0-preview2-25623-0" />
-  </ItemGroup>
+  <!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">
+    <PackageReference Include="System.Diagnostics.FileVersionInfo" Version="4.3.0" />
+  </ItemGroup>-->
   <!-- dll -->
   <ItemGroup>
-    <!--<None Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">-->
-    <None Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">
+    <Content Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
     <Content Condition="'$(Platform)'=='x64'" Include="..\x64\$(Configuration)\decimalDLL.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -48,12 +51,9 @@
       <Project>{6d69d031-f439-4aef-a3f9-57b8fe1fe4ab}</Project>
       <Name>CoreRT</Name>
     </ProjectReference>
-    <!--<ProjectReference Include="..\decimalDLL\decimalDLL.vcxproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </ProjectReference>-->
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Distributions\" />
     <Folder Include="Properties\" />
   </ItemGroup>
   
