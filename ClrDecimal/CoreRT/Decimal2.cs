@@ -54,10 +54,10 @@ namespace CoreRT
     // Decimal throws an OverflowException if the value is not within
     // the range of the Decimal type.
     [Serializable]
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Sequential)]
     [System.Runtime.CompilerServices.TypeForwardedFrom("mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     [CLSCompliant(true)]
-    public partial struct Decimal2 : IFormattable, IComparable, IConvertible, IComparable<Decimal2>, IEquatable<Decimal2>, IDeserializationCallback
+    unsafe public partial struct Decimal2 : IFormattable, IComparable, IConvertible, IComparable<Decimal2>, IEquatable<Decimal2>, IDeserializationCallback
     {
         // Sign mask for the flags field. A value of zero in this bit indicates a
         // positive Decimal value, and a value of one in this bit indicates a
@@ -65,12 +65,12 @@ namespace CoreRT
         // 
         // Look at OleAut's DECIMAL_NEG constant to check for negative values
         // in native code.
-        private const uint SignMask = 0x80000000;
+        private const int SignMask = unchecked((int)0x80000000);
 
         // Scale mask for the flags field. This byte in the flags field contains
         // the power of 10 to divide the Decimal value by. The scale byte must
         // contain a value between 0 and 28 inclusive.
-        private const uint ScaleMask = 0x00FF0000;
+        private const int ScaleMask = 0x00FF0000;
 
         // Number of bits scale is shifted by.
         private const int ScaleShift = 16;
@@ -105,25 +105,46 @@ namespace CoreRT
         //
         // NOTE: Do not change the offsets of these fields. This structure maps to the OleAut DECIMAL structure
         // and can be passed as such in P/Invokes.
-        [FieldOffset(0)]
         private int flags; // Do not rename (binary serialization)
-        [FieldOffset(4)]
         private int hi; // Do not rename (binary serialization)
-        [FieldOffset(8)]
         private int lo; // Do not rename (binary serialization)
-        [FieldOffset(12)]
         private int mid; // Do not rename (binary serialization)
 
         // NOTE: This set of fields overlay the ones exposed to serialization (which have to be signed ints for serialization compat.)
         // The code inside Decimal was ported from C++ and expect unsigned values.
-        [FieldOffset(0), NonSerialized]
-        private uint uflags;
-        [FieldOffset(4), NonSerialized]
-        private uint uhi;
-        [FieldOffset(8), NonSerialized]
-        private uint ulo;
-        [FieldOffset(12), NonSerialized]
-        private uint umid;
+        private ref uint uflags
+        {
+            get
+            {
+                return ref System.Runtime.CompilerServices.Unsafe.AsRef<uint>(
+          System.Runtime.CompilerServices.Unsafe.AsPointer(ref flags));
+            }
+        }
+        private ref uint uhi
+        {
+            get
+            {
+                return ref System.Runtime.CompilerServices.Unsafe.AsRef<uint>(
+          System.Runtime.CompilerServices.Unsafe.AsPointer(ref hi));
+            }
+        }
+        private ref uint umid
+        {
+            get
+            {
+                return ref System.Runtime.CompilerServices.Unsafe.AsRef<uint>(
+          System.Runtime.CompilerServices.Unsafe.AsPointer(ref mid));
+            }
+        }
+        private ref uint ulo
+        {
+            get
+            {
+                return ref System.Runtime.CompilerServices.Unsafe.AsRef<uint>(
+          System.Runtime.CompilerServices.Unsafe.AsPointer(ref lo));
+            }
+        }
+
 
         // Constructs a zero Decimal.
         //public Decimal() {
@@ -136,34 +157,26 @@ namespace CoreRT
         public Decimal2(global::System.Decimal value)
         {
             var bits = global::System.Decimal.GetBits(value);
-            unchecked
-            {
-                ulo = (uint)bits[0];
-                umid = (uint)bits[1];
-                uhi = (uint)bits[2];
-                uflags = (uint)bits[3];
-            }
             lo = bits[0];
             mid = bits[1];
             hi = bits[2];
             flags = bits[3];
         }
 
-#if FALSE
         // Constructs a Decimal from an integer value.
         //
-        public Decimal(int value)
+        unsafe public Decimal2(int value)
         {
             //  JIT today can't inline methods that contains "starg" opcode.
             //  For more details, see DevDiv Bugs 81184: x86 JIT CQ: Removing the inline striction of "starg".
             int value_copy = value;
             if (value_copy >= 0)
             {
-                uflags = 0;
+                flags = 0;
             }
             else
             {
-                uflags = SignMask;
+                flags = SignMask;
                 value_copy = -value_copy;
             }
             lo = value_copy;
@@ -174,46 +187,46 @@ namespace CoreRT
         // Constructs a Decimal from an unsigned integer value.
         //
         [CLSCompliant(false)]
-        public Decimal(uint value)
+        public Decimal2(uint value)
         {
-            uflags = 0;
-            ulo = value;
-            umid = 0;
-            uhi = 0;
+            flags = 0;
+            lo = unchecked((int)value);
+            mid = 0;
+            hi = 0;
         }
 
         // Constructs a Decimal from a long value.
         //
-        public Decimal(long value)
+        public Decimal2(long value)
         {
             //  JIT today can't inline methods that contains "starg" opcode.
             //  For more details, see DevDiv Bugs 81184: x86 JIT CQ: Removing the inline striction of "starg".
             long value_copy = value;
             if (value_copy >= 0)
             {
-                uflags = 0;
+                flags = 0;
             }
             else
             {
-                uflags = SignMask;
+                flags = SignMask;
                 value_copy = -value_copy;
             }
-            ulo = (uint)value_copy;
-            umid = (uint)(value_copy >> 32);
-            uhi = 0;
+            lo = unchecked((int)value_copy);
+            mid = unchecked((int)(value_copy >> 32));
+            hi = 0;
         }
 
         // Constructs a Decimal from an unsigned long value.
         //
         [CLSCompliant(false)]
-        public Decimal(ulong value)
+        public Decimal2(ulong value)
         {
-            uflags = 0;
-            ulo = (uint)value;
-            umid = (uint)(value >> 32);
-            uhi = 0;
+            flags = 0;
+            lo = unchecked((int)value);
+            mid = unchecked((int)(value >> 32));
+            hi = 0;
         }
-#endif
+
         // Constructs a Decimal from a float value.
         //
         public Decimal2(float value)
@@ -303,7 +316,6 @@ namespace CoreRT
             mid = 0;
             hi = 0;
             flags = 0;
-            ulo = uhi = umid = uflags = 0;
 
             SetBits(bits);
         }
@@ -332,18 +344,15 @@ namespace CoreRT
         // 
         public Decimal2(int lo, int mid, int hi, bool isNegative, byte scale)
         {
-            ulo = uhi = umid = 0;
-            flags = 0;
-
             if (scale > 28)
                 throw new ArgumentOutOfRangeException(nameof(scale), SR.ArgumentOutOfRange_DecimalScale);
             Contract.EndContractBlock();
             this.lo = lo;
             this.mid = mid;
             this.hi = hi;
-            uflags = ((uint)scale) << 16;
+            flags = ((int)scale) << 16;
             if (isNegative)
-                uflags |= SignMask;
+                flags |= SignMask;
         }
 
         void IDeserializationCallback.OnDeserialization(Object sender)
@@ -363,8 +372,6 @@ namespace CoreRT
         // Constructs a Decimal from its constituent parts.
         private Decimal2(int lo, int mid, int hi, int flags)
         {
-            ulo = uhi = umid = uflags = 0;
-
             if ((flags & ~(SignMask | ScaleMask)) == 0 && (flags & ScaleMask) <= (28 << 16))
             {
                 this.lo = lo;
@@ -905,6 +912,30 @@ namespace CoreRT
             DecCalc.VarDecFix(ref d);
             return d;
         }
+
+        public static implicit operator Decimal2(int value)
+        {
+            return new Decimal2(value);
+        }
+
+        [CLSCompliant(false)]
+        public static implicit operator Decimal2(uint value)
+        {
+            return new Decimal2(value);
+        }
+
+        public static implicit operator Decimal2(long value)
+        {
+            return new Decimal2(value);
+        }
+
+        [CLSCompliant(false)]
+        public static implicit operator Decimal2(ulong value)
+        {
+            return new Decimal2(value);
+        }
+
+
 #if FALSE
         public static implicit operator Decimal(byte value)
         {
@@ -933,29 +964,7 @@ namespace CoreRT
             return new Decimal(value);
         }
 
-        public static implicit operator Decimal(int value)
-        {
-            return new Decimal(value);
-        }
-
-        [CLSCompliant(false)]
-        public static implicit operator Decimal(uint value)
-        {
-            return new Decimal(value);
-        }
-
-        public static implicit operator Decimal(long value)
-        {
-            return new Decimal(value);
-        }
-
-        [CLSCompliant(false)]
-        public static implicit operator Decimal(ulong value)
-        {
-            return new Decimal(value);
-        }
-
-
+     
         public static explicit operator Decimal(float value)
         {
             return new Decimal(value);

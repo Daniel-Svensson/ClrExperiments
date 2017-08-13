@@ -32,14 +32,14 @@ namespace CoreRT
 
         internal bool Sign
         {
-            get { return (uflags & SignMask) != 0; }
-            set { uflags = (uflags & ~SignMask) | (value ? SignMask : 0); }
+            get { return (flags & SignMask) != 0; }
+            set { flags = (flags & ~SignMask) | (value ? SignMask : 0); }
         }
 
         internal int Scale
         {
-            get { return (int)((uflags & ScaleMask) >> ScaleShift); }
-            set { uflags = (uflags & ~ScaleMask) | ((uint)value << ScaleShift); }
+            get { return (int)((flags & ScaleMask) >> ScaleShift); }
+            set { flags = (flags & ~ScaleMask) | (value << ScaleShift); }
         }
 
         private ulong Low64
@@ -2433,7 +2433,7 @@ namespace CoreRT
                 // OleAut doesn't provide a VarDecMod.            
 
                 // In the operation x % y the sign of y does not matter. Result will have the sign of x.
-                d2.uflags = (d2.uflags & ~SignMask) | (d1.uflags & SignMask);
+                d2.flags = (d2.flags & ~SignMask) | (d1.flags & SignMask);
 
 
                 // This piece of code is to work around the fact that Dividing a decimal with 28 digits number by decimal which causes
@@ -2448,7 +2448,7 @@ namespace CoreRT
                 if (d1 == 0)
                 {
                     // The sign of D1 will be wrong here. Fall through so that we still get a DivideByZeroException
-                    d1.uflags = (d1.uflags & ~SignMask) | (d2.uflags & SignMask);
+                    d1.flags = (d1.flags & ~SignMask) | (d2.flags & SignMask);
                 }
 
                 // Formula:  d1 - (RoundTowardsZero(d1 / d2) * d2)            
@@ -2463,7 +2463,7 @@ namespace CoreRT
                         // Certain Remainder operations on decimals with 28 significant digits round
                         // to [+-]0.000000000000000000000000001m instead of [+-]0m during the intermediate calculations. 
                         // 'zero' results just need their sign corrected.
-                        result.uflags = (result.uflags & ~SignMask) | (d1.uflags & SignMask);
+                        result.flags = (result.flags & ~SignMask) | (d1.flags & SignMask);
                     }
                     else
                     {
