@@ -20,44 +20,35 @@ namespace Benchmarks
     {
         static readonly bool Is64Bit = IntPtr.Size == 8;
 
+
+        static void PrintStats(decimal[] numbers)
+        {
+            double count = numbers.Length;
+
+            var bits = numbers.Select(dec => decimal.GetBits(dec)).ToList();
+            var scales = bits.Select(b => (b[3] & 0x00ff0000) >> 16).ToList();
+
+            double bits96 = bits.Count(b => b[2] != 0);
+            double bits64 = bits.Count(b => b[2] == 0 && b[1] != 0);
+            double bits32 = bits.Count(b => b[2] == 0 && b[1] == 0);
+
+            double scaled = scales.Count(s => s != 0);
+
+            Console.WriteLine($"Total of {count} numbers");
+            Console.WriteLine($"{bits96} ({bits96/count:p}) use 3 int (96 bits)");
+            Console.WriteLine($"{bits64} ({bits64/count:p}) use 2 int (64 bits)");
+            Console.WriteLine($"{bits32} ({bits32/count:p}) use 1 int (32 bits)");
+
+            Console.WriteLine($"Total of {scaled} numbers with average scale {scales.Average()}");
+            Console.WriteLine($"Total of {count} numbers");
+        }
+
         static void Main(string[] args)
         {
-            var a = new Div96by96();
-            a.CoreCRTManaged2();
-            return;
+            PrintStats(Distributions.AddPentP.LoadFile());
 
-            var dummy = new Add96by96();
-            var expected = dummy.NetFramework();
-            var pinvoke = dummy.Ole32();
-
-            //var coreAssemblyInfo = FileVersionInfo.GetVersionInfo(typeof(object).Assembly.Location);
-            //Console.WriteLine($"Hello World from Core {coreAssemblyInfo.ProductVersion}");
-
-            //Console.WriteLine(typeof(Program).GetTypeInfo().Assembly.Location);
-            //Console.WriteLine($"Is 64bit: {IntPtr.Size == 8}");
-
-            ////Debugger.Break();
-            //Debug.Assert(expected == pinvoke);
-            //Console.WriteLine(dummy.NetFramework());
-            //Console.WriteLine(dummy.CoreCRTManaged());
-            //Console.WriteLine(dummy.CoreCRTManaged2());
-            //Console.WriteLine(dummy.Ole32());
-            //Console.WriteLine(dummy.Native());
-
-            //Debugger.Break();
-            //return;,
-
-
-            //dummy.CoreCRTManaged2();
-            //dummy.CoreCRTManaged2();
-
-            var b = new InterestBenchmark();
-            b.Setup();
-
-            for (int i = 0; i < 1000; ++i)
-                b.CoreRT2();
-           //return;
-
+            //(new Distributions.MulPentP()).NetFramework();
+            (new Distributions.DivPentP()).NetFramework();
 
             var config = DefaultConfig.Instance
                 .With(Job.ShortRun
@@ -69,7 +60,7 @@ namespace Benchmarks
                         //.WithMinIterationTime(TimeInterval.Millisecond * 100)
                         )
                 .With(BenchmarkDotNet.Validators.ExecutionValidator.FailOnError)
-#if NET47_DUMMY
+#if NET47
                  .With(MemoryDiagnoser.Default)
                 .With(new[]
                 {
@@ -100,7 +91,11 @@ namespace Benchmarks
             //BenchmarkRunner.Run<Mul96by96>(config);
             //
 
-            BenchmarkRunner.Run<InterestBenchmark>(config);
+            //BenchmarkRunner.Run<InterestBenchmark>(config);
+
+            BenchmarkRunner.Run<Distributions.AddPentP>(config);
+            //BenchmarkRunner.Run<Distributions.MulPentP>(config);
+            //BenchmarkRunner.Run<Distributions.DivPentP>(config);
 
             //BenchmarkRunner.Run<AddDummy>(config);
 
@@ -113,62 +108,4 @@ namespace Benchmarks
         }
 
     }
-
-    public class AddDummy
-    {
-        readonly decimal a;
-        readonly decimal b;
-        readonly CoreRT.Decimal a2;
-        readonly CoreRT.Decimal b2;
-        readonly CoreRT.Decimal2 a3;
-        readonly CoreRT.Decimal2 b3;
-
-        public AddDummy()
-        {
-            // TODO: test bort 3 and 10 
-            a = new decimal(1023, 345, 321, false, 3);
-            b = new decimal(32, 23, 2, false, 0);
-            a2 = a;
-            b2 = b;
-            a3 = a;
-            b3 = b;
-        }
-
-        //[Benchmark]
-        public decimal NetFramework()
-        {
-            return ClrClassLibrary.Methods.AddManaged(a, b);
-        }
-
-
-        public decimal Native()
-        {
-            return ClrClassLibrary.Methods.AddNative(a, b);
-        }
-
-        public decimal PalRT()
-        {
-            return ClrClassLibrary.Methods.AddPalRT(a, b);
-        }
-
-
-        public decimal Ole32()
-        {
-            return ClrClassLibrary.Methods.AddOle32(a, b);
-        }
-
-
-
-        public CoreRT.Decimal CoreCRTManaged()
-        {
-            return ClrClassLibrary.Methods.AddCoreRTManaged(a2, b2);
-        }
-
-        [Benchmark]
-        public CoreRT.Decimal2 CoreCRTManaged2()
-        {
-            return ClrClassLibrary.Methods.AddCoreRTManaged(a3, b3);
-        }
-    }
-
 }

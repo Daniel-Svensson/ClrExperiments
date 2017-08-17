@@ -5,37 +5,36 @@ namespace Benchmarks.ClrClassLibrary
 {
     internal static class Methods
     {
-        [MethodImpl(MethodImplOptions.NoInlining)]
         internal static decimal AddManaged(decimal a, decimal b)
         {
             return Decimal.Add(a, b);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+
         internal static decimal AddNative(decimal a, decimal b)
         {
             return DecimalDLL.Add(a, b);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+
         internal static decimal AddPalRT(decimal a, decimal b)
         {
             return PalRT.Add(a, b);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+
         internal static decimal AddOle32(decimal a, decimal b)
         {
             return Oleaut32.Add(a, b);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+
         internal static CoreRT.Decimal AddCoreRTManaged(CoreRT.Decimal a2, CoreRT.Decimal b2)
         {
             return CoreRT.Decimal.Add(a2, b2);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+
         internal static CoreRT.Decimal2 AddCoreRTManaged(CoreRT.Decimal2 a2, CoreRT.Decimal2 b2)
         {
             return CoreRT.Decimal2.Add(a2, b2);
@@ -99,6 +98,21 @@ namespace Benchmarks.ClrClassLibrary
         internal static CoreRT.Decimal2 DivCoreRTManaged(CoreRT.Decimal2 a2, CoreRT.Decimal2 b2)
         {
             return CoreRT.Decimal2.Divide(a2, b2);
+        }
+
+        internal static decimal AddNoop(decimal a, decimal b)
+        {
+            return Noop.Add(a, b);
+        }
+
+        internal static decimal MulNoop(decimal a, decimal b)
+        {
+            return Noop.Mul(a, b);
+        }
+
+        internal static decimal DivNoop(decimal a, decimal b)
+        {
+            return Noop.Div(a, b);
         }
     }
 }

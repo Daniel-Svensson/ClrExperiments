@@ -8,3 +8,4 @@ EXPORTS
 	VarDecAdd_PALRT @6
 	VarDecSub_PALRT @7
 	VarDecDiv_PALRT @8
+	VarDecNoop @9

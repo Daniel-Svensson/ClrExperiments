@@ -18,15 +18,19 @@ namespace Benchmarks
         {
             lhs_builtin = lhs;
             rhs_builtin = rhs;
-            res_builtin = new decimal[lhs.Length + rhs.Length];
+
+            if (object.ReferenceEquals(lhs, rhs))
+                rhs_builtin = rhs.Select(d => d).ToArray();
+
+            res_builtin = new decimal[lhs.Length * rhs.Length];
 
             lhs_corert = lhs.Select(x => (CoreRT.Decimal)x).ToArray();
             rhs_corert = rhs.Select(x => (CoreRT.Decimal)x).ToArray();
-            res_corert = new CoreRT.Decimal[lhs.Length + rhs.Length];
+            res_corert = new CoreRT.Decimal[lhs.Length * rhs.Length];
 
             lhs_corert2 = lhs.Select(x => (CoreRT.Decimal2)x).ToArray();
             rhs_corert2 = rhs.Select(x => (CoreRT.Decimal2)x).ToArray();
-            res_corert2 = new CoreRT.Decimal2[lhs.Length + rhs.Length];
+            res_corert2 = new CoreRT.Decimal2[lhs.Length * rhs.Length];
         }
 
     }

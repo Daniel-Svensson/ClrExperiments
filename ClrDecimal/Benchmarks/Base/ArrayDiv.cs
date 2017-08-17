@@ -9,9 +9,9 @@ using BenchmarkDotNet.Attributes.Jobs;
 
 namespace Benchmarks
 {
-    public class ArrayMul : ArrayBase
+    public class ArrayDiv : ArrayBase
     {
-        public ArrayMul(decimal[] lhs, decimal[] rhs)
+        public ArrayDiv(decimal[] lhs, decimal[] rhs)
             : base(lhs, rhs)
         {
         }
@@ -25,29 +25,7 @@ namespace Benchmarks
                 {
                     try
                     {
-                        res_builtin[dest++] = ClrClassLibrary.Methods.MulManaged(lhs, rhs);
-                    }
-                    catch (Exception)
-                    {
-                        dest++;
-                    }
-                }
-
-
-            return res_builtin;
-        }
-
-
-        [Benchmark]
-        public decimal[] PInvokeDummy()
-        {
-            int dest = 0;
-            foreach (var lhs in lhs_builtin)
-                foreach (var rhs in rhs_builtin)
-                {
-                    try
-                    {
-                        res_builtin[dest++] = ClrClassLibrary.Methods.MulNoop(lhs, rhs);
+                        res_builtin[dest++] = ClrClassLibrary.Methods.DivManaged(lhs, rhs);
                     }
                     catch (Exception)
                     {
@@ -68,7 +46,7 @@ namespace Benchmarks
                 {
                     try
                     {
-                        res_builtin[dest++] = ClrClassLibrary.Methods.MulNative(lhs, rhs);
+                        res_builtin[dest++] = ClrClassLibrary.Methods.DivNative(lhs, rhs);
                     }
                     catch (Exception)
                     {
@@ -87,7 +65,7 @@ namespace Benchmarks
                 {
                     try
                     {
-                        res_builtin[dest++] = ClrClassLibrary.Methods.MulPalRT(lhs, rhs);
+                        res_builtin[dest++] = ClrClassLibrary.Methods.DivPalRT(lhs, rhs);
                     }
                     catch (Exception)
                     {
@@ -106,7 +84,7 @@ namespace Benchmarks
                 {
                     try
                     {
-                        res_builtin[dest++] = ClrClassLibrary.Methods.MulOle32(lhs, rhs);
+                        res_builtin[dest++] = ClrClassLibrary.Methods.DivOle32(lhs, rhs);
                     }
                     catch (Exception)
                     {
@@ -127,7 +105,7 @@ namespace Benchmarks
                 {
                     try
                     {
-                        res_corert2[dest++] = ClrClassLibrary.Methods.MulCoreRTManaged(lhs, rhs);
+                        res_corert2[dest++] = ClrClassLibrary.Methods.DivCoreRTManaged(lhs, rhs);
                     }
                     catch (Exception)
                     {
@@ -135,6 +113,26 @@ namespace Benchmarks
                     }
                 }
             return res_corert2;
+        }
+
+        [Benchmark]
+        public decimal[] PInvokeDummy()
+        {
+            int dest = 0;
+            foreach (var lhs in lhs_builtin)
+                foreach (var rhs in rhs_builtin)
+                {
+                    try
+                    {
+                        res_builtin[dest++] = ClrClassLibrary.Methods.DivNoop(lhs, rhs);
+                    }
+                    catch (Exception)
+                    {
+                        dest++;
+                    }
+                }
+
+            return res_builtin;
         }
     }
 }

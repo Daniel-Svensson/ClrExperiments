@@ -2,8 +2,8 @@
   <PropertyGroup>
     <OutputType>exe</OutputType>
     <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>   
-    <TargetFrameworks>net47;netcoreapp2.0</TargetFrameworks>
-    <!--<TargetFrameworks>net47</TargetFrameworks>-->
+    <!--<TargetFrameworks>net47;netcoreapp2.0</TargetFrameworks>-->
+    <TargetFramework>net47</TargetFramework>
     <OutputTypeEx>exe</OutputTypeEx>
     <!--<RuntimeIdentifier>win10-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>
@@ -47,14 +47,15 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CoreRT\CoreRT.csproj">
-      <Project>{6d69d031-f439-4aef-a3f9-57b8fe1fe4ab}</Project>
-      <Name>CoreRT</Name>
-    </ProjectReference>
+    <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Distributions\" />
-    <Folder Include="Properties\" />
+    <ProjectReference Include="..\CoreRT\CoreRT.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Distributions\decimals.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   
 </Project>
