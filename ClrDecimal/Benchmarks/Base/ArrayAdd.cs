@@ -28,17 +28,6 @@ namespace Benchmarks
         }
 
         [Benchmark]
-        public decimal[] PInvokeDummy()
-        {
-            int dest = 0;
-            foreach (var lhs in lhs_builtin)
-                foreach (var rhs in rhs_builtin)
-                    res_builtin[dest++] = ClrClassLibrary.Methods.AddNoop(lhs, rhs);
-
-            return res_builtin;
-        }
-
-        [Benchmark]
         public decimal[] PInvokeNew()
         {
             int dest = 0;
@@ -86,6 +75,17 @@ namespace Benchmarks
                 foreach (var rhs in rhs_corert2)
                     res_corert2[dest++] = ClrClassLibrary.Methods.AddCoreRTManaged(lhs, rhs);
             return res_corert2;
+        }
+
+        [Benchmark]
+        public decimal[] PInvokeDummy()
+        {
+            int dest = 0;
+            foreach (var lhs in lhs_builtin)
+                foreach (var rhs in rhs_builtin)
+                    res_builtin[dest++] = ClrClassLibrary.Methods.AddNoop(lhs, rhs);
+
+            return res_builtin;
         }
     }
 }

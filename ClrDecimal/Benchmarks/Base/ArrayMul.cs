@@ -37,28 +37,6 @@ namespace Benchmarks
             return res_builtin;
         }
 
-
-        [Benchmark]
-        public decimal[] PInvokeDummy()
-        {
-            int dest = 0;
-            foreach (var lhs in lhs_builtin)
-                foreach (var rhs in rhs_builtin)
-                {
-                    try
-                    {
-                        res_builtin[dest++] = ClrClassLibrary.Methods.MulNoop(lhs, rhs);
-                    }
-                    catch (Exception)
-                    {
-                        dest++;
-                    }
-                }
-
-
-            return res_builtin;
-        }
-
         [Benchmark]
         public decimal[] PInvokeNew()
         {
@@ -135,6 +113,27 @@ namespace Benchmarks
                     }
                 }
             return res_corert2;
+        }
+
+        [Benchmark]
+        public decimal[] PInvokeDummy()
+        {
+            int dest = 0;
+            foreach (var lhs in lhs_builtin)
+                foreach (var rhs in rhs_builtin)
+                {
+                    try
+                    {
+                        res_builtin[dest++] = ClrClassLibrary.Methods.MulNoop(lhs, rhs);
+                    }
+                    catch (Exception)
+                    {
+                        dest++;
+                    }
+                }
+
+
+            return res_builtin;
         }
     }
 }

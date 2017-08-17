@@ -51,7 +51,7 @@ namespace Benchmarks
             (new Distributions.DivPentP()).NetFramework();
 
             var config = DefaultConfig.Instance
-                .With(Job.ShortRun
+                .With(Job.MediumRun
                         // Job.Default
 #if !NET47
 
@@ -91,11 +91,11 @@ namespace Benchmarks
             //BenchmarkRunner.Run<Mul96by96>(config);
             //
 
-            //BenchmarkRunner.Run<InterestBenchmark>(config);
+            BenchmarkRunner.Run<InterestBenchmark>(config);
 
             BenchmarkRunner.Run<Distributions.AddPentP>(config);
-            //BenchmarkRunner.Run<Distributions.MulPentP>(config);
-            //BenchmarkRunner.Run<Distributions.DivPentP>(config);
+            BenchmarkRunner.Run<Distributions.MulPentP>(config);
+            BenchmarkRunner.Run<Distributions.DivPentP>(config);
 
             //BenchmarkRunner.Run<AddDummy>(config);
 

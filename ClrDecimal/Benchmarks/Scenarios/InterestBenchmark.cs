@@ -153,5 +153,21 @@ namespace Benchmarks
                         Methods.MulCoreRTManaged(array[i].Amount, Methods.MulCoreRTManaged(array[i].CurrentInterestRate, dayFactor)));
             }
         }
+
+
+        [Benchmark]
+        public void PInvokeDummy()
+        {
+            var array = _decAccounts;
+
+            for (int i = 0; i < array.Length; ++i)
+            {
+                var dayFactor = Methods.DivNoop(days, array[i].DaysInYear);
+
+                array[i].NewInterest =
+                    Methods.AddNoop(array[i].CurrentInterest,
+                        Methods.MulNoop(array[i].Amount, Methods.MulNoop(array[i].CurrentInterestRate, dayFactor)));
+            }
+        }
     }
 }
