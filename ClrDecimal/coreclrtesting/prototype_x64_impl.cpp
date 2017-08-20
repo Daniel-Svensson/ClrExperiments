@@ -9,15 +9,28 @@
 // #define PROFILE_NOINLINE DECLSPEC_NOINLINE
 #define PROFILE_NOINLINE
 //#define NO_UDIV128
-#ifndef _AMD64_
+#ifndef _AMD64
 #define NO_UDIV128
 #endif
 
 DWORD32 IncreaseScale96By32(ULONG *rgulNum, DWORD32 ulPwr);
 DWORD64 IncreaseScale96By64(ULONG *rgulNum, DWORD64 ulPwr);
 
-// ------------------------- INSTRINCTS AND SIMPLE HELPERS ------------------------
+// TODO: reference additional headers your program requires here
+inline void COPYDEC(DECIMAL &to, const DECIMAL &from)
+{
+	(to).Hi32 = (from).Hi32;
+	(to).signscale = (from).signscale;
+	(to).Lo64 = (from).Lo64;
+}
 
+#undef DECIMAL_SETZERO
+inline void DECIMAL_SETZERO(DECIMAL &dec)
+{
+	memset(&dec, 0, sizeof(DECIMAL));
+}
+
+// ------------------------- INSTRINCTS AND SIMPLE HELPERS ------------------------
 inline unsigned int & low32(unsigned __int64 &value)
 {
 	return *(unsigned int*)&((SPLIT64*)&value)->u.Lo;
@@ -1126,7 +1139,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 	}
 
 RetDec:
-	*pdecRes = decRes;
+	COPYDEC(*pdecRes, decRes);
 	return NOERROR;
 }
 
@@ -1960,7 +1973,7 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 		}
 	}
 
-	pdecRes->Hi32 = rgulQuo[2];
+	pdecRes->Hi32 = (DWORD32)rgullQuo[1];
 	pdecRes->Lo64 = rgullQuo[0];
 	pdecRes->scale = (BYTE)iScale;
 	pdecRes->sign = pdecL->sign ^ pdecR->sign;
