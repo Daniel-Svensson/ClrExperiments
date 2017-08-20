@@ -167,16 +167,17 @@ namespace CoreRT
                 Split64 sdl = new Split64();
 
                 sdl.Low32 = (uint)(num / den);
-                sdl.High32 = (uint)(num % den);
+                sdl.High32 = (uint)(num - (sdl.Low32 * den));
                 return sdl.int64;
             }
 
             private static ulong DivMod32by32(uint num, uint den)
             {
                 Split64 sdl = new Split64();
-
+                
+// No deivrem for unsiged uint
                 sdl.Low32 = num / den;
-                sdl.High32 = num % den;
+                sdl.High32 = num - (sdl.Low32 * den);
                 return sdl.int64;
             }
 
