@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <functional> // swap
 #include <intrin.h>
+#include <cstdint>
 #include "PROTOTYPE_X64_IMPL.H"
 
 // Switches to test
@@ -13,8 +14,8 @@
 #define NO_UDIV128
 #endif
 
-DWORD32 IncreaseScale96By32(ULONG *rgulNum, DWORD32 ulPwr);
-DWORD64 IncreaseScale96By64(ULONG *rgulNum, DWORD64 ulPwr);
+uint32_t IncreaseScale96By32(ULONG *rgulNum, uint32_t ulPwr);
+uint64_t IncreaseScale96By64(ULONG *rgulNum, uint64_t ulPwr);
 
 // TODO: reference additional headers your program requires here
 inline void COPYDEC(DECIMAL &to, const DECIMAL &from)
@@ -31,31 +32,31 @@ inline void DECIMAL_SETZERO(DECIMAL &dec)
 }
 
 // ------------------------- INSTRINCTS AND SIMPLE HELPERS ------------------------
-inline unsigned int & low32(unsigned __int64 &value)
+inline uint32_t & low32(uint64_t &value)
 {
-	return *(unsigned int*)&((SPLIT64*)&value)->u.Lo;
+	return *(uint32_t*)&((SPLIT64*)&value)->u.Lo;
 }
 
-inline const unsigned int & low32(const unsigned __int64 &value)
+inline const uint32_t & low32(const uint64_t &value)
 {
-	return *(const unsigned int*)&((SPLIT64*)&value)->u.Lo;
+	return *(const uint32_t*)&((SPLIT64*)&value)->u.Lo;
 }
 
-inline unsigned int & hi32(unsigned __int64 &value)
+inline uint32_t & hi32(uint64_t &value)
 {
-	return *(unsigned int*)&((SPLIT64*)&value)->u.Hi;
+	return *(uint32_t*)&((SPLIT64*)&value)->u.Hi;
 }
 
-inline const unsigned int & hi32(const unsigned __int64 &value)
+inline const uint32_t & hi32(const uint64_t &value)
 {
-	return *(const unsigned int*)&((SPLIT64*)&value)->u.Hi;
+	return *(const uint32_t*)&((SPLIT64*)&value)->u.Hi;
 }
 
 // Determine if 64 bit value can be stored in 32 bits without loss (upper 32 bits are 0)
-static inline unsigned char FitsIn32Bit(const DWORD64* pValue)
+static inline unsigned char FitsIn32Bit(const uint64_t* pValue)
 {
 #ifdef _AMD64_
-	return *pValue <= (DWORD64)(MAXDWORD32);
+	return *pValue <= (uint64_t)(UINT32_MAX);
 #else
 	return hi32(*pValue) == 0;
 #endif
@@ -68,24 +69,24 @@ static inline unsigned char FitsIn32Bit(const DWORD64* pValue)
 // requires that hi < ulDen in order to not loose precision
 // so it is best to set it to 0 unless when chaining calls in which case 
 // the remainder from a previus devide should be used
-extern "C" DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, __out DWORD64 *remainder);
+extern "C" uint64_t _udiv128(uint64_t low, uint64_t hi, uint64_t divisor, __out uint64_t *remainder);
 // Performs inplace division of a 128bit number with 
 // requires that hi < ulDen in order to not loose precision
 // so it is best to set it to 0 unless when chaining calls in which case 
 // the remainder from a previus devide should be used
-extern "C" DWORD64 _udiv128_v2(__inout DWORD64* pLow, DWORD64 hi, DWORD64 ulDen);
+extern "C" uint64_t _udiv128_v2(__inout uint64_t* pLow, uint64_t hi, uint64_t ulDen);
 #else
 
-extern "C" __m128i _udiv128_impl_sse(DWORD64 low, DWORD64 hi, DWORD64 divisor);
+extern "C" __m128i _udiv128_impl_sse(uint64_t low, uint64_t hi, uint64_t divisor);
 
-inline DWORD64 _udiv128(DWORD64 low, DWORD64 hi, DWORD64 divisor, __out DWORD64 *remainder)
+inline uint64_t _udiv128(uint64_t low, uint64_t hi, uint64_t divisor, __out uint64_t *remainder)
 {
 	__m128i temp = _udiv128_impl_sse(low, hi, divisor);
 	*remainder = temp.m128i_u64[1];
 	return temp.m128i_u64[0];
 }
 
-inline DWORD64 _udiv128_v2(__inout DWORD64* pLow, DWORD64 hi, DWORD64 ulDen)
+inline uint64_t _udiv128_v2(__inout uint64_t* pLow, uint64_t hi, uint64_t ulDen)
 {
 	__m128i temp = _udiv128_impl_sse(*pLow, hi, ulDen);
 	*pLow = temp.m128i_u64[0];
@@ -96,21 +97,21 @@ inline DWORD64 _udiv128_v2(__inout DWORD64* pLow, DWORD64 hi, DWORD64 ulDen)
 #define UDIV_IMPL 1
 
 #if (UDIV_IMPL != 2 && UDIV_IMPL != 3)
-extern "C" unsigned int _udiv64(unsigned int lo, unsigned int hi, unsigned int ulDen, __out unsigned int *remainder);
-extern "C" unsigned int _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen);
+extern "C" uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, __out uint32_t *remainder);
+extern "C" uint32_t _udiv64_v2(__inout uint32_t* pLow, uint32_t hi, uint32_t ulDen);
 #endif
 #if (UDIV_IMPL == 3)
-extern "C" DWORD64 _udiv64_impl(unsigned int lo, unsigned int hi, unsigned int ulDen);
-inline unsigned int _udiv64(unsigned int lo, unsigned int hi, unsigned int ulDen, __out unsigned int *remainder)
+extern "C" uint64_t _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen);
+inline uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, __out uint32_t *remainder)
 {
-	DWORD64 temp = _udiv64_impl(lo, hi, ulDen);
+	uint64_t temp = _udiv64_impl(lo, hi, ulDen);
 	*remainder = hi32(temp);
 	return temp;
 }
-inline unsigned int _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
+inline uint32_t _udiv64_v2(__inout uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 {
-	DWORD64 temp = _udiv64_impl(*pLow, hi, ulDen);
-	*pLow = (DWORD32)temp;
+	uint64_t temp = _udiv64_impl(*pLow, hi, ulDen);
+	*pLow = (uint32_t)temp;
 	return hi32(temp);
 }
 #endif
@@ -132,19 +133,19 @@ unsigned long      __builtin_subcl (unsigned long x, unsigned long y, unsigned l
 unsigned long long __builtin_subcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
 */
 
-inline unsigned char _addcarry_u64(unsigned char carry, unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 *pRes)
+inline unsigned char _addcarry_u64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
 	carry = _addcarry_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
 	return _addcarry_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
 }
 
-inline unsigned char _subborrow_u64(unsigned char carry, unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 *pRes)
+inline unsigned char _subborrow_u64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
 	carry = _subborrow_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
 	return _subborrow_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
 }
 
-inline unsigned char _BitScanReverse64(unsigned long * Index, unsigned __int64 Mask)
+inline unsigned char _BitScanReverse64(unsigned long * Index, uint64_t Mask)
 {
 	unsigned char res = _BitScanReverse(Index, hi32(Mask));
 	if (res)
@@ -160,10 +161,10 @@ inline unsigned char _BitScanReverse64(unsigned long * Index, unsigned __int64 M
 }
 
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
-static unsigned __int64 __fastcall _umul128(unsigned __int64 lhs, unsigned __int64 rhs, unsigned __int64 * _HighProduct)
+static uint64_t __fastcall _umul128(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 {
-	unsigned __int64 lowRes, sdltmp1, sdltmp2;
-	unsigned __int64 &hiRes = *_HighProduct;
+	uint64_t lowRes, sdltmp1, sdltmp2;
+	uint64_t &hiRes = *_HighProduct;
 
 	unsigned char carry = 0;
 
@@ -189,13 +190,13 @@ static unsigned __int64 __fastcall _umul128(unsigned __int64 lhs, unsigned __int
 	return lowRes;
 }
 
-unsigned __int64 ShiftLeft128(unsigned __int64 _LowPart, unsigned __int64 _HighPart, unsigned char _Shift)
+uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
 {
 	return (_HighPart << _Shift) + (_LowPart >> (64 - _Shift));
 }
 
 #ifndef INLINE_ASM
-inline DWORD64 __fastcall _udiv64_impl(unsigned int lo, unsigned int hi, unsigned int ulDen)
+inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
 {
 	assert(hi < ulDen);
 	if (hi == 0)
@@ -212,8 +213,8 @@ inline DWORD64 __fastcall _udiv64_impl(unsigned int lo, unsigned int hi, unsigne
 		sdl.u.Lo = lo;
 
 		SPLIT64 res;
-		res.u.Hi = static_cast<unsigned int>(sdl.int64 % ulDen);
-		res.u.Lo = static_cast<unsigned int>(sdl.int64 / ulDen);
+		res.u.Hi = static_cast<uint32_t>(sdl.int64 % ulDen);
+		res.u.Lo = static_cast<uint32_t>(sdl.int64 / ulDen);
 		return res;
 	}
 }
@@ -223,7 +224,7 @@ inline DWORD64 __fastcall _udiv64_impl(unsigned int lo, unsigned int hi, unsigne
 #ifdef NAKED
 _declspec(naked)
 #endif
-inline DWORD64 __fastcall _udiv64_impl(unsigned int lo, unsigned int hi, unsigned int ulDen)
+inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
 {
 
 
@@ -250,15 +251,15 @@ inline DWORD64 __fastcall _udiv64_impl(unsigned int lo, unsigned int hi, unsigne
 }
 #endif
 
-inline unsigned int _udiv64(unsigned int lo, unsigned int hi, unsigned int ulDen, __out unsigned int *remainder)
+inline uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, __out uint32_t *remainder)
 {
 
-	DWORD64 temp = _udiv64_impl(lo, hi, ulDen);
+	uint64_t temp = _udiv64_impl(lo, hi, ulDen);
 	*remainder = hi32(temp);
 	return low32(temp);
 }
 
-inline unsigned int _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
+inline uint32_t _udiv64_v2(__inout uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 {
 	auto temp = _udiv64_impl(*pLow, hi, ulDen);
 	*pLow = low32(temp);
@@ -267,16 +268,16 @@ inline unsigned int _udiv64_v2(__inout unsigned int* pLow, unsigned int hi, unsi
 #endif
 
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
-static unsigned __int64 __fastcall _umul64by32(unsigned __int64 lhs, unsigned __int32 rhs, unsigned __int32 * _HighProduct)
+static uint64_t __fastcall _umul64by32(uint64_t lhs, unsigned __int32 rhs, unsigned __int32 * _HighProduct)
 {
 #ifdef _AMD64_
-	unsigned __int64 temp;
+	uint64_t temp;
 	auto res = _umul128(lhs, rhs, &temp);
-	*_HighProduct = (unsigned int)temp;
+	*_HighProduct = (uint32_t)temp;
 	return res;
 #else
-	DWORD64 lowRes = UInt32x32To64(low32(lhs), rhs); // quo * lo divisor
-	DWORD64 hiRes = UInt32x32To64(hi32(lhs), rhs); // quo * mid divisor
+	uint64_t lowRes = UInt32x32To64(low32(lhs), rhs); // quo * lo divisor
+	uint64_t hiRes = UInt32x32To64(hi32(lhs), rhs); // quo * mid divisor
 
 	hiRes += hi32(lowRes);
 
@@ -293,7 +294,7 @@ const int POWER10_MAX64 = 19;
 const int POWER10_MAX32 = 9;
 const int SEARCHSCALE_MAX_SCALE = POWER10_MAX64;
 
-static constexpr DWORD64 rgulPower10_64[] = {
+static constexpr uint64_t rgulPower10_64[] = {
 1,
 10,
 100,
@@ -316,13 +317,13 @@ static constexpr DWORD64 rgulPower10_64[] = {
 10000000000000000000,
 };
 
-static const DWORD64 POWER10_MAX_VALUE64 = rgulPower10_64[POWER10_MAX64];
-static const DWORD32 POWER10_MAX_VALUE32 = (DWORD32)rgulPower10_64[POWER10_MAX32];
+static const uint64_t POWER10_MAX_VALUE64 = rgulPower10_64[POWER10_MAX64];
+static const uint32_t POWER10_MAX_VALUE32 = (uint32_t)rgulPower10_64[POWER10_MAX32];
 
 struct DECOVFL2
 {
-	DWORD64 Hi;
-	DWORD32 Lo;
+	uint64_t Hi;
+	uint32_t Lo;
 };
 
 static constexpr DECOVFL2 PowerOvfl[] = {
@@ -348,19 +349,19 @@ static constexpr DECOVFL2 PowerOvfl[] = {
 	{ 1uI64, 3627848955u }, // 10^19 0,844674407370955
 };
 
-const DWORD32 OVFL_MAX32_1_HI = 429496729;
+const uint32_t OVFL_MAX32_1_HI = 429496729;
 
 // Divides a 64bit number (ullNum) by 64bit value (ullDen)
 // returns 64bit quotient with remainder in *pRemainder
 // This results in a single div instruction on x64 platforms
-static inline DWORD64 DivMod64By64_x64(DWORD64 ullNum, DWORD64 ullDen, __out DWORD64* pRemainder)
+static inline uint64_t DivMod64By64_x64(uint64_t ullNum, uint64_t ullDen, __out uint64_t* pRemainder)
 {
 #ifndef _AMD64_
 	if (FitsIn32Bit(&ullDen))
 	{
 		SPLIT64 res;
-		DWORD32 ulDen = low32(ullDen);
-		DWORD32 remainder;
+		uint32_t ulDen = low32(ullDen);
+		uint32_t remainder;
 		auto hi = hi32(ullNum);
 		if (hi < ulDen)
 		{
@@ -385,28 +386,28 @@ static inline DWORD64 DivMod64By64_x64(DWORD64 ullNum, DWORD64 ullDen, __out DWO
 	return res;
 }
 
-static inline unsigned char Add96(DECIMAL *pDec, DWORD64 value)
+static inline unsigned char Add96(DECIMAL *pDec, uint64_t value)
 {
 	auto carry = _addcarry_u64(0, pDec->Lo64, value, &pDec->Lo64);
-	return _addcarry_u32(carry, pDec->Hi32, 0, (unsigned int*)&pDec->Hi32);
+	return _addcarry_u32(carry, pDec->Hi32, 0, (uint32_t*)&pDec->Hi32);
 }
 
-static inline unsigned char Add96(ULONG *plVal, DWORD64 value)
+static inline unsigned char Add96(ULONG *plVal, uint64_t value)
 {
-	auto carry = _addcarry_u64(0, *(DWORD64*)&plVal[0], value, (DWORD64*)&plVal[0]);
-	return _addcarry_u32(carry, plVal[2], 0, (unsigned int*)(&plVal[2]));
+	auto carry = _addcarry_u64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
+	return _addcarry_u32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
 }
 
-static inline unsigned char Add96(DWORD64 *pllVal, DWORD64 value)
+static inline unsigned char Add96(uint64_t *pllVal, uint64_t value)
 {
 	auto carry = _addcarry_u64(0, pllVal[0], value, &pllVal[0]);
-	return _addcarry_u32(carry, (DWORD32)pllVal[1], 0, &low32(pllVal[1]));
+	return _addcarry_u32(carry, (uint32_t)pllVal[1], 0, &low32(pllVal[1]));
 }
 
-static inline unsigned char Sub96(ULONG *plVal, DWORD64 value)
+static inline unsigned char Sub96(ULONG *plVal, uint64_t value)
 {
-	auto carry = _subborrow_u64(0, *(DWORD64*)&plVal[0], value, (DWORD64*)&plVal[0]);
-	return _subborrow_u32(carry, plVal[2], 0, (DWORD32*)(&plVal[2]));
+	auto carry = _subborrow_u64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
+	return _subborrow_u32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
 }
 
 /***
@@ -427,10 +428,10 @@ static inline unsigned char Sub96(ULONG *plVal, DWORD64 value)
 *   None.
 *
 ***********************************************************************/
-static inline DWORD32 Div96By32_x64(__inout ULONG *pdlNum, DWORD32 ulDen)
+static inline uint32_t Div96By32_x64(__inout ULONG *pdlNum, uint32_t ulDen)
 {
-	unsigned int *const rgulNum = (unsigned int *)pdlNum;
-	DWORD32 remainder;
+	uint32_t *const rgulNum = (uint32_t *)pdlNum;
+	uint32_t remainder;
 #if 0
 	remainder = 0;
 	if (pdlNum[2] != 0)
@@ -466,17 +467,17 @@ Div1Word:
 	return remainder;
 }
 
-static inline DWORD32 Div96By32_x64(__inout DWORD64 *pdllNum, DWORD32 ulDen)
+static inline uint32_t Div96By32_x64(__inout uint64_t *pdllNum, uint32_t ulDen)
 {
 	return Div96By32_x64((ULONG*)pdllNum, ulDen);
 }
 
 PROFILE_NOINLINE
-DWORD32 InplaceDivide_32(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _In_range_(0, 2) int& iHiRes, DWORD32 ulDen)
+uint32_t InplaceDivide_32(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2) int& iHiRes, uint32_t ulDen)
 {
 	int iCur = iHiRes * 2 + 1; // convert from 64bit to 32bit indicec (+1 == always point to upper 32 bits at start)
-	DWORD32 *const rgulRes = (DWORD32*)rgullRes;
-	DWORD32 ulRemainder = 0;
+	uint32_t *const rgulRes = (uint32_t*)rgullRes;
+	uint32_t ulRemainder = 0;
 
 	if (rgulRes[iCur] == 0)
 		iCur--;
@@ -504,9 +505,9 @@ DWORD32 InplaceDivide_32(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _In_rang
 
 #if defined(_AMD64_)
 //PROFILE_NOINLINE
-inline DWORD64 InplaceDivide_64(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _In_range_(0, 2) int& iHiRes, DWORD64 ullDen)
+inline uint64_t InplaceDivide_64(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2) int& iHiRes, uint64_t ullDen)
 {
-	DWORD64 ullRemainder;
+	uint64_t ullRemainder;
 	int iCur = iHiRes - 1;
 
 	if (rgullRes[iHiRes] < ullDen)
@@ -532,14 +533,14 @@ inline DWORD64 InplaceDivide_64(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _
 #endif
 
 PROFILE_NOINLINE
-DWORD64 ReduceScale(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _In_range_(0, 2)
-	int &iHiRes, _Out_ DWORD64 &ullDen, _Inout_ int &iNewScale)
+uint64_t ReduceScale(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2)
+	int &iHiRes, _Out_ uint64_t &ullDen, _Inout_ int &iNewScale)
 {
 #if !defined(_AMD64_)
-	DWORD32 ulDen;
+	uint32_t ulDen;
 	// Handle up to POWER10_MAX32 scale at a time
 	if (iNewScale < POWER10_MAX32) {
-		ulDen = (DWORD32)rgulPower10_64[iNewScale];
+		ulDen = (uint32_t)rgulPower10_64[iNewScale];
 	}
 	else {
 		ulDen = POWER10_MAX_VALUE32;
@@ -557,7 +558,7 @@ DWORD64 ReduceScale(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _In_range_(0,
 		if (iNewScale <= POWER10_MAX32)
 		{
 			iNewScale = 0;
-			return InplaceDivide_32(rgullRes, iHiRes, (DWORD32)ullDen);
+			return InplaceDivide_32(rgullRes, iHiRes, (uint32_t)ullDen);
 		}
 	}
 	else
@@ -574,7 +575,7 @@ DWORD64 ReduceScale(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _In_range_(0,
 * ScaleResult_x64
 *
 * Entry:
-*   rgullRes - Array of DWORD64 with value, least-significant first.
+*   rgullRes - Array of uint64_t with value, least-significant first.
 *   iHiRes  - Index of last non-zero value in rgulRes, Max 2.
 *   iScale  - Scale factor for this value, range 0 - 2 * DEC_SCALE_MAX
 *
@@ -588,7 +589,7 @@ DWORD64 ReduceScale(_In_count_(iHiRes) DWORD64 * rgullRes, _Inout_ _In_range_(0,
 *   New scale factor returned, -1 if overflow error.
 *
 ***********************************************************************/
-int ScaleResult_x64(__inout DWORD64 *rgullRes, __in_range(0, 2) int iHiRes, __in_range(0, 2 * DEC_SCALE_MAX) int iScale)
+int ScaleResult_x64(__inout uint64_t *rgullRes, __in_range(0, 2) int iHiRes, __in_range(0, 2 * DEC_SCALE_MAX) int iScale)
 {
 	LIMITED_METHOD_CONTRACT;
 
@@ -597,9 +598,9 @@ int ScaleResult_x64(__inout DWORD64 *rgullRes, __in_range(0, 2) int iHiRes, __in
 
 	int     iNewScale;
 	DWORD   ulMsb;
-	DWORD64 ullSticky;
-	DWORD64 ullPwr;
-	DWORD64 ullRemainder;
+	uint64_t ullSticky;
+	uint64_t ullPwr;
+	uint64_t ullRemainder;
 
 	// See if we need to scale the result.  The combined scale must
 	// be <= DEC_SCALE_MAX and the upper 96 bits must be zero.
@@ -716,10 +717,10 @@ int ScaleResult_x64(__inout DWORD64 *rgullRes, __in_range(0, 2) int iHiRes, __in
 //**********************************************************************
 STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict res)
 {
-	DWORD64 lo;
-	DWORD64 hi;
-	DWORD64 ullPwr;
-	DWORD64 ullRem;
+	uint64_t lo;
+	uint64_t hi;
+	uint64_t ullPwr;
+	uint64_t ullRem;
 
 	int iScale = pdecL->scale + pdecR->scale;
 
@@ -760,7 +761,7 @@ STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __res
 		}
 		else
 		{
-			DWORD64 tmpSpace[2];
+			uint64_t tmpSpace[2];
 			tmpSpace[0] = lo;
 			tmpSpace[1] = hi;
 			iScale = ScaleResult_x64(tmpSpace, 1, iScale);
@@ -769,16 +770,16 @@ STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __res
 				return DISP_E_OVERFLOW;
 
 			res->Lo64 = tmpSpace[0];
-			res->Hi32 = (DWORD32)tmpSpace[1];
+			res->Hi32 = (uint32_t)tmpSpace[1];
 		}
 	}
 	else
 	{
-		DWORD64 tmpSum;
-		DWORD64 tmpLo2;
-		DWORD32 tmpHi1;
-		DWORD32 tmpHi2;
-		DWORD64 rgulProd[3];
+		uint64_t tmpSum;
+		uint64_t tmpLo2;
+		uint32_t tmpHi1;
+		uint32_t tmpHi2;
+		uint64_t rgulProd[3];
 
 		// At least one operand has bits set in the upper 64 bits.
 		//
@@ -799,8 +800,8 @@ STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __res
 		// 
 		// We can add 2 32bit numers to a 32bit*32bit result withaout overflow / carry
 		//  This is the reason that adding 
-		//  The maximum value of the "hi" result of the middle products are MAXDWORD32-1 each
-		//  so adding their carry to the addition will only result in a 32bit value at most MAXDWORD32
+		//  The maximum value of the "hi" result of the middle products are MAXuint32_t-1 each
+		//  so adding their carry to the addition will only result in a 32bit value at most MAXuint32_t
 		//  so this will never generate a carry.
 
 		rgulProd[0] = _umul128(pdecL->Lo64, pdecR->Lo64, &tmpSum);
@@ -833,7 +834,7 @@ STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __res
 			return DISP_E_OVERFLOW;
 
 		res->Lo64 = rgulProd[0];
-		res->Hi32 = (DWORD32)rgulProd[1];
+		res->Hi32 = (uint32_t)rgulProd[1];
 	}
 
 	res->sign = pdecL->sign ^ pdecR->sign;
@@ -850,7 +851,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 {
 	DECIMAL   decTmp;
 	DECIMAL   decRes;
-	DWORD64   rgulNum[3];
+	uint64_t   rgulNum[3];
 
 	bSign ^= (pdecR->sign ^ pdecL->sign) & DECIMAL_NEG;
 
@@ -864,7 +865,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			// Signs differ - subtract
 			//
 			auto carry = _subborrow_u64(0, pdecL->Lo64, pdecR->Lo64, &decRes.Lo64);
-			carry = _subborrow_u32(carry, pdecL->Hi32, pdecR->Hi32, (unsigned int*)&decRes.Hi32);
+			carry = _subborrow_u32(carry, pdecL->Hi32, pdecR->Hi32, (uint32_t*)&decRes.Hi32);
 
 			// Propagate carry
 			//
@@ -883,7 +884,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			// Signs are the same - add
 			//
 			auto carry = _addcarry_u64(0, pdecL->Lo64, pdecR->Lo64, &decRes.Lo64);
-			carry = _addcarry_u32(carry, pdecL->Hi32, pdecR->Hi32, (unsigned int*)&decRes.Hi32);
+			carry = _addcarry_u32(carry, pdecL->Hi32, pdecR->Hi32, (uint32_t*)&decRes.Hi32);
 
 			// Propagate carry
 			if (carry != 0) {
@@ -895,9 +896,9 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 				decRes.scale--;
 
 				// Dibvide with 10, "carry 1" from overflow
-				DWORD32 remainder = _udiv64_v2((DWORD32*)&decRes.Hi32, 1, 10);
-				remainder = _udiv64_v2((DWORD32*)&decRes.Mid32, remainder, 10);
-				remainder = _udiv64_v2((DWORD32*)&decRes.Lo32, remainder, 10);
+				uint32_t remainder = _udiv64_v2((uint32_t*)&decRes.Hi32, 1, 10);
+				remainder = _udiv64_v2((uint32_t*)&decRes.Mid32, remainder, 10);
+				remainder = _udiv64_v2((uint32_t*)&decRes.Lo32, remainder, 10);
 
 				// See if we need to round up.
 				//
@@ -909,7 +910,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 		}
 	}
 	else {
-		DWORD64   ullPwr;
+		uint64_t   ullPwr;
 		int       iScale;
 		int       iHiProd;
 
@@ -946,14 +947,14 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 #endif
 
 			// Scaling won't make it larger than 96 + (32/64) bits < so it will 
-			// fit in 128 bits (2*DWORD64) for 32bit platfrms
-			// fit in 128+32 bits (3*DWORD64) for 64bit platfrms
+			// fit in 128 bits (2*uint64_t) for 32bit platfrms
+			// fit in 128+32 bits (3*uint64_t) for 64bit platfrms
 			//
 			ullPwr = rgulPower10_64[iScale];
 
 
 #if defined(_AMD64_)
-			DWORD64 hi;
+			uint64_t hi;
 			rgulNum[0] = _umul128(pdecL->Lo64, ullPwr, &hi);
 			rgulNum[1] = _umul128(pdecL->Hi32, ullPwr, &rgulNum[2]);
 			auto carry = _addcarry_u64(0, rgulNum[1], hi, &rgulNum[1]);
@@ -964,7 +965,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			// This generates only 1 add instruction more but is a bit shorter
 			rgulNum[0] = pdecL->Lo64;
 			low32(rgulNum[1]) = pdecL->Hi32;
-			hi32(rgulNum[1]) = IncreaseScale96By32((ULONG*)rgulNum, (DWORD32)ullPwr);
+			hi32(rgulNum[1]) = IncreaseScale96By32((ULONG*)rgulNum, (uint32_t)ullPwr);
 #elif TEST_SIMPLER == 0
 			rgulNum[0] = UInt32x32To64(pdecL->Lo32, ullPwr);
 			auto midResult = UInt32x32To64(pdecL->Mid32, ullPwr);
@@ -989,7 +990,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 					// Result fits in 96 bits.  Use standard aligned add.
 					//
 					decTmp.Lo64 = rgulNum[0];
-					decTmp.Hi32 = (DWORD32)rgulNum[1];
+					decTmp.Hi32 = (uint32_t)rgulNum[1];
 					pdecL = &decTmp;
 					goto AlignedAdd;
 				}
@@ -1030,13 +1031,13 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 					ullPwr = rgulPower10_64[iScale];
 #if 1
 				// TODO: Try loop unrolling for 2 or 3
-				DWORD64 mul_carry;
+				uint64_t mul_carry;
 				unsigned char add_carry = 0;
 				rgulNum[0] = _umul128(ullPwr, rgulNum[0], &mul_carry);
 
 				for (int iCur = 1; iCur <= iHiProd; iCur++) {
-					DWORD64 tmp = mul_carry;
-					DWORD64 product = _umul128(ullPwr, rgulNum[iCur], &mul_carry);
+					uint64_t tmp = mul_carry;
+					uint64_t product = _umul128(ullPwr, rgulNum[iCur], &mul_carry);
 					add_carry = _addcarry_u64(add_carry, tmp, product, &rgulNum[iCur]);
 				}
 
@@ -1048,10 +1049,10 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 					_addcarry_u64(add_carry, mul_carry, 0, &rgulNum[++iHiProd]);
 			}
 #else
-				DWORD64 hi, mul_carry;
+				uint64_t hi, mul_carry;
 				rgulNum[0] = _umul128(ullPwr, rgulNum[0], &hi);
-				DWORD64 product = _umul128(ullPwr, rgulNum[1], &mul_carry);
-				DWORD64 product2 = ullPwr*rgulNum[2];
+				uint64_t product = _umul128(ullPwr, rgulNum[1], &mul_carry);
+				uint64_t product2 = ullPwr*rgulNum[2];
 
 				auto add_carry = _addcarry_u64(0, product, hi, &rgulNum[1]);
 				_addcarry_u64(add_carry, mul_carry, product2, &rgulNum[2]);
@@ -1075,7 +1076,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			//
 			auto carry = _subborrow_u64(0, rgulNum[0], pdecR->Lo64, &decRes.Lo64);
 			carry = _subborrow_u64(carry, rgulNum[1], pdecR->Hi32, &rgulNum[1]);
-			decRes.Hi32 = (DWORD32)rgulNum[1];
+			decRes.Hi32 = (uint32_t)rgulNum[1];
 
 			// Propagate carry
 			//
@@ -1101,7 +1102,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 			//
 			auto carry = _addcarry_u64(0, rgulNum[0], pdecR->Lo64, &decRes.Lo64);
 			carry = _addcarry_u64(carry, rgulNum[1], pdecR->Hi32, &rgulNum[1]);
-			decRes.Hi32 = (DWORD32)rgulNum[1];
+			decRes.Hi32 = (uint32_t)rgulNum[1];
 
 			// Propagate carry
 			//
@@ -1133,7 +1134,7 @@ static HRESULT DecAddSub_x64(__in const DECIMAL * pdecL, __in const DECIMAL * pd
 				return DISP_E_OVERFLOW;
 
 			decRes.Lo64 = rgulNum[0];
-			decRes.Hi32 = (DWORD32)rgulNum[1];
+			decRes.Hi32 = (uint32_t)rgulNum[1];
 			assert(FitsIn32Bit(&rgulNum[1]));
 		}
 	}
@@ -1185,15 +1186,15 @@ STDAPI VarDecSub_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __res
 // Add a 64bit number to a 96bit number => 160 bit
 // updates 96bit in place and return the overflow (up to 64 bit)
 PROFILE_NOINLINE
-DWORD64 IncreaseScale96By64(ULONG *rgulNum, DWORD64 ulPwr)
+uint64_t IncreaseScale96By64(ULONG *rgulNum, uint64_t ulPwr)
 {
 	LIMITED_METHOD_CONTRACT;
 
-	DWORD64 *rgullNum = (DWORD64*)rgulNum;
+	uint64_t *rgullNum = (uint64_t*)rgulNum;
 	SPLIT64   sdlTmp;
 
-	DWORD64 hi;
-	DWORD64 overflow;
+	uint64_t hi;
+	uint64_t overflow;
 	rgullNum[0] = _umul128(rgullNum[0], ulPwr, &hi);
 	sdlTmp.int64 = _umul128(rgulNum[2], ulPwr, &overflow);
 
@@ -1211,13 +1212,13 @@ DWORD64 IncreaseScale96By64(ULONG *rgulNum, DWORD64 ulPwr)
 }
 
 PROFILE_NOINLINE
-DWORD32 IncreaseScale96By32(ULONG *rgulNum, DWORD32 ulPwr)
+uint32_t IncreaseScale96By32(ULONG *rgulNum, uint32_t ulPwr)
 {
 	LIMITED_METHOD_CONTRACT;
 
 	SPLIT64   sdlTmp;
-	DWORD64 *rgullNum = (DWORD64*)rgulNum;
-	DWORD32 hi;
+	uint64_t *rgullNum = (uint64_t*)rgulNum;
+	uint32_t hi;
 	rgullNum[0] = _umul64by32(rgullNum[0], ulPwr, &hi);
 	sdlTmp.int64 = UInt32x32To64(rgulNum[2], ulPwr) + hi;
 
@@ -1247,7 +1248,7 @@ int SearchScale64(const ULONG(&rgulQuo)[4], int iScale)
 {
 	DWORD msb;
 	int iCurScale;
-	DWORD64 ulResHi;
+	uint64_t ulResHi;
 
 	auto hi32 = rgulQuo[2];
 	auto mid32 = rgulQuo[1];
@@ -1258,7 +1259,7 @@ int SearchScale64(const ULONG(&rgulQuo)[4], int iScale)
 		goto HaveScale;
 	}
 
-	ulResHi = ((DWORD64)hi32 << 32) + mid32;
+	ulResHi = ((uint64_t)hi32 << 32) + mid32;
 	if (iScale > DEC_SCALE_MAX - SEARCHSCALE_MAX_SCALE) {
 		// We can't scale by 10^19 without exceeding the max scale factor.
 		// See if we can scale to the max.  If not, we'll fall into
@@ -1341,17 +1342,17 @@ HaveScale:
 *
 ***********************************************************************/
 PROFILE_NOINLINE
-DWORD64 Div128By96_x64(ULONG * __restrict rgulNum, ULONG *__restrict rgulDen)
+uint64_t Div128By96_x64(ULONG * __restrict rgulNum, ULONG *__restrict rgulDen)
 {
 	LIMITED_METHOD_CONTRACT;
 
-	DWORD64* const rgullNum = (DWORD64*)(&rgulNum[0]);
-	DWORD64* const rgullDen = (DWORD64*)(&rgulDen[0]);
+	uint64_t* const rgullNum = (uint64_t*)(&rgulNum[0]);
+	uint64_t* const rgullDen = (uint64_t*)(&rgulDen[0]);
 
-	DWORD64 sdlNum;
-	DWORD64 sdlProd1;
-	DWORD32 remainder;
-	DWORD32 hi;
+	uint64_t sdlNum;
+	uint64_t sdlProd1;
+	uint32_t remainder;
+	uint32_t hi;
 
 	if (rgulNum[3] == 0 && rgulNum[2] < rgulDen[2])
 		// TODO: TEST
@@ -1361,13 +1362,13 @@ DWORD64 Div128By96_x64(ULONG * __restrict rgulNum, ULONG *__restrict rgulDen)
 		return 0;
 
 
-	DWORD32 quo = _udiv64(rgulNum[2], rgulNum[3], rgulDen[2], &remainder);
+	uint32_t quo = _udiv64(rgulNum[2], rgulNum[3], rgulDen[2], &remainder);
 
 	// Compute full remainder, rem = dividend - (quo * divisor).
 	sdlProd1 = _umul64by32(rgullDen[0], quo, &hi);
 
 	auto carry = _subborrow_u64(0, rgullNum[0], sdlProd1, &sdlNum);
-	carry = _subborrow_u32(carry, remainder, hi, (DWORD32*)&rgulNum[2]);
+	carry = _subborrow_u32(carry, remainder, hi, (uint32_t*)&rgulNum[2]);
 
 	// Propagate carries
 	//
@@ -1381,14 +1382,14 @@ DWORD64 Div128By96_x64(ULONG * __restrict rgulNum, ULONG *__restrict rgulDen)
 			carry = _addcarry_u64(0, sdlNum, rgullDen[0], &sdlNum);
 
 			// rgulNum[2] += rgulDen[2];
-			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (DWORD32*)&rgulNum[2]);
+			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]);
 
-			//_addcarry_u32(carry, rgulNum[2], 0, (DWORD32*)&rgulNum[2]);
+			//_addcarry_u32(carry, rgulNum[2], 0, (uint32_t*)&rgulNum[2]);
 
 			// OLD ::: -------
 			// rgulNum[2] += rgulDen[2];
-			//auto carry2 = _addcarry_u32(0, rgulNum[2], rgulDen[2], (DWORD32*)&rgulNum[2]); 
-			//_addcarry_u32(carry, rgulNum[2], 0, (DWORD32*)&rgulNum[2]);
+			//auto carry2 = _addcarry_u32(0, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]); 
+			//_addcarry_u32(carry, rgulNum[2], 0, (uint32_t*)&rgulNum[2]);
 
 			//// TODO: Look though logic, why should we not break when we overflow due to carry??
 			//if (carry2)
@@ -1421,12 +1422,12 @@ DWORD64 Div128By96_x64(ULONG * __restrict rgulNum, ULONG *__restrict rgulDen)
 *   None.
 *
 ***********************************************************************/
-inline DWORD64 Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
+inline uint64_t Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
 {
 #if 1
-	//* (DWORD64*)(&rgulRem[3]) = tmp64;
-	DWORD64 quo;
-	if (*(DWORD64*)(&rgulNum[3]) >= rgulDen[2])
+	//* (uint64_t*)(&rgulRem[3]) = tmp64;
+	uint64_t quo;
+	if (*(uint64_t*)(&rgulNum[3]) >= rgulDen[2])
 	{
 		quo = Div128By96_x64(&rgulNum[1], rgulDen) << 32;
 	}
@@ -1440,20 +1441,20 @@ inline DWORD64 Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
 	This is experimental(non - working) code !
 
 
-		if (*(DWORD64*)(&rgulNum[3]) < rgulDen[2])
+		if (*(uint64_t*)(&rgulNum[3]) < rgulDen[2])
 		{
 			return Div128By96_x64(&rgulNum[0], rgulDen);
 		}
 
-	DWORD64* const rgullNum = (DWORD64*)(&rgulNum[0]);
-	DWORD64* const rgullDen = (DWORD64*)(&rgulDen[0]);
+	uint64_t* const rgullNum = (uint64_t*)(&rgulNum[0]);
+	uint64_t* const rgullDen = (uint64_t*)(&rgulDen[0]);
 
-	DWORD64 sdlNum;
-	DWORD64 sdlProd1;
-	DWORD64 remainder;
-	DWORD32 hi;
+	uint64_t sdlNum;
+	uint64_t sdlProd1;
+	uint64_t remainder;
+	uint32_t hi;
 
-	if (rgulNum[4] == 0 && rgullNum[1] < (DWORD64)rgulDen[2])
+	if (rgulNum[4] == 0 && rgullNum[1] < (uint64_t)rgulDen[2])
 		// TODO: TEST
 		//if (rgulNum[3] == 0 && *rgullNumMid64 < *rgullDenHi64)
 		// Result is zero.  Entire dividend is remainder.
@@ -1461,7 +1462,7 @@ inline DWORD64 Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
 		return 0;
 
 
-	DWORD64 quo = _udiv128(*(DWORD64*)&rgulNum[1], *(DWORD64*)&rgulNum[3], *(DWORD64*)&rgulDen[1], &remainder);
+	uint64_t quo = _udiv128(*(uint64_t*)&rgulNum[1], *(uint64_t*)&rgulNum[3], *(uint64_t*)&rgulDen[1], &remainder);
 
 	// Compute full remainder, rem = dividend - (quo * divisor).
 	sdlProd1 = _umul64by32(quo, rgulDen[0], &hi);
@@ -1476,13 +1477,13 @@ inline DWORD64 Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
 		// Remainder went negative.  Add divisor back in until it's positive (detected by carry),
 		// a max of 2 times.
 		//
-		if ((MAXDWORD64 - rgullNum[1]) > rgulDen[2])
+		if ((MAXuint64_t - rgullNum[1]) > rgulDen[2])
 		{
-			auto scale = (MAXDWORD64 - rgullNum[1]) / rgulDen[2];
-			assert(scale <= MAXDWORD32);
+			auto scale = (MAXuint64_t - rgullNum[1]) / rgulDen[2];
+			assert(scale <= MAXuint32_t);
 
 			// determine number of times rgulDen[2] must be added to wrap rgullNum[1] around
-			// must scale * rgulDen >= (DWORD64_MAX - rgullNum[1]) 
+			// must scale * rgulDen >= (uint64_t_MAX - rgullNum[1]) 
 			// sca
 			quo -= scale;
 
@@ -1501,7 +1502,7 @@ inline DWORD64 Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
 		while (carry == 0) {
 			quo--;
 			carry = _addcarry_u64(0, sdlNum, rgullDen[0], &sdlNum);
-			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (DWORD32*)&rgulNum[2]);
+			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]);
 		};
 	}
 
@@ -1530,14 +1531,14 @@ inline DWORD64 Div160By96_x64(ULONG rgulNum[6], ULONG rgulDen[4])
 *
 ***********************************************************************/
 PROFILE_NOINLINE
-DWORD32 Div96By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
+uint32_t Div96By64_x64(uint64_t *rgullNum, uint64_t ullDen)
 {
 	LIMITED_METHOD_CONTRACT;
 
-	DWORD32 quo;
-	DWORD64 sdlNum;
-	DWORD64 sdlProd;
-	DWORD32* rgulNum = (DWORD32*)rgullNum;
+	uint32_t quo;
+	uint64_t sdlNum;
+	uint64_t sdlProd;
+	uint32_t* rgulNum = (uint32_t*)rgullNum;
 
 	low32(sdlNum) = rgulNum[0];
 
@@ -1599,18 +1600,18 @@ DWORD32 Div96By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 *
 ***********************************************************************/
 PROFILE_NOINLINE
-DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
+uint64_t Div128By64_x64(uint64_t *rgullNum, uint64_t ullDen)
 {
 #ifdef NO_UDIV128
-	DWORD64 res = Div96By64_x64((DWORD64*)&hi32(rgullNum[0]), ullDen);
+	uint64_t res = Div96By64_x64((uint64_t*)&hi32(rgullNum[0]), ullDen);
 	return (res << 32) + Div96By64_x64(rgullNum, ullDen);
 #else
 	LIMITED_METHOD_CONTRACT;
 
-	DWORD64 sdlNum;
-	DWORD64 quotient;
+	uint64_t sdlNum;
+	uint64_t quotient;
 
-	DWORD64 hi64 = rgullNum[1];
+	uint64_t hi64 = rgullNum[1];
 
 	if (hi64 >= ullDen) {
 		// Divide would overflow.  Assume a quotient of 2^64, and set
@@ -1634,7 +1635,7 @@ DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 
 	// Hardware divide won't overflow
 	// Check for 0 result, else do hardware divide
-	DWORD64 lo64 = rgullNum[0];
+	uint64_t lo64 = rgullNum[0];
 	if (hi64 == 0 && lo64 < ullDen)
 	{
 		// Result is zero.  Entire dividend is remainder.
@@ -1658,19 +1659,18 @@ DWORD64 Div128By64_x64(DWORD64 *rgullNum, DWORD64 ullDen)
 STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restrict  pdecRes)
 {
 	ULONG   rgulQuo[4]; //[3];
-	//ULONG   rgulQuoSave[4]; //[3];
-	DWORD64 rgullQuoSave[2];
+	uint64_t rgullQuoSave[2];
 	ULONG   rgulRem[6]; // [4]
 	ULONG   rgulDivisor[4]; //[3];
 	ULONG   ulTmp;
-	DWORD64 ullTmp64;
-	DWORD64 ullDivisor;
+	uint64_t ullTmp64;
+	uint64_t ullDivisor;
 	int     iScale;
 	int     iCurScale;
 
-	DWORD64* rgullRem = (DWORD64*)(&rgulRem[0]);
-	DWORD64* rgullDivisor = (DWORD64*)(&rgulDivisor[0]);
-	DWORD64* rgullQuo = (DWORD64*)(&rgulQuo[0]);
+	uint64_t* rgullRem = (uint64_t*)(&rgulRem[0]);
+	uint64_t* rgullDivisor = (uint64_t*)(&rgulDivisor[0]);
+	uint64_t* rgullQuo = (uint64_t*)(&rgulQuo[0]);
 
 	// not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl
 	// TODO: Determine if this it improves x64 impl or not
@@ -1743,7 +1743,7 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 
 			iCurScale = min(iCurScale, POWER10_MAX32);
 		HaveScale32:
-			DWORD32 ullPwr32 = (DWORD32)rgulPower10_64[iCurScale];
+			uint32_t ullPwr32 = (uint32_t)rgulPower10_64[iCurScale];
 			iScale += iCurScale;
 
 			if (IncreaseScale96By32(rgulQuo, ullPwr32) != 0)
@@ -1751,8 +1751,8 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 
 			// We can use a single _udiv64 here since upper 32bits must be less than rgulDivisor<<2^32
 			// since ullPwr < 2^32 and remainder < divisor
-			auto num = UInt32x32To64(rgulRem[0], (DWORD32)ullPwr32);
-			DWORD32 ullTmp32 = _udiv64(low32(num), hi32(num), rgulDivisor[0], &low32(rgullRem[0]));
+			auto num = UInt32x32To64(rgulRem[0], (uint32_t)ullPwr32);
+			uint32_t ullTmp32 = _udiv64(low32(num), hi32(num), rgulDivisor[0], &low32(rgullRem[0]));
 			Add96(rgulQuo, ullTmp32);
 		} // for (;;)
 	}
@@ -1820,7 +1820,7 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 
 			HaveScale64:
 				iCurScale = min(iCurScale, POWER10_MAX32);
-				DWORD32 ullPwr32 = (DWORD32)rgulPower10_64[iCurScale];
+				uint32_t ullPwr32 = (uint32_t)rgulPower10_64[iCurScale];
 				iScale += iCurScale;
 
 				if (IncreaseScale96By32(rgulQuo, ullPwr32) != 0)
@@ -1829,7 +1829,7 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 				// Reminder is at most 64bits, a single multiply is needed to IncreaseScale
 				// result is up to 96 bits
 				rgullRem[0] = _umul64by32(rgullRem[0], ullPwr32, &low32(rgullRem[1]));
-				DWORD32 tmp32 = Div96By64_x64(rgullRem, ullDivisor);
+				uint32_t tmp32 = Div96By64_x64(rgullRem, ullDivisor);
 				Add96(rgulQuo, tmp32);
 			} // for (;;)
 		}
@@ -1873,7 +1873,7 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 					// multiply reminder by 2, was "shift 1" but add/adc instruction is faster for a wider range of CPU's
 					// and is recommended especially for older CPUs
 					auto carry = _addcarry_u64(0, rgullRem[0], rgullRem[0], &rgullRem[0]);
-					_addcarry_u32(carry, rgulRem[2], rgulRem[2], (unsigned int*)&rgulRem[2]);
+					_addcarry_u32(carry, rgulRem[2], rgulRem[2], (uint32_t*)&rgulRem[2]);
 
 					if (rgulRem[2] > rgulDivisor[2] || (rgulRem[2] == rgulDivisor[2] &&
 						(rgullRem[0] > rgullDivisor[0] || (rgullRem[0] == rgullDivisor[0] &&
@@ -1886,10 +1886,10 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 					return DISP_E_OVERFLOW;
 
 			HaveScale96:
-				DWORD64 quo;
+				uint64_t quo;
 #ifdef NO_UDIV128
 				iCurScale = min(iCurScale, POWER10_MAX32);
-				DWORD32 ullPwr32 = (DWORD32)rgulPower10_64[iCurScale];
+				uint32_t ullPwr32 = (uint32_t)rgulPower10_64[iCurScale];
 				iScale += iCurScale;
 
 				if (IncreaseScale96By32(rgulQuo, ullPwr32) != 0)
@@ -1898,14 +1898,14 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 				rgulRem[3] = IncreaseScale96By32(rgulRem, ullPwr32);
 				quo = Div128By96_x64(rgulRem, rgulDivisor);
 #else
-				DWORD64 ullPwr64 = rgulPower10_64[iCurScale];
+				uint64_t ullPwr64 = rgulPower10_64[iCurScale];
 				iScale += iCurScale;
 
 				if (IncreaseScale96By64(rgulQuo, ullPwr64) != 0)
 					return DISP_E_OVERFLOW;
 
-				DWORD64 tmp64 = IncreaseScale96By64(rgulRem, ullPwr64);
-				*(DWORD64*)(&rgulRem[3]) = tmp64;
+				uint64_t tmp64 = IncreaseScale96By64(rgulRem, ullPwr64);
+				*(uint64_t*)(&rgulRem[3]) = tmp64;
 				quo = Div160By96_x64(rgulRem, rgulDivisor);
 #endif
 				Add96(rgulQuo, quo);
@@ -1928,11 +1928,11 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 		// 
 		while ((rgullQuo[0] & 0xFF) == 0 && iScale >= 8) {
 			rgullQuoSave[0] = rgullQuo[0];
-			rgullQuoSave[1] = rgullQuo[1];
+			low32(rgullQuoSave[1]) = low32(rgullQuo[1]);
 
 			if (Div96By32_x64(rgullQuoSave, 100000000) == 0) {
 				rgullQuo[0] = rgullQuoSave[0];
-				rgullQuo[1] = rgullQuoSave[1];
+				low32(rgullQuo[1]) = low32(rgullQuoSave[1]);
 				iScale -= 8;
 			}
 			else
@@ -1941,43 +1941,43 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 
 		if ((rgullQuo[0] & 0xF) == 0 && iScale >= 4) {
 			rgullQuoSave[0] = rgullQuo[0];
-			rgullQuoSave[1] = rgullQuo[1];
+			low32(rgullQuoSave[1]) = low32(rgullQuo[1]);
 
 			if (Div96By32_x64(rgullQuoSave, 10000) == 0) {
 				rgullQuo[0] = rgullQuoSave[0];
-				rgullQuo[1] = rgullQuoSave[1];
+				low32(rgullQuo[1]) = low32(rgullQuoSave[1]);
 				iScale -= 4;
 			}
 		}
 
 		if ((rgullQuo[0] & 3) == 0 && iScale >= 2) {
 			rgullQuoSave[0] = rgullQuo[0];
-			rgullQuoSave[1] = rgullQuo[1];
+			low32(rgullQuoSave[1]) = low32(rgullQuo[1]);
 
 			if (Div96By32_x64(rgullQuoSave, 100) == 0) {
 				rgullQuo[0] = rgullQuoSave[0];
-				rgullQuo[1] = rgullQuoSave[1];
+				low32(rgullQuo[1]) = low32(rgullQuoSave[1]);
 				iScale -= 2;
 			}
 		}
 
 		if ((rgullQuo[0] & 1) == 0 && iScale >= 1) {
 			rgullQuoSave[0] = rgullQuo[0];
-			rgullQuoSave[1] = rgullQuo[1];
+			low32(rgullQuoSave[1]) = low32(rgullQuo[1]);
 
 			if (Div96By32_x64(rgullQuoSave, 10) == 0) {
 				rgullQuo[0] = rgullQuoSave[0];
-				rgullQuo[1] = rgullQuoSave[1];
+				low32(rgullQuo[1]) = low32(rgullQuoSave[1]);
 				iScale -= 1;
 			}
 		}
 	}
 
-	pdecRes->Hi32 = (DWORD32)rgullQuo[1];
-	pdecRes->Lo64 = rgullQuo[0];
+	pdecRes->Hi32 = (uint32_t)rgullQuo[1];
 	pdecRes->scale = (BYTE)iScale;
 	pdecRes->sign = pdecL->sign ^ pdecR->sign;
 	pdecRes->wReserved = 0; // not part of oleauto impl, only in decimal.cpp from classlibnative in corecrl
+	pdecRes->Lo64 = rgullQuo[0];
 	return NOERROR;
 }
 
