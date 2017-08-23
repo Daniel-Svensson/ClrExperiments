@@ -1,0 +1,10 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "command": "g++",
+    "isShellCommand": true,
+    //"args": ["-std=c++11", "-stdlib=libc++", "coreclrtesting/prototype_x64_impl.cpp","-fms-compatibility", "-I", "/home/ds/dev/github/coreclr/src/pal/inc/rt/", "-I", "/home/ds/dev/github/coreclr/src/pal/inc/"],
+    "args": ["-m64", "-std=c++14", "coreclrtesting/prototype_x64_impl.cpp"],
+    "showOutput": "always"
+}

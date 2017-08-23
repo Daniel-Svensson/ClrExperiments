@@ -4,7 +4,7 @@
 #include "stdafx.h"
 //#include <vector>
 #include <functional>
-#include <oleauto.h>
+//#include <oleauto.h>
 #include <emmintrin.h>
 
 #define _CRT_RAND_S  
