@@ -61,7 +61,10 @@ using std::max;
 #ifdef _MSC_VER
 #include <intrin.h>
 
+#if _TARGET_TARGET_X86_
 #define INLINE_ASM // Enable or disable inline asm for x86
+#endif
+
 #else // CLANG? 
 
 #include <x86intrin.h>
@@ -179,6 +182,51 @@ unsigned           __builtin_subc  (unsigned x, unsigned y, unsigned carryin, un
 unsigned long      __builtin_subcl (unsigned long x, unsigned long y, unsigned long carryin, unsigned long *carryout);
 unsigned long long __builtin_subcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
 */
+
+#if !defined(_TARGET_X86_) && !defined(_TARGET_AMD64_)
+inline unsigned char _addcarry_u32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
+{
+	unsigned char carry_out = 0;
+	*pRes = lhs + rhs;
+
+	if (*pRes < lhs) // check for overflow
+	{
+		carry_out = 1;
+	}
+
+	if (carry)
+	{
+		*pRes += 1;
+
+		// Can use or + xor instead
+		if (*pRes == 0)
+			carry_out = 1;
+	}
+	return carry_out;
+}
+
+inline unsigned char _subborrow_u32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
+{
+	unsigned char carry_out = 0;
+	*pRes = lhs - rhs;
+
+	if (*pRes > lhs) // check for overflow
+	{
+		++pRes;
+		carry_out = 1;
+	}
+
+	if (carry)
+	{
+		*pRes -= 1;
+
+		// Can use or + xor instead
+		if (*pRes == UINT32_MAX)
+			carry_out = 1;
+	}
+	return carry_out;
+}
+#endif
 
 inline unsigned char _addcarry_u64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
@@ -313,7 +361,7 @@ inline bool BitScanMsb32(uint32_t *Index, uint32_t Mask) {
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 {
-#if defined(_WIN32) && !defined(_TARGET_X86_)
+#if defined(_WIN32) && defined(_TARGET_AMD64_)
 	return BitScanReverse64((DWORD*)Index, Mask);
 #else
 	unsigned char res = BitScanMsb32(Index, hi32(Mask));
