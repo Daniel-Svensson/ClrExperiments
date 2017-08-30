@@ -67,11 +67,9 @@ using std::max;
 
 #else // CLANG? 
 
-#include <x86intrin.h>
+#define __fastcall
 
-const HRESULT NOERROR = 0L;
-const HRESULT DISP_E_OVERFLOW = 0x8002000AL;
-const HRESULT DISP_E_DIVBYZERO = 0x80020012L;
+#include <x86intrin.h>
 
 typedef uint32_t BOOL;
 typedef bool BOOLEAN;
