@@ -123,7 +123,7 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="prototype_x64_impl.cpp" />
+    <ClCompile Include="decimal_calc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="udiv128.masm">

@@ -44,7 +44,7 @@
     <ClCompile Include="decimal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="prototype_x64_impl.cpp">
+    <ClCompile Include="decimal_calc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
