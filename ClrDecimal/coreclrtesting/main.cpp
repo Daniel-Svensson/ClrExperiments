@@ -2,9 +2,12 @@
 //
 
 #include "stdafx.h"
+
+#include "decimal_calc.h"
+
 //#include <vector>
 #include <functional>
-//#include <oleauto.h>
+#include <oleauto.h>
 #include <emmintrin.h>
 
 #define _CRT_RAND_S  
@@ -12,6 +15,12 @@
 #include <array>
 #include <vector>
 #include <iostream>
+
+// PAL RT Implementationsions
+STDAPI VarDecMul_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
+STDAPI VarDecAdd_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
+STDAPI VarDecSub_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
+STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 
 using namespace std;
 
@@ -30,17 +39,17 @@ using namespace std;
 #endif 
 
 //#define TEST_MULTIPLY
-//#define TEST_ADD
-//#define TEST_SUB
-#define TEST_DIV
+#define TEST_ADD
+#define TEST_SUB
+//#define TEST_DIV
 //
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
-#define TEST_64bit_with_scale_64bit_result
+//#define TEST_64bit_with_scale_64bit_result
 #define TEST_64bit_with_0_scale_128bit_result
 #define TEST_64bit_with_scale_128bit_result
-#define TEST_96bit_with_scale_96bit_result_and_overflow
-#define TEST_96bit_with_scale_96bit_result_no_overflow
+//#define TEST_96bit_with_scale_96bit_result_and_overflow
+//#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
 
@@ -350,7 +359,6 @@ void run_benchmarks(int iterations, int elements, int bytes,
 void InitializeTestData(std::vector<DECIMAL>& numbers, int bytes)
 {
 	// Start with some specific patters
-	const int nibbles = bytes * 2;
 	const int bits = bytes * 8;
 
 	const DWORD64 allBits = (0xffffffffffffffffui64) >> (64 - bits);
@@ -574,7 +582,7 @@ int SearchScale32(const ULONG* rgulQuo, int iScale)
 }
 
 int SearchScale32(const ULONG* rgulQuo, int iScale);
-int SearchScale64(const ULONG(&rgulQuo)[4], int iScale);
+int SearchScale64(const uint32_t(&rgulQuo)[4], int iScale);
 ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
 
 void CompareScaleResult()
@@ -602,7 +610,7 @@ void CompareScaleResult()
 					//for (int func = 0; func < all_functions.size(); ++func)
 					const int func = 1;
 					{
-						auto res = SearchScale64(input, scale);
+						auto res = SearchScale64((const uint32_t(&)[4])input, scale);
 						auto control = SearchScale32(input, scale);
 
 
@@ -654,68 +662,25 @@ void CompareScaleResult()
 	}
 }
 
-void TestDivideByTen32(DWORD32);
-void TestDivideByTen64(DWORD64);
-
-__declspec(noinline)
-inline DWORD64 __fastcall fastcall64(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
-{
-	SPLIT64 result;
-	result.u.Hi = hi;
-	result.u.Lo = *pLow + ulDen;
-	return result.int64;
-}
-
-__declspec(noinline)
-inline DWORD64 __fastcall fastcall64_2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
-{
-	DWORD64 res = hi;
-	return (res << 32) | (*pLow + ulDen);
-}
-
-__declspec(noinline)
-inline __m128i testcall1(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
-{
-	__m128i result = _mm_setr_epi32(hi, *pLow + ulDen, 0, 0);
-	return result;
-}
-
-__declspec(noinline)
-inline __m128i testcall2(__inout unsigned int* pLow, unsigned int hi, unsigned int ulDen)
-{
-	__m128i result = _mm_set_epi64x(hi, *pLow + ulDen);
-	return result;
-}
-
-
-DECLSPEC_NOINLINE
-void printData(__m128i a, __m128i b, DWORD64 d)
-{
-	std::cout << "fastcall res is " << d << endl;
-	std::cout << "fastcall res is " << a.m128i_u32[0] << ", " << a.m128i_u32[1] << endl;
-	std::cout << "fastcall res is " << b.m128i_u64[0] << ", " << b.m128i_u64[1] << endl;
-}
-#pragma optimize("",off)
-#pragma optimize("",on)
-
 int __cdecl main()
 {
 	// Use system formatting
 	setlocale(LC_ALL, "");
-	//cin.get();
-
-	//unsigned int a = rand() , b = rand(), c = rand();
-	//
-	//auto res1 = testcall1(&a, b, c);
-	//auto res2 = testcall2(&a, b, c);
-	//auto d = fastcall64(&a, res1.m128i_u32[0], res1.m128i_u32[1]);
-	//d = fastcall64_2(&a, res2.m128i_u64[0], res2.m128i_u64[1]);
-
-//	printData(res1, res2, d);
 
 #if 1
 	DECIMAL a, b;
 	DECIMAL expected, actual;
+
+	printf("reserved %ld, scale %ld, sign %ld, scalesign %ld, hi32 %ld, mid 32 %ld, lo 32 %ld, lo64 %ld",
+		FIELD_OFFSET(DECIMAL, wReserved),
+		FIELD_OFFSET(DECIMAL, scale),
+		FIELD_OFFSET(DECIMAL, sign),
+		FIELD_OFFSET(DECIMAL, signscale),
+		FIELD_OFFSET(DECIMAL, Hi32),
+		FIELD_OFFSET(DECIMAL, Mid32),
+		FIELD_OFFSET(DECIMAL, Lo32),
+		FIELD_OFFSET(DECIMAL, Lo64)
+	);
 
 	*((__m128*)&expected) = _mm_setzero_ps();
 	ZeroMemory(&actual, sizeof(DECIMAL));
@@ -730,12 +695,12 @@ int __cdecl main()
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
 	a.Hi32 = 1;
-	a.Lo64 = 18446744073709551615;
+	a.Lo64 = 4294967295;
 	a.scale = 0;
 	a.sign = 0;
 	b.Hi32 = 1;
 	//b.Mid32 = 23;
-	b.Lo64 = 18446744073709551615;
+	b.Lo64 = 4294967295;
 	b.scale = 20;
 	b.sign = 0; // DECIMAL_NEG;
 

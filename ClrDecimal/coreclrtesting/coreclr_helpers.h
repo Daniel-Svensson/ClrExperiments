@@ -1,5 +1,8 @@
 #pragma once
 
+#include <Windows.h>
+#include <OleAuto.h>
+
 #define Div64by32(num, den) ((ULONG)((DWORDLONG)(num) / (ULONG)(den)))
 #define Mod64by32(num, den) ((ULONG)((DWORDLONG)(num) % (ULONG)(den)))
 

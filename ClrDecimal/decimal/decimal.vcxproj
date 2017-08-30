@@ -77,7 +77,7 @@
   <ItemGroup>
     <ClCompile Include="..\coreclrtesting\coreclr_impl.cpp" />
     <ClCompile Include="..\coreclrtesting\decimal.cpp" />
-    <ClCompile Include="..\coreclrtesting\prototype_x64_impl.cpp" />
+    <ClCompile Include="..\coreclrtesting\decimal_calc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="prototype_x64_impl.h" />

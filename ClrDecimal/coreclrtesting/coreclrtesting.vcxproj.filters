@@ -21,14 +21,14 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="prototype_x64_impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="coreclr_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="x86_64bit_emulation.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="decimal_calc.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -38,20 +38,22 @@
     <ClCompile Include="coreclr_impl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="prototype_x64_impl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="decimal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source.cpp">
+    <ClCompile Include="prototype_x64_impl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="udiv128.masm" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="decimal_calc.inl">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
