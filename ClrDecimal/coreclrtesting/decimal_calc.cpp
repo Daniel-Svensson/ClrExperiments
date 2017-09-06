@@ -63,8 +63,9 @@ using std::max;
 #ifdef _MSC_VER
 #include <intrin.h>
 
-#if _TARGET_TARGET_X86_
+#ifdef _TARGET_X86_
 #define INLINE_ASM // Enable or disable inline asm for x86
+#define NAKED
 #endif
 
 #else // CLANG? 
@@ -196,14 +197,10 @@ unsigned long long __builtin_subcll(unsigned long long x, unsigned long long y, 
 #else
 inline unsigned char AddCarry32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	unsigned char carry_out = 0;
 	*pRes = lhs + rhs;
 
-	if (*pRes < lhs) // check for overflow
-	{
-		carry_out = 1;
-	}
-
+	// check for overflow
+	unsigned char carry_out = (*pRes < lhs) ? 1 : 0;
 	if (carry)
 	{
 		*pRes += 1;
@@ -217,21 +214,16 @@ inline unsigned char AddCarry32(unsigned char carry, uint32_t lhs, uint32_t rhs,
 
 inline unsigned char SubBorrow32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	unsigned char carry_out = 0;
 	*pRes = lhs - rhs;
 
-	if (*pRes > lhs) // check for overflow
-	{
-		carry_out = 1;
-	}
-
+	// check for overflow
+	unsigned char carry_out = (*pRes > lhs) ? 1 : 0;
 	if (carry)
 	{
-		*pRes -= 1;
-
-		// Can use or + xor instead
-		if (*pRes == UINT32_MAX)
+		if (*pRes == 0)
 			carry_out = 1;
+
+		*pRes -= 1;
 	}
 	return carry_out;
 }
@@ -285,9 +277,34 @@ inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned cha
 	return (_HighPart << _Shift) + (_LowPart >> (64 - _Shift));
 }
 
-#ifndef INLINE_ASM
+#ifdef NAKED
+_declspec(naked)
+#endif
 inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
 {
+#ifdef INLINE_ASM
+
+	// DX:AX = DX:AX / r/m; resulting 
+	// 
+	// DX == remainder
+#ifdef NAKED
+	_asm
+	{
+		// edx is already hi
+		mov eax, ecx; // lo is in ecx
+		div dword ptr[esp + 4];
+		ret 4;// ulDen (4 uint8_t on stack)
+	}
+#else
+	_asm
+	{
+		// edx is already hi
+		mov eax, ecx; // lo is in ecx
+		div ulDen;
+	}
+#endif
+
+#else
 	assert(hi < ulDen);
 	if (hi == 0)
 	{
@@ -307,39 +324,9 @@ inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen
 		res.u.Lo = static_cast<uint32_t>(sdl.int64 / ulDen);
 		return res.int64;
 	}
+#endif
 }
-#else
 
-//#define NAKED _declspec(naked)
-#ifdef NAKED
-_declspec(naked)
-#endif
-inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
-{
-
-
-	// DX:AX = DX:AX / r/m; resulting 
-	// 
-	// DX == remainder
-#ifdef NAKED
-	_asm
-	{
-		// edx is already hi
-		mov eax, ecx; // lo is in ecx
-		div uint32_t ptr[esp + 4];
-		ret 4;// ulDen (4 uint8_t on stack)
-	}
-#else
-	_asm
-	{
-		// edx is already hi
-		mov eax, ecx; // lo is in ecx
-		div ulDen;
-	}
-#endif
-
-}
-#endif
 
 inline uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder)
 {
