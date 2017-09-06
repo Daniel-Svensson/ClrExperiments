@@ -38,19 +38,31 @@ using namespace std;
 #endif
 #endif 
 
-//#define TEST_MULTIPLY
+#define TEST_MULTIPLY
 #define TEST_ADD
 #define TEST_SUB
-//#define TEST_DIV
+#define TEST_DIV
 //
 #define TEST_32bit_with_0_scale
 #define TEST_32bit_with_scale
-//#define TEST_64bit_with_scale_64bit_result
+#define TEST_64bit_with_scale_64bit_result
 #define TEST_64bit_with_0_scale_128bit_result
 #define TEST_64bit_with_scale_128bit_result
-//#define TEST_96bit_with_scale_96bit_result_and_overflow
-//#define TEST_96bit_with_scale_96bit_result_no_overflow
+#define TEST_96bit_with_scale_96bit_result_and_overflow
+#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
+
+// #define VERBOSE_OUTPUT 1
+
+#ifdef _TARGET_X86_
+const char * platform = "new-x86";
+#elif defined(_TARGET_AMD64_)
+const char * platform = "new-x64";
+#elif defined(_TARGET_ARM_)
+const char * platform = "new-ARM";
+#else
+#error "MISSING _TARGET_XXX_ define" 
+#endif
 
 
 void run_benchmarks(int iterations, int elements, int bytes,
@@ -166,7 +178,10 @@ void CompareResult(
 
 	if (errors > 0)
 		printf("ERRORS FOUND: %zi with different results (%f%%)\n", errors, 100.0 * (double)errors / (double)(expected.size()));
+
+#ifdef VERBOSE_OUTPUT
 	printf("%zi equal results with different scale (FALSE POSITIVE)\n", scale_diff);
+#endif
 }
 
 void compare_benchmark(
@@ -183,10 +198,6 @@ void compare_benchmark(
 {
 	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
-	printf("\n\nStarting Scenario %20s\n", scenario);
-
-	printf("%s;;%s;;;%% time;speedup\n", first, second);
-	printf("ticks;sec;ticks;sec;;;\n");
 
 	for (int i = 0; i < iterations; ++i)
 	{
@@ -204,15 +215,22 @@ void compare_benchmark(
 		double percent_of_original = (seconds2 / seconds1);
 		double speedup = (seconds1 - seconds2) / seconds2;
 
-		printf("%I64u;%g;%I64u;%g;;%f%%;%f%%\n", time1, seconds1, time2, seconds2, percent_of_original * 100.0, speedup* 100.0);
+		printf("%s;%s vs %s; %I64u;%g;%I64u;%g;;%f%%;%f%%\n", scenario, second, first, time1, seconds1, time2, seconds2, percent_of_original * 100.0, speedup* 100.0);
 	}
+#ifdef VERBOSE_OUTPUT
 	printf("\n");
+#endif
 
 #if !(defined(NO_VALIDATE) || defined(NO_COMPARE))
 	int first_hres0 = (int)std::count(first_result.begin(), first_result.end(), 0);
 	int second_hres0 = (int)std::count(second_result.begin(), second_result.end(), 0);
 	//cout << second_hres0 << " out of " << first_target.size() << " resuts was successfull, expected " << first_hres0 << " => ratio " << 100.0 * (double)second_hres0 / (double)(first_target.size()) << "%" << endl;
-	printf("%d out of %zi results was successfull, expected %d, ratio is %f%%\n", second_hres0, first_target.size(), first_hres0, 100.0 * (double)second_hres0 / (double)(first_target.size()));
+
+	
+#ifndef VERBOSE_OUTPUT
+	if (first_hres0 != second_hres0)
+#endif
+		printf("%d out of %zi results was successfull, expected %d, ratio is %f%%\n", second_hres0, first_target.size(), first_hres0, 100.0 * (double)second_hres0 / (double)(first_target.size()));
 
 	CompareResult(lhs, rhs, first_target, first_result, second_target, second_result);
 #endif // !NO_COMPARE
@@ -276,6 +294,9 @@ void run_benchmarks(int iterations, int elements, int bytes,
 	// Change scale
 	const int minScale = 10;
 	const int maxScale = DEC_SCALE_MAX - 2;
+
+	printf("%s;;%s;;;%% time;speedup;elements=%d\n", baseline_name, func_name, elements);
+	printf("scenario;ticks;sec;ticks;sec;;;\n");
 
 #ifdef TEST_32bit_with_0_scale
 	compare_benchmark("32bit x 32bit with scale 0", baseline_name, func_name, iterations, numbers, numbers, targetA, hresultA, targetC, hresultC, baseline, func);
@@ -477,14 +498,14 @@ void AdditionalTests(const int &iterations)
 
 #ifdef TEST_MULTIPLY
 #ifdef COMPARE_OLEAUT
-	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "palrt", "x64", iterations, numbers,
+	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_PALRT,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
@@ -494,14 +515,14 @@ void AdditionalTests(const int &iterations)
 
 #ifdef TEST_ADD
 #ifdef COMPARE_OLEAUT
-	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "palrt", "x64", iterations, numbers,
+	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_PALRT,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
@@ -511,14 +532,14 @@ void AdditionalTests(const int &iterations)
 
 #ifdef TEST_SUB
 #ifdef COMPARE_OLEAUT
-	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "palrt", "x64", iterations, numbers,
+	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_PALRT,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
@@ -528,14 +549,14 @@ void AdditionalTests(const int &iterations)
 
 #ifdef TEST_DIV
 #ifdef COMPARE_OLEAUT
-	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "oleaut", "x64", iterations, numbers,
+	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "palrt", "x64", iterations, numbers,
+	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_PALRT,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
@@ -662,16 +683,58 @@ void CompareScaleResult()
 	}
 }
 
+#ifdef SIGN_TEST
+int singTest(int i1, int i2)
+{
+	__asm
+	{
+		mov eax, i1
+		or ebx, 0xffffffff
+		mov ecx, i2
+		cmp eax, ecx
+		setg al; //(d = (i1 > i2), dvs 1 om(i1 > i2) annars 0)
+		cmovl eax, ebx
+	}
+}
+
+__declspec(noinline)
+void signTest(int &a, int &b, int &c)
+{
+	int i1, i2;
+	cout << "Enter 2 int" << endl;
+	cin >> i1 >> i2;
+
+	a = (i1 < i2) ? -1 : (i1 > i2) ? 1 : 0;
+
+	printf("a is %d", a);
+	c = singTest(i1, i2);
+	printf("c is %d", c);
+	unsigned int u1, u2;
+	cout << "Enter 2 uint" << endl;
+	cin >> u1 >> u2;
+
+	b = (u1 < u2) ? -1 : (u1 > u2) ? 1 : 0;
+	printf("b is %d", b);
+}
+#endif
+
 int __cdecl main()
 {
 	// Use system formatting
 	setlocale(LC_ALL, "");
 
-#if 1
+#ifdef SIGN_TEST
+	int a1, b1, c1;
+	signTest(a1,b1,c1);
+	printf("a is %d", a1);
+	printf("b is %d", b1);
+#endif
+
+#if 0
 	DECIMAL a, b;
 	DECIMAL expected, actual;
 
-	printf("reserved %ld, scale %ld, sign %ld, scalesign %ld, hi32 %ld, mid 32 %ld, lo 32 %ld, lo64 %ld",
+	printf("reserved %ld, scale %ld, sign %ld, scalesign %ld, hi32 %ld, mid 32 %ld, lo 32 %ld, lo64 %ld\n",
 		FIELD_OFFSET(DECIMAL, wReserved),
 		FIELD_OFFSET(DECIMAL, scale),
 		FIELD_OFFSET(DECIMAL, sign),
@@ -733,37 +796,37 @@ int __cdecl main()
 
 #ifdef TEST_MULTIPLY
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecMul", "x64", VarDecMul, VarDecMul_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecMul", platform, VarDecMul, VarDecMul_x64);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecMul", "x64", VarDecMul_PALRT, VarDecMul_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecMul", platform, VarDecMul_PALRT, VarDecMul_x64);
 #endif // COMPARE_CORECLR
 #endif
 
 #ifdef TEST_DIV
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", "x64", VarDecDiv, VarDecDiv_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", platform, VarDecDiv, VarDecDiv_x64);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecDiv", "x64", VarDecDiv_PALRT, VarDecDiv_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecDiv", platform, VarDecDiv_PALRT, VarDecDiv_x64);
 #endif // COMPARE_CORECLR
 #endif
 
 #ifdef TEST_ADD
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecAdd", "x64", VarDecAdd, VarDecAdd_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecAdd", platform, VarDecAdd, VarDecAdd_x64);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecAdd", "x64", VarDecAdd_PALRT, VarDecAdd_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecAdd", platform, VarDecAdd_PALRT, VarDecAdd_x64);
 #endif // COMPARE_CORECLR
 #endif
 
 #ifdef TEST_SUB
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecSub", "x64", VarDecSub, VarDecSub_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecSub", platform, VarDecSub, VarDecSub_x64);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecSub", "x64", VarDecSub_PALRT, VarDecSub_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecSub", platform, VarDecSub_PALRT, VarDecSub_x64);
 #endif // COMPARE_CORECLR
 #endif
 
