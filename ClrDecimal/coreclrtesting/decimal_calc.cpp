@@ -83,7 +83,7 @@ const uint32_t FALSE = 0;
 
 // #define PROFILE_NOINLINE DECLSPEC_NOINLINE
 #define PROFILE_NOINLINE
-#ifdef _TARGET_TARGET_AMD64_
+#ifdef _TARGET_AMD64_
 #define FEATURE_UDIV128
 #endif
 
