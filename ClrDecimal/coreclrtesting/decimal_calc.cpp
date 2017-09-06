@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+// #undef _TARGET_X86_
+// #define _TARGET_ARM_
 #include "decimal_calc.h"
 
 #include <cassert>
@@ -61,8 +63,9 @@ using std::max;
 #ifdef _MSC_VER
 #include <intrin.h>
 
-#if _TARGET_TARGET_X86_
+#ifdef _TARGET_X86_
 #define INLINE_ASM // Enable or disable inline asm for x86
+#define NAKED
 #endif
 
 #else // CLANG? 
@@ -163,6 +166,11 @@ inline uint32_t _udiv64_v2(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 }
 #endif
 
+#define AddCarry32 _addcarry_u32
+#define SubBorrow32 _subborrow_u32
+#define AddCarry64 _addcarry_u64
+#define SubBorrow64 _subborrow_u64
+
 #else
 
 
@@ -181,17 +189,16 @@ unsigned long      __builtin_subcl (unsigned long x, unsigned long y, unsigned l
 unsigned long long __builtin_subcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
 */
 
-#if !defined(_TARGET_X86_) && !defined(_TARGET_AMD64_)
-inline unsigned char _addcarry_u32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
+#if defined(_TARGET_X86_) 
+#define AddCarry32 _addcarry_u32
+#define SubBorrow32 _subborrow_u32
+#else
+inline unsigned char AddCarry32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	unsigned char carry_out = 0;
 	*pRes = lhs + rhs;
 
-	if (*pRes < lhs) // check for overflow
-	{
-		carry_out = 1;
-	}
-
+	// check for overflow
+	unsigned char carry_out = (*pRes < lhs) ? 1 : 0;
 	if (carry)
 	{
 		*pRes += 1;
@@ -203,39 +210,33 @@ inline unsigned char _addcarry_u32(unsigned char carry, uint32_t lhs, uint32_t r
 	return carry_out;
 }
 
-inline unsigned char _subborrow_u32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
+inline unsigned char SubBorrow32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	unsigned char carry_out = 0;
 	*pRes = lhs - rhs;
 
-	if (*pRes > lhs) // check for overflow
-	{
-		++pRes;
-		carry_out = 1;
-	}
-
+	// check for overflow
+	unsigned char carry_out = (*pRes > lhs) ? 1 : 0;
 	if (carry)
 	{
-		*pRes -= 1;
-
-		// Can use or + xor instead
-		if (*pRes == UINT32_MAX)
+		if (*pRes == 0)
 			carry_out = 1;
+
+		*pRes -= 1;
 	}
 	return carry_out;
 }
 #endif
 
-inline unsigned char _addcarry_u64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
+inline unsigned char AddCarry64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
-	carry = _addcarry_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
-	return _addcarry_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
+	carry = AddCarry32(carry, low32(lhs), low32(rhs), &low32(*pRes));
+	return AddCarry32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
 }
 
-inline unsigned char _subborrow_u64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
+inline unsigned char SubBorrow64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
-	carry = _subborrow_u32(carry, low32(lhs), low32(rhs), &low32(*pRes));
-	return _subborrow_u32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
+	carry = SubBorrow32(carry, low32(lhs), low32(rhs), &low32(*pRes));
+	return SubBorrow32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
 }
 
 
@@ -255,16 +256,16 @@ inline uint64_t __fastcall _umul128(uint64_t lhs, uint64_t rhs, uint64_t * _High
 	}
 
 	sdltmp1 = UInt32x32To64(hi32(lhs), low32(rhs));
-	carry = _addcarry_u32(0, low32(sdltmp1), hi32(lowRes), &hi32(lowRes));
+	carry = AddCarry32(0, low32(sdltmp1), hi32(lowRes), &hi32(lowRes));
 
 	hiRes = UInt32x32To64(hi32(lhs), hi32(rhs));
-	carry = _addcarry_u32(carry, hi32(sdltmp1), low32(hiRes), &low32(hiRes));
-	_addcarry_u32(carry, hi32(hiRes), 0, &hi32(hiRes));
+	carry = AddCarry32(carry, hi32(sdltmp1), low32(hiRes), &low32(hiRes));
+	AddCarry32(carry, hi32(hiRes), 0, &hi32(hiRes));
 
 	sdltmp2 = UInt32x32To64(low32(lhs), hi32(rhs));
-	carry = _addcarry_u32(0, low32(sdltmp2), hi32(lowRes), &hi32(lowRes));
-	carry = _addcarry_u32(carry, hi32(sdltmp2), low32(hiRes), &low32(hiRes));
-	_addcarry_u32(carry, hi32(hiRes), 0, &hi32(hiRes));
+	carry = AddCarry32(0, low32(sdltmp2), hi32(lowRes), &hi32(lowRes));
+	carry = AddCarry32(carry, hi32(sdltmp2), low32(hiRes), &low32(hiRes));
+	AddCarry32(carry, hi32(hiRes), 0, &hi32(hiRes));
 
 	return lowRes;
 }
@@ -274,9 +275,34 @@ inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned cha
 	return (_HighPart << _Shift) + (_LowPart >> (64 - _Shift));
 }
 
-#ifndef INLINE_ASM
+#ifdef NAKED
+_declspec(naked)
+#endif
 inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
 {
+#ifdef INLINE_ASM
+
+	// DX:AX = DX:AX / r/m; resulting 
+	// 
+	// DX == remainder
+#ifdef NAKED
+	_asm
+	{
+		// edx is already hi
+		mov eax, ecx; // lo is in ecx
+		div dword ptr[esp + 4];
+		ret 4;// ulDen (4 uint8_t on stack)
+	}
+#else
+	_asm
+	{
+		// edx is already hi
+		mov eax, ecx; // lo is in ecx
+		div ulDen;
+	}
+#endif
+
+#else
 	assert(hi < ulDen);
 	if (hi == 0)
 	{
@@ -296,39 +322,9 @@ inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen
 		res.u.Lo = static_cast<uint32_t>(sdl.int64 / ulDen);
 		return res.int64;
 	}
+#endif
 }
-#else
 
-//#define NAKED _declspec(naked)
-#ifdef NAKED
-_declspec(naked)
-#endif
-inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
-{
-
-
-	// DX:AX = DX:AX / r/m; resulting 
-	// 
-	// DX == remainder
-#ifdef NAKED
-	_asm
-	{
-		// edx is already hi
-		mov eax, ecx; // lo is in ecx
-		div uint32_t ptr[esp + 4];
-		ret 4;// ulDen (4 uint8_t on stack)
-	}
-#else
-	_asm
-	{
-		// edx is already hi
-		mov eax, ecx; // lo is in ecx
-		div ulDen;
-	}
-#endif
-
-}
-#endif
 
 inline uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder)
 {
@@ -497,26 +493,26 @@ inline uint64_t DivMod64By64_x64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_
 
 inline unsigned char Add96(DECIMAL *pDec, uint64_t value)
 {
-	auto carry = _addcarry_u64(0, pDec->Lo64, value, &pDec->Lo64);
-	return _addcarry_u32(carry, pDec->Hi32, 0, (uint32_t*)&pDec->Hi32);
+	auto carry = AddCarry64(0, pDec->Lo64, value, &pDec->Lo64);
+	return AddCarry32(carry, pDec->Hi32, 0, (uint32_t*)&pDec->Hi32);
 }
 
 inline unsigned char Add96(uint32_t *plVal, uint64_t value)
 {
-	auto carry = _addcarry_u64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
-	return _addcarry_u32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
+	auto carry = AddCarry64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
+	return AddCarry32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
 }
 
 inline unsigned char Add96(uint64_t *pllVal, uint64_t value)
 {
-	auto carry = _addcarry_u64(0, pllVal[0], value, &pllVal[0]);
-	return _addcarry_u32(carry, (uint32_t)pllVal[1], 0, &low32(pllVal[1]));
+	auto carry = AddCarry64(0, pllVal[0], value, &pllVal[0]);
+	return AddCarry32(carry, (uint32_t)pllVal[1], 0, &low32(pllVal[1]));
 }
 
 inline unsigned char Sub96(uint32_t *plVal, uint64_t value)
 {
-	auto carry = _subborrow_u64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
-	return _subborrow_u32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
+	auto carry = SubBorrow64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
+	return SubBorrow32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
 }
 
 
@@ -556,8 +552,8 @@ uint64_t IncreaseScale96By64(uint32_t *rgulNum, uint64_t ulPwr)
 	sdlTmp.int64 = _umul128(rgulNum[2], ulPwr, &overflow);
 
 	// We will never overflow past 160 bits (32bit stored in overflow)
-	auto carry = _addcarry_u64(0, sdlTmp.int64, hi, &sdlTmp.int64);
-	_addcarry_u64(carry, overflow, 0, &overflow);
+	auto carry = AddCarry64(0, sdlTmp.int64, hi, &sdlTmp.int64);
+	AddCarry64(carry, overflow, 0, &overflow);
 
 	rgulNum[2] = sdlTmp.u.Lo;
 
@@ -1075,12 +1071,12 @@ STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __res
 		// tmpSum keeps value for tmpSum (initialized from first multiply)
 		// Add lo64 and result to tmpSum and propagate upper bits (hi) to rgulProd[2]
 		lo = _umul64by32(pdecL->Lo64, pdecR->Hi32, &tmpHi1);
-		auto carry1 = _addcarry_u64(0, lo, tmpSum, &tmpSum);
-		_addcarry_u64(carry1, tmpHi1, rgulProd[2], &rgulProd[2]);
+		auto carry1 = AddCarry64(0, lo, tmpSum, &tmpSum);
+		AddCarry64(carry1, tmpHi1, rgulProd[2], &rgulProd[2]);
 
 		tmpLo2 = _umul64by32(pdecR->Lo64, pdecL->Hi32, &tmpHi2);
-		auto carry2 = _addcarry_u64(0, tmpLo2, tmpSum, &tmpSum);
-		_addcarry_u64(carry2, tmpHi2, rgulProd[2], &rgulProd[2]);
+		auto carry2 = AddCarry64(0, tmpLo2, tmpSum, &tmpSum);
+		AddCarry64(carry2, tmpHi2, rgulProd[2], &rgulProd[2]);
 
 		rgulProd[1] = tmpSum;
 
@@ -1129,8 +1125,8 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		if (bSign) {
 			// Signs differ - subtract
 			//
-			carry = _subborrow_u64(0, pdecL->Lo64, pdecR->Lo64, &decRes.Lo64);
-			carry = _subborrow_u32(carry, pdecL->Hi32, pdecR->Hi32, (uint32_t*)&decRes.Hi32);
+			carry = SubBorrow64(0, pdecL->Lo64, pdecR->Lo64, &decRes.Lo64);
+			carry = SubBorrow32(carry, pdecL->Hi32, pdecR->Hi32, (uint32_t*)&decRes.Hi32);
 
 			// Propagate carry
 			//
@@ -1148,8 +1144,8 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		else {
 			// Signs are the same - add
 			//
-			carry = _addcarry_u64(0, pdecL->Lo64, pdecR->Lo64, &decRes.Lo64);
-			carry = _addcarry_u32(carry, pdecL->Hi32, pdecR->Hi32, (uint32_t*)&decRes.Hi32);
+			carry = AddCarry64(0, pdecL->Lo64, pdecR->Lo64, &decRes.Lo64);
+			carry = AddCarry32(carry, pdecL->Hi32, pdecR->Hi32, (uint32_t*)&decRes.Hi32);
 
 			// Propagate carry
 			if (carry != 0) {
@@ -1222,8 +1218,8 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			uint64_t hi;
 			rgulNum[0] = _umul128(pdecL->Lo64, ullPwr, &hi);
 			rgulNum[1] = _umul128(pdecL->Hi32, ullPwr, &rgulNum[2]);
-			carry = _addcarry_u64(0, rgulNum[1], hi, &rgulNum[1]);
-			_addcarry_u64(carry, rgulNum[2], 0, &rgulNum[2]);
+			carry = AddCarry64(0, rgulNum[1], hi, &rgulNum[1]);
+			AddCarry64(carry, rgulNum[2], 0, &rgulNum[2]);
 #else
 #define TEST_SIMPLER 0
 #if TEST_SIMPLER == 1
@@ -1235,9 +1231,9 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			rgulNum[0] = UInt32x32To64(pdecL->Lo32, ullPwr);
 			auto midResult = UInt32x32To64(pdecL->Mid32, ullPwr);
 			rgulNum[1] = UInt32x32To64(pdecL->Hi32, ullPwr);
-			carry = _addcarry_u32(0, low32(midResult), hi32(rgulNum[0]), &hi32(rgulNum[0]));
-			carry = _addcarry_u32(carry, hi32(midResult), low32(rgulNum[1]), &low32(rgulNum[1]));
-			_addcarry_u32(carry, 0, hi32(rgulNum[1]), &hi32(rgulNum[1]));
+			carry = AddCarry32(0, low32(midResult), hi32(rgulNum[0]), &hi32(rgulNum[0]));
+			carry = AddCarry32(carry, hi32(midResult), low32(rgulNum[1]), &low32(rgulNum[1]));
+			AddCarry32(carry, 0, hi32(rgulNum[1]), &hi32(rgulNum[1]));
 #endif
 #endif
 
@@ -1303,7 +1299,7 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 				for (int iCur = 1; iCur <= iHiProd; iCur++) {
 					uint64_t tmp = mul_carry;
 					uint64_t product = _umul128(ullPwr, rgulNum[iCur], &mul_carry);
-					add_carry = _addcarry_u64(add_carry, tmp, product, &rgulNum[iCur]);
+					add_carry = AddCarry64(add_carry, tmp, product, &rgulNum[iCur]);
 				}
 
 				// We're extending the result by another element.
@@ -1311,7 +1307,7 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 				// ex: 0xffff*0xffff => "fffe0001", and it is the same pattern for all bitlenghts
 				//
 				if ((mul_carry | add_carry) != 0)
-					_addcarry_u64(add_carry, mul_carry, 0, &rgulNum[++iHiProd]);
+					AddCarry64(add_carry, mul_carry, 0, &rgulNum[++iHiProd]);
 			}
 #else
 				uint64_t hi, mul_carry;
@@ -1319,8 +1315,8 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 				uint64_t product = _umul128(ullPwr, rgulNum[1], &mul_carry);
 				uint64_t product2 = ullPwr*rgulNum[2];
 
-				auto add_carry = _addcarry_u64(0, product, hi, &rgulNum[1]);
-				_addcarry_u64(add_carry, mul_carry, product2, &rgulNum[2]);
+				auto add_carry = AddCarry64(0, product, hi, &rgulNum[1]);
+				AddCarry64(add_carry, mul_carry, product2, &rgulNum[2]);
 
 		}
 
@@ -1339,8 +1335,8 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		if (bSign) {
 			// Signs differ, subtract.
 			//
-			carry = _subborrow_u64(0, rgulNum[0], pdecR->Lo64, &decRes.Lo64);
-			carry = _subborrow_u64(carry, rgulNum[1], pdecR->Hi32, &rgulNum[1]);
+			carry = SubBorrow64(0, rgulNum[0], pdecR->Lo64, &decRes.Lo64);
+			carry = SubBorrow64(carry, rgulNum[1], pdecR->Hi32, &rgulNum[1]);
 			decRes.Hi32 = (uint32_t)rgulNum[1];
 
 			// Propagate carry
@@ -1365,8 +1361,8 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		else {
 			// Signs are the same - add
 			//
-			carry = _addcarry_u64(0, rgulNum[0], pdecR->Lo64, &decRes.Lo64);
-			carry = _addcarry_u64(carry, rgulNum[1], pdecR->Hi32, &rgulNum[1]);
+			carry = AddCarry64(0, rgulNum[0], pdecR->Lo64, &decRes.Lo64);
+			carry = AddCarry64(carry, rgulNum[1], pdecR->Hi32, &rgulNum[1]);
 			decRes.Hi32 = (uint32_t)rgulNum[1];
 
 			// Propagate carry
@@ -1479,8 +1475,8 @@ uint64_t Div128By96_x64(uint32_t * __restrict rgulNum, uint32_t *__restrict rgul
 	// Compute full remainder, rem = dividend - (quo * divisor).
 	sdlProd1 = _umul64by32(rgullDen[0], quo, &hi);
 
-	auto carry = _subborrow_u64(0, rgullNum[0], sdlProd1, &sdlNum);
-	carry = _subborrow_u32(carry, remainder, hi, (uint32_t*)&rgulNum[2]);
+	auto carry = SubBorrow64(0, rgullNum[0], sdlProd1, &sdlNum);
+	carry = SubBorrow32(carry, remainder, hi, (uint32_t*)&rgulNum[2]);
 
 	// Propagate carries
 	//
@@ -1491,17 +1487,17 @@ uint64_t Div128By96_x64(uint32_t * __restrict rgulNum, uint32_t *__restrict rgul
 		do {
 			quo--;
 			// sdlNum += rgullDen[0];
-			carry = _addcarry_u64(0, sdlNum, rgullDen[0], &sdlNum);
+			carry = AddCarry64(0, sdlNum, rgullDen[0], &sdlNum);
 
 			// rgulNum[2] += rgulDen[2];
-			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]);
+			carry = AddCarry32(carry, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]);
 
-			//_addcarry_u32(carry, rgulNum[2], 0, (uint32_t*)&rgulNum[2]);
+			//AddCarry32(carry, rgulNum[2], 0, (uint32_t*)&rgulNum[2]);
 
 			// OLD ::: -------
 			// rgulNum[2] += rgulDen[2];
-			//auto carry2 = _addcarry_u32(0, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]); 
-			//_addcarry_u32(carry, rgulNum[2], 0, (uint32_t*)&rgulNum[2]);
+			//auto carry2 = AddCarry32(0, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]); 
+			//AddCarry32(carry, rgulNum[2], 0, (uint32_t*)&rgulNum[2]);
 
 			//// TODO: Look though logic, why should we not break when we overflow due to carry??
 			//if (carry2)
@@ -1579,9 +1575,9 @@ inline uint64_t Div160By96_x64(uint32_t rgulNum[6], uint32_t rgulDen[4])
 	// Compute full remainder, rem = dividend - (quo * divisor).
 	sdlProd1 = _umul64by32(quo, rgulDen[0], &hi);
 
-	auto carry = _subborrow_u64(0, rgullNum[0], sdlProd1, &sdlNum);
+	auto carry = SubBorrow64(0, rgullNum[0], sdlProd1, &sdlNum);
 
-	carry = _subborrow_u64(carry, remainder, hi, &rgullNum[1]);
+	carry = SubBorrow64(carry, remainder, hi, &rgullNum[1]);
 
 	// Propagate carries
 	//
@@ -1601,11 +1597,11 @@ inline uint64_t Div160By96_x64(uint32_t rgulNum[6], uint32_t rgulDen[4])
 
 			// sdlNum += rgullDen[0]*scale;
 			sdlProd1 = _umul128(rgullDen[0], scale, &hi);
-			carry = _addcarry_u64(0, sdlNum, sdlProd1, &sdlNum);
-			carry = _addcarry_u64(carry, rgullNum[1], hi, &rgullNum[1]);
+			carry = AddCarry64(0, sdlNum, sdlProd1, &sdlNum);
+			carry = AddCarry64(carry, rgullNum[1], hi, &rgullNum[1]);
 
 			// rgulNum[2] += rgulDen[2]*scale;
-			carry |= _addcarry_u64(0, rgullNum[1], rgulDen[2] * scale, &rgullNum[1]);
+			carry |= AddCarry64(0, rgullNum[1], rgulDen[2] * scale, &rgullNum[1]);
 		}
 
 		// Remainder went negative.  Add divisor back in until it's positive (detected by carry),
@@ -1613,8 +1609,8 @@ inline uint64_t Div160By96_x64(uint32_t rgulNum[6], uint32_t rgulDen[4])
 		//
 		while (carry == 0) {
 			quo--;
-			carry = _addcarry_u64(0, sdlNum, rgullDen[0], &sdlNum);
-			carry = _addcarry_u32(carry, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]);
+			carry = AddCarry64(0, sdlNum, rgullDen[0], &sdlNum);
+			carry = AddCarry32(carry, rgulNum[2], rgulDen[2], (uint32_t*)&rgulNum[2]);
 		};
 	}
 
@@ -1677,7 +1673,7 @@ uint32_t Div96By64_x64(uint64_t *rgullNum, uint64_t ullDen)
 	// Compute full remainder, rem = dividend - (quo * divisor).
 	//
 	sdlProd = UInt32x32To64(quo, low32(ullDen)); // quo * lo divisor
-	carry = _subborrow_u64(0, sdlNum, sdlProd, &sdlNum);
+	carry = SubBorrow64(0, sdlNum, sdlProd, &sdlNum);
 	if (carry) {
 	NegRem:
 		// Remainder went negative.  Add divisor back in until it's positive,
@@ -1985,8 +1981,8 @@ STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__res
 
 					// multiply reminder by 2, was "shift 1" but add/adc instruction is faster for a wider range of CPU's
 					// and is recommended especially for older CPUs
-					auto carry = _addcarry_u64(0, rgullRem[0], rgullRem[0], &rgullRem[0]);
-					_addcarry_u32(carry, rgulRem[2], rgulRem[2], (uint32_t*)&rgulRem[2]);
+					auto carry = AddCarry64(0, rgullRem[0], rgullRem[0], &rgullRem[0]);
+					AddCarry32(carry, rgulRem[2], rgulRem[2], (uint32_t*)&rgulRem[2]);
 
 					if (rgulRem[2] > rgulDivisor[2] || (rgulRem[2] == rgulDivisor[2] &&
 						(rgullRem[0] > rgullDivisor[0] || (rgullRem[0] == rgullDivisor[0] &&
