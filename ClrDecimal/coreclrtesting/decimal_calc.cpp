@@ -51,15 +51,6 @@ const uint8_t DECIMAL_NEG = 0x80;
 using std::min;
 using std::max;
 
-
-#ifndef NOERROR
-#define NOERROR 0
-#define DISP_E_OVERFLOW 0x8002000A
-#define DISP_E_DIVBYZERO 0x80020012
-#endif // !DISP_E_OVERFLOW
-
-
-
 #ifdef _MSC_VER
 #include <intrin.h>
 
@@ -72,20 +63,24 @@ using std::max;
 
 #define __fastcall
 
+#if defined(_TARGET_X86_) || defined(_TARGET_AMD64_)
 #include <x86intrin.h>
+#endif
 
+#ifndef NOERROR
+#define NOERROR 0
+#define DISP_E_OVERFLOW 0x8002000A
+#define DISP_E_DIVBYZERO 0x80020012
 typedef uint32_t BOOL;
 typedef bool BOOLEAN;
 const uint32_t TRUE = 1;
 const uint32_t FALSE = 0;
+#endif // !DISP_E_OVERFLOW
 
 #endif
 
 // #define PROFILE_NOINLINE DECLSPEC_NOINLINE
 #define PROFILE_NOINLINE
-#ifdef _TARGET_AMD64_
-#define FEATURE_UDIV128
-#endif
 
 uint32_t IncreaseScale96By32(uint32_t *rgulNum, uint32_t ulPwr);
 
@@ -113,8 +108,29 @@ inline unsigned char FitsIn32Bit(const uint64_t* pValue)
 }
 
 #ifdef _TARGET_AMD64_
-#define UDIV1238_IMPL 1
-#if UDIV1238_IMPL == 1
+#define FEATURE_UDIV128
+
+#if defined(__GNUC__)
+inline uint64_t _udiv128(uint64_t lo, uint64_t hi, uint64_t ulDen, uint64_t *remainder)
+{
+	uint64_t rax, rdx;
+	
+	asm ("divq %[den]" 
+	: "=d" (rdx) , "=a"(rax)  // results in edx, eax reg
+    : [den] "rm" (ulDen), "d"(hi), "a"(lo) /* input - hi in edx, lo in eax , ulDen as either reg or mem */
+    :); // no clobbers
+
+    *remainder = rdx;
+	return rax;
+}
+
+inline uint64_t _udiv128_v2(uint64_t* pLow, uint64_t hi, uint64_t ulDen)
+{
+    uint64_t rem;
+    *pLow = _udiv128(*pLow, hi, ulDen, &rem);
+	return rem;
+}
+#else
 // Performs division of a 128bit number with 
 // requires that hi < ulDen in order to not loose precision
 // so it is best to set it to 0 unless when chaining calls in which case 
@@ -125,53 +141,8 @@ extern "C" uint64_t _udiv128(uint64_t low, uint64_t hi, uint64_t divisor, _Out_ 
 // so it is best to set it to 0 unless when chaining calls in which case 
 // the remainder from a previus devide should be used
 extern "C" uint64_t _udiv128_v2(uint64_t* pLow, uint64_t hi, uint64_t ulDen);
-#else
-
-extern "C" __m128i _udiv128_impl_sse(uint64_t low, uint64_t hi, uint64_t divisor);
-
-inline uint64_t _udiv128(uint64_t low, uint64_t hi, uint64_t divisor, _Out_ uint64_t *remainder)
-{
-	__m128i temp = _udiv128_impl_sse(low, hi, divisor);
-	*remainder = temp.m128i_u64[1];
-	return temp.m128i_u64[0];
-}
-
-inline uint64_t _udiv128_v2(uint64_t* pLow, uint64_t hi, uint64_t ulDen)
-{
-	__m128i temp = _udiv128_impl_sse(*pLow, hi, ulDen);
-	*pLow = temp.m128i_u64[0];
-	return temp.m128i_u64[1];
-}
 #endif
-
-#define UDIV_IMPL 1
-
-#if (UDIV_IMPL != 2 && UDIV_IMPL != 3)
-extern "C" uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder);
-extern "C" uint32_t _udiv64_v2(uint32_t* pLow, uint32_t hi, uint32_t ulDen);
 #endif
-#if (UDIV_IMPL == 3)
-extern "C" uint64_t _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen);
-inline uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder)
-{
-	uint64_t temp = _udiv64_impl(lo, hi, ulDen);
-	*remainder = hi32(temp);
-	return temp;
-}
-inline uint32_t _udiv64_v2(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
-{
-	uint64_t temp = _udiv64_impl(*pLow, hi, ulDen);
-	*pLow = (uint32_t)temp;
-	return hi32(temp);
-}
-#endif
-
-#define AddCarry32 _addcarry_u32
-#define SubBorrow32 _subborrow_u32
-#define AddCarry64 _addcarry_u64
-#define SubBorrow64 _subborrow_u64
-
-#else
 
 
 // TODO: Define addcaryy etc for ARM 
@@ -189,9 +160,9 @@ unsigned long      __builtin_subcl (unsigned long x, unsigned long y, unsigned l
 unsigned long long __builtin_subcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
 */
 
-#if defined(_TARGET_X86_) 
-#define AddCarry32 _addcarry_u32
-#define SubBorrow32 _subborrow_u32
+#if defined(_TARGET_X86_)  || defined(_TARGET_AMD64_)
+	#define AddCarry32 _addcarry_u32
+	#define SubBorrow32 _subborrow_u32
 #else
 inline unsigned char AddCarry32(unsigned char carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
@@ -227,6 +198,16 @@ inline unsigned char SubBorrow32(unsigned char carry, uint32_t lhs, uint32_t rhs
 }
 #endif
 
+#if defined(_TARGET_AMD64_)
+
+	#if defined(__GNUC__) || defined(__GNUC__)
+		#define AddCarry64(carry, lhs,rhs, pRes) _addcarry_u64(carry, lhs,rhs, (unsigned long long int *)pRes)
+		#define SubBorrow64(carry, lhs,rhs, pRes) _subborrow_u64(carry, lhs,rhs,  (unsigned long long int *)pRes)
+	#else
+		#define AddCarry64 _addcarry_u64
+		#define SubBorrow64 _subborrow_u64
+	#endif
+#else
 inline unsigned char AddCarry64(unsigned char carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
 	carry = AddCarry32(carry, low32(lhs), low32(rhs), &low32(*pRes));
@@ -238,7 +219,22 @@ inline unsigned char SubBorrow64(unsigned char carry, uint64_t lhs, uint64_t rhs
 	carry = SubBorrow32(carry, low32(lhs), low32(rhs), &low32(*pRes));
 	return SubBorrow32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
 }
+#endif
 
+#if defined(_TARGET_AMD64_)
+#ifndef _MSC_VER
+// CLANG/GCC Does not contain umul instrinct
+inline uint64_t _umul128(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
+{
+	__uint128_t res = ((__uint128_t)lhs) * ((__uint128_t)rhs);
+
+	*_HighProduct = ((uint64_t*)res)[1];
+	return (uint64_t)res;
+}
+#else
+// MSC_VER _umul128 is part of intrin.h
+#endif
+#else
 
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
 inline uint64_t __fastcall _umul128(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
@@ -269,23 +265,51 @@ inline uint64_t __fastcall _umul128(uint64_t lhs, uint64_t rhs, uint64_t * _High
 
 	return lowRes;
 }
+#endif
 
 inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
 {
 	return (_HighPart << _Shift) + (_LowPart >> (64 - _Shift));
 }
 
-#ifdef NAKED
+#if defined(__GNUC__) && (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
+inline uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, uint32_t *remainder)
+{
+	uint32_t eax, edx;
+	
+	asm ("divl %[den]" 
+	: "=d" (edx) , "=a"(eax)  // results in edx, eax reg
+    : [den] "rm" (ulDen), "d"(hi), "a"(lo) /* input - hi in edx, lo in eax , ulDen as either reg or mem */
+    :); // no clobbers
+
+    *remainder = edx;
+	return eax;
+}
+
+inline uint32_t _udiv64_v2(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
+{
+    uint32_t rem;
+    *pLow = _udiv64(*pLow, hi, ulDen, &rem);
+	return rem;
+}
+#else
+// MSVC or not _X86_
+
+// MSVC _X86_ support some inline asm
+// both ue a single _udiv64_impl
+#if defined(_MSC_VER) 
+
+#if defined(_TARGET_AMD64_) // _MSVC_ x64 does not support inline asm
+extern "C" uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder);
+extern "C" uint32_t _udiv64_v2(uint32_t* pLow, uint32_t hi, uint32_t ulDen);
+
+#elif defined(_TARGET_X86_)
+
 _declspec(naked)
-#endif
 inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
 {
-#ifdef INLINE_ASM
-
 	// DX:AX = DX:AX / r/m; resulting 
-	// 
 	// DX == remainder
-#ifdef NAKED
 	_asm
 	{
 		// edx is already hi
@@ -293,16 +317,11 @@ inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen
 		div dword ptr[esp + 4];
 		ret 4;// ulDen (4 uint8_t on stack)
 	}
+}
 #else
-	_asm
-	{
-		// edx is already hi
-		mov eax, ecx; // lo is in ecx
-		div ulDen;
-	}
-#endif
-
-#else
+// no X86 asm support 
+inline uint64_t _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
+{
 	assert(hi < ulDen);
 	if (hi == 0)
 	{
@@ -322,9 +341,8 @@ inline uint64_t __fastcall _udiv64_impl(uint32_t lo, uint32_t hi, uint32_t ulDen
 		res.u.Lo = static_cast<uint32_t>(sdl.int64 / ulDen);
 		return res.int64;
 	}
-#endif
 }
-
+#endif
 
 inline uint32_t _udiv64(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder)
 {
@@ -342,12 +360,15 @@ inline uint32_t _udiv64_v2(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 }
 #endif
 
+#endif
+
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline bool BitScanMsb32(uint32_t *Index, uint32_t Mask) {
 #ifdef _WIN32
 	return BitScanReverse((DWORD*)Index, Mask);
 #else
-	*Index = __builtin_clz(Mask);
+	// G++/Clang __builtin_clz count LSB as 1, and MSB as 0 while BitScanReverse works in other way around
+	*Index = 31 - __builtin_clz(Mask);
 	return (Mask != 0);
 #endif
 }
@@ -357,6 +378,10 @@ inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 {
 #if defined(_WIN32) && defined(_TARGET_AMD64_)
 	return BitScanReverse64((DWORD*)Index, Mask);
+#elif defined(__GNUC__) || defined(__CLANG__)
+	static_assert(sizeof(long) == 8, "assuming long is 64 bits");
+	*Index = 63 - __builtin_clzl(Mask);
+	return (Mask != 0);
 #else
 	unsigned char res = BitScanMsb32(Index, hi32(Mask));
 	if (res)

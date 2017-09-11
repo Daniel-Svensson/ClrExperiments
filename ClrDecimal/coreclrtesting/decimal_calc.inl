@@ -15,7 +15,7 @@ inline void COPYDEC(DECIMAL &to, const DECIMAL &from)
 	(to).sign = (from).sign;
 	(to).Hi32 = (from).Hi32;
 	(to).Lo64 = (from).Lo64;
-#endif;
+#endif
 }
 
 #undef DECIMAL_SETZERO
