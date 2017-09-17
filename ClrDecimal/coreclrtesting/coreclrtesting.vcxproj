@@ -105,8 +105,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='ARM'">
     <ClCompile>
-      <PreprocessorDefinitions>_ARM_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <CallingConvention>StdCall</CallingConvention>
+      <PreprocessorDefinitions>_ARM_;_TARGET_ARM_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -8,7 +8,10 @@
 //#include <vector>
 #include <functional>
 #include <oleauto.h>
+
+#if defined(_TARGET_X86_) || defined(_TARGET_AMD64_)
 #include <emmintrin.h>
+#endif
 
 #define _CRT_RAND_S  
 #include <stdlib.h>  
@@ -745,8 +748,6 @@ int __cdecl main()
 		FIELD_OFFSET(DECIMAL, Lo64)
 	);
 
-	*((__m128*)&expected) = _mm_setzero_ps();
-	ZeroMemory(&actual, sizeof(DECIMAL));
 	/*
 	[0]x[9]  -- (0) 0 18446744073709551615 / 10^3  * (0) 0 18446251492500307960 / 10^6:
  PRODUCT expected (0) 542115562 5349999624952008190 / 10^25 but got (0) 0 0 / 10^0
@@ -757,19 +758,19 @@ int __cdecl main()
 	//b.Hi32 = 1;
 	//b.Lo64 = 18446744073709551615;
 	//b.scale = 19;
-	a.Hi32 = 1;
-	a.Lo64 = 4294967295;
-	a.scale = 0;
+	a.Hi32 = 2147483647;
+	a.Lo64 = 9223372034707292159;
+	a.scale = 14;
 	a.sign = 0;
-	b.Hi32 = 1;
+	b.Hi32 = 2851480405;
 	//b.Mid32 = 23;
-	b.Lo64 = 4294967295;
-	b.scale = 20;
+	b.Lo64 = 12247015087511315285;
+	b.scale = 25;
 	b.sign = 0; // DECIMAL_NEG;
 
 
-	VarDecAdd_PALRT(&a, &b, &expected);
-	VarDecAdd_x64(&a, &b, &actual);
+	VarDecMul_PALRT(&a, &b, &expected);
+	VarDecMul_x64(&a, &b, &actual);
 
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
 	assert(actual.Hi32 == expected.Hi32);

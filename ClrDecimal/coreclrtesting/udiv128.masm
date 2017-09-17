@@ -10,19 +10,20 @@
 ; RAX       Quotient upon return
 
 .code
-_udiv64 proc
+
+DivMod64By32 proc
     mov rax, rcx    ; Put the low digit in place (hi is already there)
     div r8d         ; 64 bit divide edx:eax/r8d = edx remainder, eax quotient
     mov [r9], edx   ; Save the reminder
     ret     ; Return the quotient, already in rax
-_udiv64 endp
+DivMod64By32 endp
 
-_udiv128 proc
+DivMod128By64 proc
     mov rax, rcx    ; Put the low digit in place (hi is already there)
     div r8      ; 128 bit divide rdx:rax/r8 = rdx remainder, rax quotient
     mov [r9], rdx   ; Save the reminder
     ret     ; Return the quotient, already in rax
-_udiv128 endp
+DivMod128By64 endp
 
 ; Arguments
 ; RCX       Low Digit
@@ -32,40 +33,20 @@ _udiv128 endp
 ; RAX       Quotient upon return
 ; extern "C" digit64 _udiv128_v2(digit64 *low, digit64 hi, digit64 divisor);
 
-_udiv64_v2 proc
+DivMod64By32InPlace proc
 	mov eax, [rcx]    ; Put the low digit in place (hi is already there)
     div r8d      ; 128 bit divide rdx:rax/r8 = rdx remainder, rax quotient
     mov [rcx], eax   ; Save the quotient
 	mov rax, rdx	; Set remainder as return value
     ret     ; Return the remainder
-_udiv64_v2 endp
+DivMod64By32InPlace endp
 
-_udiv128_v2 proc
+DivMod128By64InPlace proc
     mov rax, [rcx]    ; Put the low digit in place (hi is already there)
     div r8      ; 128 bit divide rdx:rax/r8 = rdx remainder, rax quotient
     mov [rcx], rax   ; Save the quotient
 	mov rax, rdx	; Set remainder as return value
     ret     ; Return the remainder
-_udiv128_v2 endp
-
-_udiv64_impl_sse proc
-    mov rax, rcx    ; Put the low digit in place (hi is already there)
-    div r8d         ; 64 bit divide edx:eax/r8d = edx remainder, eax quotient
-
-	; put remainder in hi 32 bits and move bits into rax
-	movd xmm1, edx
-	movd xmm0, eax
-	punpcklqdq  xmm0, xmm1
-    ret     ; Return the quotient, already in rax
-_udiv64_impl_sse endp
-
-_udiv128_impl_sse proc
-    mov rax, rcx    ; Put the low digit in place (hi is already there)
-    div r8      ; 128 bit divide rdx:rax/r8 = rdx remainder, rax quotient
-    movq xmm1, rdx
-	movq xmm0, rax
-	punpcklqdq  xmm0, xmm1
-    ret     ; Return the quotient, already in rax
-_udiv128_impl_sse endp
+DivMod128By64InPlace endp
 
 end
