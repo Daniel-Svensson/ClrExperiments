@@ -363,20 +363,19 @@ HaveScale:
 *   None.
 *
 ***********************************************************************/
-inline uint32_t Div96By32_x64(uint32_t *pdlNum, uint32_t ulDen)
+inline uint32_t Div96By32_x64(uint32_t *rgulNum, uint32_t ulDen)
 {
-	uint32_t *const rgulNum = (uint32_t *)pdlNum;
 	uint32_t remainder;
 #if 0
 	remainder = 0;
-	if (pdlNum[2] != 0)
+	if (rgulNum[2] != 0)
 		goto Div3Word;
 
-	if (pdlNum[1] >= ulDen)
+	if (rgulNum[1] >= ulDen)
 		goto Div2Word;
 
-	remainder = pdlNum[1];
-	pdlNum[1] = 0;
+	remainder = rgulNum[1];
+	rgulNum[1] = 0;
 	goto Div1Word;
 #else
 	if (rgulNum[2] >= ulDen)
