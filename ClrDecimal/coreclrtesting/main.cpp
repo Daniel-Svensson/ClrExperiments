@@ -3,6 +3,14 @@
 
 #include "stdafx.h"
 
+#if 0
+#include <ittnotify.h>
+#pragma comment(lib, "libittnotify.lib")
+#else
+#define __itt_resume()
+#define __itt_pause()
+#endif
+
 #include "decimal_calc.h"
 
 //#include <vector>
@@ -13,11 +21,13 @@
 #include <emmintrin.h>
 #endif
 
-#define _CRT_RAND_S  
-#include <stdlib.h>  
+#define _CRT_RAND_S
+#include <stdlib.h>
 #include <array>
 #include <vector>
 #include <iostream>
+#include <sstream>
+#include <fstream>
 
 // PAL RT Implementationsions
 STDAPI VarDecMul_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
@@ -27,8 +37,15 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 
 using namespace std;
 
-//#define NO_VALIDATE
+
+#define SAVE_BASELINE
+//#define LOAD_BASELINE
+
 //#define NO_COMPARE
+//#define NO_COMPARE_ONLY_BASELINE
+
+
+//#define NO_VALIDATE
 //#define COMPARE_OLEAUT
 //#define COMPARE_CORECLR
 #define COMPARE_DEFAULT 
@@ -42,17 +59,17 @@ using namespace std;
 #endif 
 
 #define TEST_MULTIPLY
-#define TEST_ADD
-#define TEST_SUB
-#define TEST_DIV
+//#define TEST_ADD
+//#define TEST_SUB
+//#define TEST_DIV
 //
-#define TEST_32bit_with_0_scale
-#define TEST_32bit_with_scale
-#define TEST_64bit_with_scale_64bit_result
-#define TEST_64bit_with_0_scale_128bit_result
-#define TEST_64bit_with_scale_128bit_result
-#define TEST_96bit_with_scale_96bit_result_and_overflow
-#define TEST_96bit_with_scale_96bit_result_no_overflow
+//#define TEST_32bit_with_0_scale
+//#define TEST_32bit_with_scale
+//#define TEST_64bit_with_scale_64bit_result
+//#define TEST_64bit_with_0_scale_128bit_result
+//#define TEST_64bit_with_scale_128bit_result
+//#define TEST_96bit_with_scale_96bit_result_and_overflow
+//#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
 // #define VERBOSE_OUTPUT 1
@@ -76,6 +93,10 @@ void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
 	HRESULT(STDAPICALLTYPE *baseline)(DECIMAL *, DECIMAL *, DECIMAL *),
 	HRESULT(STDAPICALLTYPE *func)(DECIMAL *, DECIMAL *, DECIMAL *));
+
+void save_or_load_baseline(const char *const &scenario, 
+	const char *const &baseline, 
+	const std::vector<DECIMAL> & lhs, const std::vector<DECIMAL> & rhs, std::vector<DECIMAL> & first_target, std::vector<HRESULT> & first_result);
 
 void InitializeTestData(std::vector<DECIMAL>& numbers, int bytes);
 void test_round_to_nearest();
@@ -202,16 +223,31 @@ void compare_benchmark(
 	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
 
+	std::vector<long long> timings1(iterations);
+	std::vector<long long> timings2(iterations);
+
+	__itt_resume();
 	for (int i = 0; i < iterations; ++i)
 	{
-#ifndef NO_COMPARE
-		auto time1 = run_benchmark(lhs, rhs, first_target, first_result, first_func);
-		auto time2 = run_benchmark(lhs, rhs, second_target, second_result, second_func);
-#else // !NO_COMPARE
+#if defined(NO_COMPARE) || defined(LOAD_BASELINE)
 		auto time2 = run_benchmark(lhs, rhs, second_target, second_result, second_func);
 		auto time1 = time2;
+#elif defined(NO_COMPARE_ONLY_BASELINE)
+		auto time2 = run_benchmark(lhs, rhs, first_target, first_result, first_func);;
+		auto time1 = time2;
+#else
+		auto time1 = run_benchmark(lhs, rhs, first_target, first_result, first_func);
+		auto time2 = run_benchmark(lhs, rhs, second_target, second_result, second_func);
 #endif
+		timings1[i] = time1;
+		timings2[i] = time2;
+	}
+	__itt_pause();
 
+	for (int i = 0; i < iterations; ++i)
+	{
+		auto time1 = timings1[i];
+		auto time2 = timings2[i];
 		double seconds1 = (double)time1 / (double)frequency.QuadPart;
 		double seconds2 = (double)time2 / (double)frequency.QuadPart;
 
@@ -220,16 +256,21 @@ void compare_benchmark(
 
 		printf("%s;%s vs %s; %I64u;%g;%I64u;%g;;%f%%;%f%%\n", scenario, second, first, time1, seconds1, time2, seconds2, percent_of_original * 100.0, speedup* 100.0);
 	}
+
+#if defined(SAVE_BASELINE) || defined(LOAD_BASELINE)
+	save_or_load_baseline(scenario, first, lhs, rhs, first_target, first_result);
+#endif
+
 #ifdef VERBOSE_OUTPUT
 	printf("\n");
 #endif
 
-#if !(defined(NO_VALIDATE) || defined(NO_COMPARE))
+#if !(defined(NO_VALIDATE) || defined(NO_COMPARE) || defined(NO_COMPARE_ONLY_BASELINE))
 	int first_hres0 = (int)std::count(first_result.begin(), first_result.end(), 0);
 	int second_hres0 = (int)std::count(second_result.begin(), second_result.end(), 0);
 	//cout << second_hres0 << " out of " << first_target.size() << " resuts was successfull, expected " << first_hres0 << " => ratio " << 100.0 * (double)second_hres0 / (double)(first_target.size()) << "%" << endl;
 
-	
+
 #ifndef VERBOSE_OUTPUT
 	if (first_hres0 != second_hres0)
 #endif
@@ -238,6 +279,92 @@ void compare_benchmark(
 	CompareResult(lhs, rhs, first_target, first_result, second_target, second_result);
 #endif // !NO_COMPARE
 }
+
+#include "miniz.h"
+
+template <typename T>
+void WriteCompressed(const std::vector<T> & source, const std::string &filename)
+{
+	const size_t bytes = source.size() * sizeof(T);
+	const unsigned char * data = (const unsigned char *)source.data();
+
+	vector<byte> buffer;
+	buffer.resize(bytes);
+
+	mz_ulong bytes_written = buffer.size();
+	int status = mz_compress2(buffer.data(), &bytes_written, data, bytes, 8);
+	assert(status == MZ_OK);
+
+	ofstream file(filename, ios::binary);
+	file.write((const char*)buffer.data(), bytes_written);
+}
+
+template <typename T>
+void ReadCompressed(std::vector<T> & destination, const std::string &filename)
+{
+	ifstream fin(filename, ios::binary);
+	auto start = fin.tellg();
+	fin.seekg(0, ios::end);
+	auto bytes = fin.tellg() - start;
+
+	fin.seekg(0, ios::beg);
+
+	vector<byte> buffer;
+	buffer.resize(bytes);
+
+	// Read file
+	fin.read((char*)buffer.data(), bytes);
+	mz_ulong bytes_written = (mz_ulong)(destination.size() * sizeof(T));
+	int status = mz_uncompress((unsigned char*)destination.data(), &bytes_written, buffer.data(), bytes);
+
+	assert(status == MZ_OK);
+	assert(bytes_written == destination.size() * sizeof(T));
+}
+
+/*
+void ReadCompressed(const size_t bytes, const unsigned char * data, const std::string &filename)
+{
+	ifstream fin(filename);
+	
+	z_stream strm;
+	memset(&strm, 0, sizeof(strm));
+
+	strm.avail_in = bytes;
+	strm.next_in = data;
+
+	vector<byte> buffer;
+	buffer.resize(strm.avail_in);
+	strm.next_out = buffer.data();
+	strm.avail_out = buffer.size();
+
+	deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+	deflate(&strm, Z_FINISH);
+	deflateEnd(&strm);
+
+	ofstream file(filename, ios::binary);
+	file.write((const char*)buffer.data(), strm.total_out);
+}*/
+
+
+// Handles persisting or restoring expected result
+void save_or_load_baseline(const char *const &scenario, const char *const &baseline, const std::vector<DECIMAL> & lhs, const std::vector<DECIMAL> & rhs, std::vector<DECIMAL> & first_target, std::vector<HRESULT> & first_result)
+{
+	std::ostringstream filename;
+	filename << "baselines/" << baseline << "_" << scenario << "_" << lhs.size() << "x" << rhs.size();
+	std::string values_file = filename.str() + "_values.dat";
+	std::string result_file = filename.str() + "_hresult.dat";
+
+#if defined(SAVE_BASELINE)
+	WriteCompressed(first_target, values_file + "gzip");
+	WriteCompressed(first_result, result_file + "gzip");
+#endif
+
+#if defined (LOAD_BASELINE)
+	ReadCompressed(first_target, values_file + "gzip");
+	ReadCompressed(first_result, result_file + "gzip");
+#endif
+}
+
 
 long long run_benchmark(const char *const name,
 	DECIMAL* lhs, int lhs_count,
@@ -250,7 +377,7 @@ long long run_benchmark(const char *const name,
 		totalSum += func((DWORD32*)&lhs->Lo32, 14);
 	QueryPerformanceCounter(&end);
 
-	auto elapsed = end.QuadPart - start.QuadPart;
+	uint64_t elapsed = end.QuadPart - start.QuadPart;
 	QueryPerformanceFrequency(&frequency);
 
 	printf("%s;%I64u;%f\n", name, elapsed, (double)elapsed / (double)frequency.QuadPart);
@@ -283,7 +410,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 
 void run_benchmarks(int iterations, int elements, int bytes,
 	const char *const baseline_name, const char *const func_name,
-	HRESULT(STDAPICALLTYPE *baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *), 
+	HRESULT(STDAPICALLTYPE *baseline)(const DECIMAL *, const DECIMAL *, DECIMAL *),
 	HRESULT(STDAPICALLTYPE *func)(const DECIMAL *, const DECIMAL *, DECIMAL *)
 )
 {
@@ -307,7 +434,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 
 
 #ifdef TEST_32bit_with_scale
-	for (size_t i = 0; i < numbers.size();++i)
+	for (size_t i = 0; i < numbers.size(); ++i)
 		numbers[i].scale = random_scale(minScale, maxScale);
 
 	compare_benchmark("32bit x 32bit with scale in range [10,26]", baseline_name, func_name, iterations, numbers, numbers, targetA, hresultA, targetC, hresultC, baseline, func);
@@ -315,7 +442,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 
 	//#ifdef TEST_64bit_with_scale_64bit_result
 #ifdef TEST_64bit_with_scale_64bit_result
-	for (size_t i = 0; i < numbers.size();++i)
+	for (size_t i = 0; i < numbers.size(); ++i)
 	{
 		numbers[i].scale = random_scale(minScale, maxScale);
 		numbers[i].Mid32 = numbers[i].Lo32 >> 4;
@@ -340,7 +467,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 #endif
 
 #ifdef TEST_64bit_with_0_scale_128bit_result
-	for (size_t i = 0; i < numbers.size();++i)
+	for (size_t i = 0; i < numbers.size(); ++i)
 	{
 		numbers[i].Mid32 = RotateLeft32(numbers[i].Lo32, 14);
 		numbers[i].scale = 0;
@@ -350,7 +477,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 #endif
 
 #ifdef TEST_64bit_with_scale_128bit_result
-	for (size_t i = 0; i < numbers.size();++i)
+	for (size_t i = 0; i < numbers.size(); ++i)
 	{
 		numbers[i].Mid32 = RotateLeft32(numbers[i].Lo32, 14);
 		numbers[i].scale = random_scale(2, 9);
@@ -360,7 +487,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 #endif
 
 #ifdef TEST_96bit_with_scale_96bit_result_and_overflow
-	for (size_t i = 0; i < numbers.size();++i)
+	for (size_t i = 0; i < numbers.size(); ++i)
 	{
 		numbers[i].scale = rand() % 5;
 		numbers[i].Hi32 = numbers[i].Mid32 = numbers[i].Lo32;
@@ -370,7 +497,7 @@ void run_benchmarks(int iterations, int elements, int bytes,
 #endif
 
 #ifdef TEST_96bit_with_scale_96bit_result_no_overflow
-	for (size_t i = 0; i < numbers.size();++i)
+	for (size_t i = 0; i < numbers.size(); ++i)
 	{
 		numbers[i].scale = (rand() % (maxScale - minScale)) + minScale;
 		numbers[i].Hi32 = numbers[i].Mid32 = numbers[i].Lo32;
@@ -415,7 +542,7 @@ void InitializeTestData(std::vector<DECIMAL>& numbers, int bytes)
 
 	// Generate deterministic random sequence to fill the rest of the numbers
 	srand(42);
-	for (;dest < numbers.size(); ++dest)
+	for (; dest < numbers.size(); ++dest)
 	{
 		DWORD64 number = 0;
 		for (int i = 0; i < bytes; ++i)
@@ -616,14 +743,14 @@ void CompareScaleResult()
 	DWORD64 *pHi64 = (DWORD64*)&input[1];
 	DWORD32 *pLo32 = (DWORD32*)&input[0];
 	std::vector<int> result;
-	
+
 
 	for (int i = 0; i <= 19; ++i)
 	{
 		for (int hi = -1000; hi <= 1000; ++hi)
 		{
 			for (int lo = -100; lo <= 100; ++lo)
-			//for (int lo = 0; lo <= 0; ++lo)
+				//for (int lo = 0; lo <= 0; ++lo)
 			{
 				*pHi64 = PowerOvfl[i].Hi + hi;
 				*pLo32 = PowerOvfl[i].Lo + lo;
@@ -668,7 +795,7 @@ void CompareScaleResult()
 							cin.get();
 							exit(-1);
 						}
-					
+
 						//cout << "Function " << func << " item " << i << " => " << res;
 						/*
 						if (func != 0)
@@ -723,12 +850,14 @@ void signTest(int &a, int &b, int &c)
 
 int __cdecl main()
 {
+	__itt_pause();
+
 	// Use system formatting
 	setlocale(LC_ALL, "");
 
 #ifdef SIGN_TEST
 	int a1, b1, c1;
-	signTest(a1,b1,c1);
+	signTest(a1, b1, c1);
 	printf("a is %d", a1);
 	printf("b is %d", b1);
 #endif
