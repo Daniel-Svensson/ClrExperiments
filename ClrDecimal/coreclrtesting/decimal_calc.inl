@@ -132,7 +132,7 @@ inline uint64_t Mul32By32(uint32_t lhs, uint32_t rhs) { return UInt32x32To64(lhs
 
 
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
-inline uint64_t __fastcall Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _HighProduct)
+inline uint64_t Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _HighProduct)
 {
 #ifdef _TARGET_AMD64_
 	uint64_t temp;
@@ -164,7 +164,7 @@ inline uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 }
 #else
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
-inline uint64_t __fastcall Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
+inline uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 {
 	uint64_t lowRes, sdltmp1, sdltmp2;
 	uint64_t &hiRes = *_HighProduct;
@@ -371,9 +371,11 @@ inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 #endif
 }
 
-#if defined (WIN32) && !defined (_TARGET_AMD64_)
+#if !defined (_TARGET_AMD64_)
 inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
 {
-	return (_HighPart << _Shift) + (_LowPart >> (64 - _Shift));
+	return (_HighPart << _Shift) | (_LowPart >> (64 - _Shift));
 }
+#elif !defined(_WIN32)
+#define ShiftLeft128 __shiftleft128
 #endif
