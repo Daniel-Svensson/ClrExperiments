@@ -38,7 +38,7 @@ STDAPI VarDecDiv_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR, LPDECIMAL pdecRes);
 using namespace std;
 
 
-#define SAVE_BASELINE
+//#define SAVE_BASELINE
 //#define LOAD_BASELINE
 
 //#define NO_COMPARE
@@ -72,7 +72,7 @@ using namespace std;
 //#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
-// #define VERBOSE_OUTPUT 1
+#define VERBOSE_OUTPUT 1
 
 #ifdef _TARGET_X86_
 const char * platform = "new-x86";
@@ -133,8 +133,8 @@ long long run_benchmark(
 
 	auto destination = target.begin();
 	auto res = result.begin();
-	for (int i = 0; i < lhs.size(); ++i)
-		for (int j = 0; j < rhs.size(); ++j)
+	for (size_t i = 0; i < lhs.size(); ++i)
+		for (size_t j = 0; j < rhs.size(); ++j)
 			*(res++) = func(&lhs[i], &rhs[j], &*(destination++));
 	QueryPerformanceCounter(&end);
 
@@ -156,9 +156,9 @@ void CompareResult(
 	size_t errors = 0;
 
 
-	size_t result_idx = -1;
-	for (int i = 0; i < lhs.size(); ++i)
-		for (int j = 0; j < rhs.size(); ++j)
+	size_t result_idx = (size_t)0 - 1;
+	for (size_t i = 0; i < lhs.size(); ++i)
+		for (size_t j = 0; j < rhs.size(); ++j)
 		{
 			++result_idx;
 
@@ -285,18 +285,57 @@ void compare_benchmark(
 template <typename T>
 void WriteCompressed(const std::vector<T> & source, const std::string &filename)
 {
-	const size_t bytes = source.size() * sizeof(T);
+	ofstream file(filename, ios::binary);
+
+#if COMPRESSION
+#if VERBOSE_OUTPUT
+	printf("compressing output\n");
+#endif
+
+	const mz_ulong bytes = (mz_ulong)source.size() * sizeof(T);
 	const unsigned char * data = (const unsigned char *)source.data();
 
 	vector<byte> buffer;
 	buffer.resize(bytes);
 
-	mz_ulong bytes_written = buffer.size();
+	mz_ulong bytes_written = (mz_ulong)buffer.size();
 	int status = mz_compress2(buffer.data(), &bytes_written, data, bytes, 8);
 	assert(status == MZ_OK);
 
-	ofstream file(filename, ios::binary);
+#if VERBOSE_OUTPUT
+	printf("Writing to '%s' (compression status %d)\n", filename.c_str(), status);
+#endif
 	file.write((const char*)buffer.data(), bytes_written);
+#else
+	auto & buffer = source;
+	
+
+	if constexpr (is_same<T,DECIMAL>())
+	{
+		//std::for_each((const DECIMAL*)source.data(), ((const DECIMAL*)source.data())+source.size(),
+		/*std::for_each(source.data(), source.data() + source.size(),
+			[&file](const DECIMAL &d)*/
+		for(const DECIMAL & d : source)
+		{
+			file.write((const char*)&d.Lo32, sizeof(d.Lo32));
+			file.write((const char*)&d.Mid32, sizeof(d.Mid32));
+			file.write((const char*)&d.Hi32, sizeof(d.Hi32));
+			char scaleSign = (d.scale | (DECIMAL_NEG & d.sign));
+			file.write((const char*)&scaleSign, 1);
+		}
+	}
+	else
+	{
+		const auto bytes_written = source.size() * sizeof(T);
+		file.write((const char*)buffer.data(), bytes_written);
+	}
+#endif
+
+	file.close();
+
+#if VERBOSE_OUTPUT
+	printf("Write completed\n");
+#endif
 }
 
 template <typename T>
@@ -309,6 +348,7 @@ void ReadCompressed(std::vector<T> & destination, const std::string &filename)
 
 	fin.seekg(0, ios::beg);
 
+#if COMPRESSION
 	vector<byte> buffer;
 	buffer.resize(bytes);
 
@@ -319,6 +359,11 @@ void ReadCompressed(std::vector<T> & destination, const std::string &filename)
 
 	assert(status == MZ_OK);
 	assert(bytes_written == destination.size() * sizeof(T));
+
+#else
+	auto & buffer = source;
+	fin.read((char*)buffer.data(), bytes);
+#endif
 }
 
 /*
@@ -354,14 +399,19 @@ void save_or_load_baseline(const char *const &scenario, const char *const &basel
 	std::string values_file = filename.str() + "_values.dat";
 	std::string result_file = filename.str() + "_hresult.dat";
 
+#if COMPRESSION
+	values_file = values_file + "gzip";
+	result_file = result_file + "gzip";
+#endif
+
 #if defined(SAVE_BASELINE)
-	WriteCompressed(first_target, values_file + "gzip");
-	WriteCompressed(first_result, result_file + "gzip");
+	WriteCompressed(first_target, values_file);
+	WriteCompressed(first_result, result_file);
 #endif
 
 #if defined (LOAD_BASELINE)
-	ReadCompressed(first_target, values_file + "gzip");
-	ReadCompressed(first_result, result_file + "gzip");
+	ReadCompressed(first_target, values_file);
+	ReadCompressed(first_result, result_file);
 #endif
 }
 
@@ -518,7 +568,7 @@ void InitializeTestData(std::vector<DECIMAL>& numbers, int bytes)
 	assert(numbers.size() >= 2 + 3 * bits + 2 * bytes);
 
 	// Genereate 0x0000000000000000, 0x000000000000000f, 0x00000000000000ff, to 0xffffffffffffffffu
-	int dest = 0;
+	size_t dest = 0;
 	VarDecFromUI8(allBits, &numbers[dest++]);
 	VarDecFromUI8(noBits, &numbers[dest++]);
 
@@ -597,34 +647,84 @@ void test_round_to_nearest()
 
 }
 
+void WriteDecimal(FILE* file, const DECIMAL& dec)
+{
+	fprintf(file, "%I64uULL,%u,%u,%u", dec.Lo64, dec.Hi32, dec.scale, dec.sign ? 1 : 0);
+}
+
+typedef HRESULT (STDAPICALLTYPE *DecimalOp)(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict res);
+
+void WriteOp(FILE* file, const DECIMAL& lhs, const DECIMAL& rhs, const char* name, DecimalOp func)
+{
+	DECIMAL result;
+	HRESULT return_code = func(&lhs, &rhs, &result);
+
+	fprintf(file, "ValidateResult(%s,", name);
+	WriteDecimal(file, lhs);
+	fprintf(file, ",\n");
+	WriteDecimal(file, rhs);
+	fprintf(file, ",\n%ul,\n", return_code);
+	if (return_code == 0)
+		WriteDecimal(file, result);
+	else
+		fprintf(file, "0,0,0,0");
+	fprintf(file, ");\n");
+}
+
+void WriteMul(FILE* file, const DECIMAL& lhs, const DECIMAL& rhs)
+{
+	WriteOp(file, lhs, rhs, "VarDecMul_x64", VarDecMul_x64);
+}
+
+
 void AdditionalTests(const int &iterations)
 {
 	// Additional tests
 	vector<DECIMAL> numbers;
 	numbers.reserve(2 * (DEC_SCALE_MAX + 1) * 96);
 	BYTE signs[] = { 0, DECIMAL_NEG };
-	for (byte sign : signs)
+	const int bitsteps = 3;
+	const uint32_t bitmask = (1 << (bitsteps + 1)) - 1;
+
+	for (BYTE sign : signs)
 	{
 		DECIMAL current;
 		current.sign = sign;
-		for (size_t scale = 0; scale <= DEC_SCALE_MAX; scale++)
+		for (size_t scale = 0; scale <= DEC_SCALE_MAX; scale+=3)
 		{
 			current.scale = (BYTE)scale;
 			current.Lo64 = MAXDWORD64;
 			current.Hi32 = 0;
 
 			//for (int bit = 0; bit < 96; ++bit)
-			for (int bit = 0; bit < 32; ++bit)
+			for (int bit = 0; bit < 32; bit += bitsteps)
 			{
 				if (current.Lo64 == MAXDWORD64)
-					current.Hi32 = (current.Hi32 << 1) | 1;
-				current.Lo64 = (current.Lo64 << 1) | 1;
+					current.Hi32 = (current.Hi32 << bitsteps) | bitmask;
+				current.Lo64 = (current.Lo64 << bitsteps) | bitmask;
 				numbers.push_back(current);
 			}
 		}
 	}
 	vector<DECIMAL> expected(numbers.size()*numbers.size()), actual(numbers.size()*numbers.size());
 	vector<HRESULT> expected_res(numbers.size()*numbers.size()), actual_res(numbers.size()*numbers.size());
+
+
+	FILE* mul = fopen("compare_mul.cpp", "w");
+	FILE* add = fopen("compare_add.cpp", "w");
+	FILE* div = fopen("compare_div.cpp", "w");
+	for (size_t i = 0; i < numbers.size(); i++)
+	{
+		for (size_t j =i; j < numbers.size(); j += 3)
+		{
+			WriteOp(mul, numbers[i], numbers[j], "VarDecMul_x64", VarDecMul_x64);
+			WriteOp(add, numbers[i], numbers[j], "VarDecAdd_x64", VarDecAdd_x64);
+			WriteOp(div, numbers[i], numbers[j], "VarDecDiv_x64", VarDecDiv_x64);
+		}
+	}
+	fclose(mul);
+	fclose(add);
+	fclose(div);
 
 #ifdef TEST_MULTIPLY
 #ifdef COMPARE_OLEAUT
@@ -733,6 +833,7 @@ int SearchScale32(const ULONG* rgulQuo, int iScale)
 }
 
 int SearchScale32(const ULONG* rgulQuo, int iScale);
+void InitializeDecimal(DECIMAL &expected, const uint64_t &expected_low64, const uint32_t &expected_hi32, const uint8_t &expected_scale, bool expected_sign);
 int SearchScale64(const uint32_t(&rgulQuo)[4], int iScale);
 ULONG IncreaseScale(ULONG *rgulNum, ULONG ulPwr);
 
@@ -847,6 +948,47 @@ void signTest(int &a, int &b, int &c)
 	printf("b is %d", b);
 }
 #endif
+
+void InitializeDecimal(DECIMAL &dec, const uint64_t &low64, const uint32_t &hi32, const uint8_t &scale, BYTE sign)
+{
+	dec.Lo64 = low64;
+	dec.Hi32 = hi32;
+	dec.scale = scale;
+	dec.sign = (sign != 0) ? DECIMAL_NEG : 0;
+}
+
+void ValidateResult( HRESULT (*func)(const DECIMAL*, const DECIMAL*, DECIMAL*),
+	uint64_t lhs_low64, uint32_t lhs_hi32, uint8_t lhs_scale, BYTE lhs_sign,
+	uint64_t rhs_low64, uint32_t rhs_hi32, uint8_t rhs_scale, BYTE rhs_sign,
+	HRESULT expected_result,
+	uint64_t expected_low64, uint32_t expected_hi32, uint8_t expected_scale, BYTE expected_sign)
+{
+	DECIMAL lhs, rhs, actual, expected;
+	InitializeDecimal(lhs, lhs_low64, lhs_hi32, lhs_scale, lhs_sign);
+	InitializeDecimal(rhs, rhs_low64, rhs_hi32, rhs_scale, rhs_sign);
+	InitializeDecimal(expected, expected_low64, expected_hi32, expected_scale, expected_sign);
+
+	HRESULT actual_result = func(&lhs, &rhs, &actual);
+
+	if (actual.Lo64 != expected.Lo64
+		|| actual.Hi32 != expected.Hi32
+		|| actual.scale != expected.scale
+		|| actual.sign != expected.sign
+		|| actual_result != expected_result)
+	{
+		printf("(%i) %lu %I64u / 10^%i  * (%i) %lu %I64u / 10^%i: \n",
+			lhs.sign, lhs.Hi32, lhs.Lo64, lhs.scale,
+			rhs.sign, rhs.Hi32, rhs.Lo64, rhs.scale);
+
+		if (expected_result != actual_result)
+			printf(" RESULT expected %li actual %li\n", expected_result, actual_result);
+		else
+			printf(" PRODUCT expected (%i) %lu %I64u / 10^%i but got (%i) %lu %I64u / 10^%i\n",
+				expected.sign, expected.Hi32, expected.Lo64, expected.scale,
+				actual.sign, actual.Hi32, actual.Lo64, actual.scale
+			);
+	}
+}
 
 int __cdecl main()
 {
