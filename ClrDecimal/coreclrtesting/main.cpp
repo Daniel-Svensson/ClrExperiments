@@ -107,7 +107,7 @@ void TestMultiply(DECIMAL a, DECIMAL b)
 {
 	DECIMAL prod, prod2;
 	HRESULT res1 = VarDecMul(&a, &b, &prod);
-	HRESULT res2 = VarDecMul_x64(&a, &b, &prod2);
+	HRESULT res2 = DecimalMul(&a, &b, &prod2);
 
 	printf("Original DecMul %lu %lu %lu sign %i scale %i\n (RETURN %li)", prod.Hi32, prod.Mid32, prod.Lo32, (int)prod.sign, (int)prod.scale, res1);
 	printf("Ny DecMul %lu %lu %lu sign %i scale %i (RETURN %li)\n", prod2.Hi32, prod2.Mid32, prod2.Lo32, (int)prod2.sign, (int)prod2.scale, res2);
@@ -673,7 +673,7 @@ void WriteOp(FILE* file, const DECIMAL& lhs, const DECIMAL& rhs, const char* nam
 
 void WriteMul(FILE* file, const DECIMAL& lhs, const DECIMAL& rhs)
 {
-	WriteOp(file, lhs, rhs, "VarDecMul_x64", VarDecMul_x64);
+	WriteOp(file, lhs, rhs, "DecimalMul", DecimalMul);
 }
 
 
@@ -717,9 +717,9 @@ void AdditionalTests(const int &iterations)
 	{
 		for (size_t j =i; j < numbers.size(); j += 3)
 		{
-			WriteOp(mul, numbers[i], numbers[j], "VarDecMul_x64", VarDecMul_x64);
-			WriteOp(add, numbers[i], numbers[j], "VarDecAdd_x64", VarDecAdd_x64);
-			WriteOp(div, numbers[i], numbers[j], "VarDecDiv_x64", VarDecDiv_x64);
+			WriteOp(mul, numbers[i], numbers[j], "DecimalMul", DecimalMul);
+			WriteOp(add, numbers[i], numbers[j], "DecimalAdd", DecimalAdd);
+			WriteOp(div, numbers[i], numbers[j], "DecimalDiv", DecimalDiv);
 		}
 	}
 	fclose(mul);
@@ -731,14 +731,14 @@ void AdditionalTests(const int &iterations)
 	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalMul
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
 	compare_benchmark("VarDecMul all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_PALRT,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecMul_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalMul
 	);
 #endif // COMPARE_CORECLR
 #endif
@@ -748,14 +748,14 @@ void AdditionalTests(const int &iterations)
 	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalAdd
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
 	compare_benchmark("VarDecAdd all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_PALRT,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecAdd_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalAdd
 	);
 #endif // COMPARE_CORECLR
 #endif
@@ -765,14 +765,14 @@ void AdditionalTests(const int &iterations)
 	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalSub
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
 	compare_benchmark("VarDecSub all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_PALRT,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecSub_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalSub
 	);
 #endif // COMPARE_CORECLR
 #endif
@@ -782,14 +782,14 @@ void AdditionalTests(const int &iterations)
 	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "oleaut", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalDiv
 	);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
 	compare_benchmark("VarDecDiv all 0..111 patterns for all signs and scales", "palrt", platform, iterations, numbers,
 		numbers, expected, expected_res, actual, actual_res,
 		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_PALRT,
-		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))VarDecDiv_x64
+		(HRESULT(STDAPICALLTYPE *)(const DECIMAL*, const DECIMAL*, DECIMAL*))DecimalDiv
 	);
 #endif // COMPARE_CORECLR
 #endif
@@ -1041,7 +1041,7 @@ int __cdecl main()
 
 
 	VarDecMul_PALRT(&a, &b, &expected);
-	VarDecMul_x64(&a, &b, &actual);
+	DecimalMul(&a, &b, &actual);
 
 	assert(VarDecCmp(&actual, &expected) == VARCMP_EQ);
 	assert(actual.Hi32 == expected.Hi32);
@@ -1068,37 +1068,37 @@ int __cdecl main()
 
 #ifdef TEST_MULTIPLY
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecMul", platform, VarDecMul, VarDecMul_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecMul", platform, VarDecMul, DecimalMul);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecMul", platform, VarDecMul_PALRT, VarDecMul_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecMul", platform, VarDecMul_PALRT, DecimalMul);
 #endif // COMPARE_CORECLR
 #endif
 
 #ifdef TEST_DIV
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", platform, VarDecDiv, VarDecDiv_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecDiv", platform, VarDecDiv, DecimalDiv);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecDiv", platform, VarDecDiv_PALRT, VarDecDiv_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecDiv", platform, VarDecDiv_PALRT, DecimalDiv);
 #endif // COMPARE_CORECLR
 #endif
 
 #ifdef TEST_ADD
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecAdd", platform, VarDecAdd, VarDecAdd_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecAdd", platform, VarDecAdd, DecimalAdd);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecAdd", platform, VarDecAdd_PALRT, VarDecAdd_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecAdd", platform, VarDecAdd_PALRT, DecimalAdd);
 #endif // COMPARE_CORECLR
 #endif
 
 #ifdef TEST_SUB
 #ifdef COMPARE_OLEAUT
-	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecSub", platform, VarDecSub, VarDecSub_x64);
+	run_benchmarks(iterations, elements, bytes, "oleauto-VarDecSub", platform, VarDecSub, DecimalSub);
 #endif // COMPARE_OLEAUT
 #ifdef COMPARE_CORECLR
-	run_benchmarks(iterations, elements, bytes, "palrt-VarDecSub", platform, VarDecSub_PALRT, VarDecSub_x64);
+	run_benchmarks(iterations, elements, bytes, "palrt-VarDecSub", platform, VarDecSub_PALRT, DecimalSub);
 #endif // COMPARE_CORECLR
 #endif
 

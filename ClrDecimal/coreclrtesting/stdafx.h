@@ -34,19 +34,6 @@ typedef uint64_t DWORDLONG;
 // Following is from coreclr headers
 #define LIMITED_METHOD_CONTRACT
 #define DEC_SCALE_MAX 28
-typedef union {
-	uint64_t int64;
-	struct {
-#ifdef BIGENDIAN
-		uint32_t Hi;
-		uint32_t Lo;
-#else
-		uint32_t Lo;
-		uint32_t Hi;
-#endif
-	} u;
-} SPLIT64;
-
 
 #ifndef UInt32x32To64
 #define UInt32x32To64(a, b) ((uint64_t)((uint32_t)(a)) * (uint64_t)((uint32_t)(b)))

@@ -13,6 +13,19 @@ inline ULONG & DECIMAL_MID32(DECIMAL &dec) { return dec.Mid32; }
 inline ULONG & DECIMAL_LO32(DECIMAL &dec) { return dec.Lo32; }
 inline USHORT & DECIMAL_SIGNSCALE(DECIMAL &dec) { return dec.signscale; }
 
+typedef union {
+	uint64_t int64;
+	struct {
+#ifdef BIGENDIAN
+		uint32_t Hi;
+		uint32_t Lo;
+#else
+		uint32_t Lo;
+		uint32_t Hi;
+#endif
+	} u;
+} SPLIT64;
+
 
 inline DWORDLONG DivMod32by32(ULONG num, ULONG den)
 {

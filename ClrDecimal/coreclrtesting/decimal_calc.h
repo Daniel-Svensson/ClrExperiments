@@ -1,20 +1,18 @@
 #pragma once
 
-#ifndef  _DECIMAL_CALC_
+#ifndef _DECIMAL_CALC_
 #define _DECIMAL_CALC_
 
-#include <cstdint>
-
 #if defined(_WIN32)
-	#if 1
-	#include <windows.h>
-	#else
-		#ifndef STDAPI
-		#define STDAPI extern "C" long __stdcall
-		#endif
-	#endif
+#if 1
+#include <windows.h>
+#else
+#ifndef STDAPI
+#define STDAPI extern "C" long __stdcall
+#endif
+#endif
 #else // ! _WIN32
-	typedef uint32_t HRESULT;
+typedef int32_t HRESULT;
 #endif
 
 #ifndef STDAPI
@@ -42,10 +40,17 @@ struct DECIMAL;
 
 
 // Prototype X64 Implementations
-STDAPI VarDecMul_x64(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
-STDAPI VarDecDiv_x64(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
-STDAPI VarDecAdd_x64(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
-STDAPI VarDecSub_x64(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
-STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, char bSign);
+STDAPI DecimalMul(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
+STDAPI DecimalDiv(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
+STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, char bSign);
+
+inline HRESULT DecimalAdd(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res)
+{
+	return DecimalAddSub(l, r, res, 0);
+}
+inline HRESULT DecimalSub(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res)
+{
+	return DecimalAddSub(l, r, res, DECIMAL_NEG);
+}
 
 #endif // ! _DECIMAL_CALC_

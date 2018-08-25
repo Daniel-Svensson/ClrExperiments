@@ -5,68 +5,43 @@
 
 // #undef _TARGET_X86_
 // #define _TARGET_ARM_
-#include "decimal_calc.h"
-
 #include <cassert>
 #include <functional> // swap
 #include <algorithm>
 #include <cstdint>
+#include <windows.h>
+#include "decimal_calc.h"
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#else // CLANG? 
+#if defined(_TARGET_X86_) || defined(_TARGET_AMD64_)
+#include <x86intrin.h>
+#endif
+#endif
+
+#if 0
+#include "common.h"
+#include "object.h"
+#include "excep.h"
+#include "frames.h"
+#include "vars.hpp"
+#include "decimal.h"
+#include "string.h"
 
 
-// oleauto on windows defines 
-#ifndef __wtypes_h__
-struct DECIMAL
-{
-	uint16_t wReserved;
-	union {
-		struct
-		{
-			uint8_t scale;
-			uint8_t sign;
-		};
-		uint16_t signscale;
-	};
-	uint32_t Hi32;
-	union
-	{
-		struct
-		{
-			uint32_t Lo32;
-			uint32_t Mid32;
-		};
-		uint64_t Lo64;
-	};
-};
-#undef DECIMAL_NEG
-const uint8_t DECIMAL_NEG = 0x80;
-#define __wtypes_h__
+#endif
+
+#define PROFILE_NOINLINE
+
+// Following is from coreclr headers
+#ifndef DEC_SCALE_MAX
+#define DEC_SCALE_MAX 28
 #endif
 
 #include "decimal_calc.inl"
 
-#if defined(_WIN32)
-//#include <windows.h>
-//#include <intrin.h>
-
-#else // CLANG? 
-#define __fastcall
-#ifndef NOERROR
-#define NOERROR 0
-#define DISP_E_OVERFLOW 0x8002000A
-#define DISP_E_DIVBYZERO 0x80020012
-typedef uint32_t BOOL;
-typedef bool BOOLEAN;
-const uint32_t TRUE = 1;
-const uint32_t FALSE = 0;
-#endif // !NOERROR
-#endif
-
-using std::min;
-using std::max;
-
 uint32_t IncreaseScale96By32(uint32_t *rgulNum, uint32_t ulPwr);
-
-// TODO: reference additional headers your program requires here
 
 // ------------------------- INSTRINCTS AND SIMPLE HELPERS ------------------------
 
@@ -230,24 +205,24 @@ uint64_t IncreaseScale96By64(uint32_t *rgulNum, uint64_t ulPwr)
 	LIMITED_METHOD_CONTRACT;
 
 	uint64_t *rgullNum = (uint64_t*)rgulNum;
-	SPLIT64   sdlTmp;
+	uint64_t tmp64;
 
 	uint64_t hi;
 	uint64_t overflow;
 	rgullNum[0] = Mul64By64(rgullNum[0], ulPwr, &hi);
-	sdlTmp.int64 = Mul64By64(rgulNum[2], ulPwr, &overflow);
+	tmp64 = Mul64By64(rgulNum[2], ulPwr, &overflow);
 
 	// We will never overflow past 160 bits (32bit stored in overflow)
-	auto carry = AddCarry64(0, sdlTmp.int64, hi, &sdlTmp.int64);
+	auto carry = AddCarry64(0, tmp64, hi, &tmp64);
 	AddCarry64(carry, overflow, 0, &overflow);
 
-	rgulNum[2] = sdlTmp.u.Lo;
+	rgulNum[2] = low32(tmp64);
 
 	// shift [overflow, sdlTemp] 32bit right and return lower 64 bits
 	// we should return bits [160..97] of our 192 bit result 
 	// use lo32 bits of overflow [192..129] by 32 bit left shift
 	// use hi32 bits of sdlTmp   [128..97] by 32 bit left shift
-	return (overflow << 32) + sdlTmp.u.Hi;
+	return (((uint64_t)(uint32_t)overflow) << 32) + hi32(tmp64);
 }
 #endif
 
@@ -283,9 +258,9 @@ uint32_t IncreaseScale96By32(uint32_t *rgulNum, uint32_t ulPwr)
 ***********************************************************************/
 int SearchScale(ULONG ulResHi, ULONG ulResMid, ULONG ulResLo, int iScale);
 
-PROFILE_NOINLINE // ONLY FOR TESTING, TODO: REMOVE IT IS Important to inline for perf
+PROFILE_NOINLINE 
 				 // Assumes input is not 0
-	int SearchScale64(const uint32_t(&rgulQuo)[4], int iScale)
+int SearchScale64(const uint32_t(&rgulQuo)[4], int iScale)
 {
 #if !defined(_TARGET_AMD64_)
 	return SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
@@ -542,8 +517,8 @@ int ScaleResult_x64(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_range_(
 {
 	LIMITED_METHOD_CONTRACT;
 
-	__assume(0 <= iHiRes &&  iHiRes <= 2);
-	__assume(0 <= iScale &&  iScale <= 2 * DEC_SCALE_MAX);
+	__assume(0 <= iHiRes && iHiRes <= 2);
+	__assume(0 <= iScale && iScale <= 2 * DEC_SCALE_MAX);
 
 	int     iNewScale;
 	uint32_t  ulMsb;
@@ -661,11 +636,11 @@ int ScaleResult_x64(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_range_(
 
 //**********************************************************************
 //
-// VarDecMul_x64 - Decimal Multiply
-// x64 implementation of VarDecMul
+// DecimalMul - Decimal Multiply
+// 64bit optimized implementation of VarDecMul
 //
 //**********************************************************************
-STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict res)
+STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict res)
 {
 	uint64_t lo;
 	uint64_t hi;
@@ -791,10 +766,10 @@ STDAPI VarDecMul_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __res
 
 //**********************************************************************
 //
-// DecAddSub_x64 - Decimal Add / Subtract
+// DecimalAddSub - Decimal Add / Subtract
 //
 //**********************************************************************
-STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, char bSign)
+STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, char bSign)
 {
 	DECIMAL   decTmp;
 	DECIMAL   decRes;
@@ -1005,7 +980,7 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 				uint64_t hi, mul_carry;
 				rgulNum[0] = Mul64By64(ullPwr, rgulNum[0], &hi);
 				uint64_t product = Mul64By64(ullPwr, rgulNum[1], &mul_carry);
-				uint64_t product2 = ullPwr*rgulNum[2];
+				uint64_t product2 = ullPwr * rgulNum[2];
 
 				auto add_carry = AddCarry64(0, product, hi, &rgulNum[1]);
 				AddCarry64(add_carry, mul_carry, product2, &rgulNum[2]);
@@ -1095,26 +1070,6 @@ STDAPI DecAddSub_x64(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 RetDec:
 	COPYDEC(*pdecRes, decRes);
 	return NOERROR;
-}
-
-//**********************************************************************
-//
-// VarDecAdd_x64 - x64 implementation of VarDecAdd
-//
-//**********************************************************************
-STDAPI VarDecAdd_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict pdecRes)
-{
-	return DecAddSub_x64(pdecL, pdecR, pdecRes, 0);
-}
-
-//**********************************************************************
-//
-// VarDecSub_x64 - x64 implementation of VarDecSub
-//
-//**********************************************************************
-STDAPI VarDecSub_x64(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict pdecRes)
-{
-	return DecAddSub_x64(pdecL, pdecR, pdecRes, DECIMAL_NEG);
 }
 
 /***
@@ -1449,15 +1404,12 @@ uint64_t Div128By64_x64(uint64_t *rgullNum, uint64_t ullDen)
 #endif
 }
 
-
-
 //**********************************************************************
 //
-// VarDecDiv_x64 - Decimal Divide
-// x64 Implementation of VarDecDiv
+// DecimalDiv - Decimal Divide
 //
 //**********************************************************************
-STDAPI VarDecDiv_x64(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restrict  pdecRes)
+STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restrict  pdecRes)
 {
 	uint32_t   rgulQuo[4]; //[3];
 	uint64_t rgullQuoSave[2];

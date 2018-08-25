@@ -29,41 +29,21 @@
 // * ShiftLeft128
 //
 
-#include <cstdint>
+typedef unsigned char carry_t;
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#else // CLANG? 
-#if defined(_TARGET_X86_) || defined(_TARGET_AMD64_)
-#include <x86intrin.h>
-#endif
-#endif
-
-
-inline uint32_t & low32(uint64_t &value) { return *(uint32_t*)&((SPLIT64*)&value)->u.Lo; }
+// Access least significant 32 bits of 64bit value
+inline uint32_t & low32(uint64_t &value) { return *(uint32_t*)&((ULARGE_INTEGER*)&value)->u.LowPart; }
+// Access least significant 32 bits of 64bit value
 inline const uint32_t & low32(const uint64_t &value) {
-	return *(const uint32_t*)&((SPLIT64*)&value)->u.Lo;
+	return *(const uint32_t*)&((ULARGE_INTEGER*)&value)->u.LowPart;
 }
 
-inline uint32_t & hi32(uint64_t &value) { return *(uint32_t*)&((SPLIT64*)&value)->u.Hi; }
+// Access most significant 32 bits of 64bit value
+inline uint32_t & hi32(uint64_t &value) { return *(uint32_t*)&((ULARGE_INTEGER*)&value)->u.HighPart; }
+// Access most significant 32 bits of 64bit value
 inline const uint32_t & hi32(const uint64_t &value) {
-	return *(const uint32_t*)&((SPLIT64*)&value)->u.Hi;
+	return *(const uint32_t*)&((ULARGE_INTEGER*)&value)->u.HighPart;
 }
-
-// TODO: Define addcaryy etc for ARM 
-// CLANG builtins availible 
-/*
-unsigned char      __builtin_addcb (unsigned char x, unsigned char y, unsigned char carryin, unsigned char *carryout);
-unsigned short     __builtin_addcs (unsigned short x, unsigned short y, unsigned short carryin, unsigned short *carryout);
-unsigned           __builtin_addc  (unsigned x, unsigned y, unsigned carryin, unsigned *carryout);
-unsigned long      __builtin_addcl (unsigned long x, unsigned long y, unsigned long carryin, unsigned long *carryout);
-unsigned long long __builtin_addcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
-unsigned char      __builtin_subcb (unsigned char x, unsigned char y, unsigned char carryin, unsigned char *carryout);
-unsigned short     __builtin_subcs (unsigned short x, unsigned short y, unsigned short carryin, unsigned short *carryout);
-unsigned           __builtin_subc  (unsigned x, unsigned y, unsigned carryin, unsigned *carryout);
-unsigned long      __builtin_subcl (unsigned long x, unsigned long y, unsigned long carryin, unsigned long *carryout);
-unsigned long long __builtin_subcll(unsigned long long x, unsigned long long y, unsigned long long carryin, unsigned long long *carryout);
-*/
 
 #if defined(_TARGET_X86_)  || defined(_TARGET_AMD64_)
 #define AddCarry32 _addcarry_u32
@@ -128,20 +108,24 @@ inline unsigned char SubBorrow64(unsigned char carry, uint64_t lhs, uint64_t rhs
 
 // -------------------------- MULTIPLY ----------------------
 
-inline uint64_t Mul32By32(uint32_t lhs, uint32_t rhs) { return UInt32x32To64(lhs, rhs); }
+inline uint64_t Mul32By32(uint32_t lhs, uint32_t rhs) { return ((uint64_t)lhs) *((uint64_t)rhs); }
 
 
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
 inline uint64_t Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _HighProduct)
 {
-#ifdef _TARGET_AMD64_
+#if defined(_TARGET_AMD64_) && defined(_MSC_VER)
 	uint64_t temp;
 	auto res = _umul128(lhs, rhs, &temp);
 	*_HighProduct = (uint32_t)temp;
 	return res;
+#elif defined(_TARGET_AMD64_)
+	__uint128_t res = ((__uint128_t)lhs) * ((__uint128_t)rhs);
+	*_HighProduct = (uint32_t)(res >> 64);
+	return (uint64_t)res;
 #else
-	uint64_t lowRes = UInt32x32To64(low32(lhs), rhs); // quo * lo divisor
-	uint64_t hiRes = UInt32x32To64(hi32(lhs), rhs); // quo * mid divisor
+	uint64_t lowRes = Mul32By32(low32(lhs), rhs); // quo * lo divisor
+	uint64_t hiRes = Mul32By32(hi32(lhs), rhs); // quo * mid divisor
 
 	hiRes += hi32(lowRes);
 
@@ -154,12 +138,12 @@ inline uint64_t Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _HighProduct)
 
 #if defined(_TARGET_AMD64_) && defined(_MSC_VER)
 #define Mul64By64 _umul128
-#elif defined(_TARGET_AMD64_)
+#elif defined(_TARGET_AMD64_) && defined(__GNUC__) //defined(__SIZEOF_INT128__     )
 // CLANG/GCC Does not contain umul instrinct, but has __uint128 datatype
 inline uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 {
 	__uint128_t res = ((__uint128_t)lhs) * ((__uint128_t)rhs);
-	*_HighProduct = ((uint64_t*)res)[1];
+	*_HighProduct = (uint64_t)(res >> 64);
 	return (uint64_t)res;
 }
 #else
@@ -171,21 +155,21 @@ inline uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 
 	unsigned char carry = 0;
 
-	lowRes = UInt32x32To64(low32(lhs), low32(rhs));
+	lowRes = Mul32By32(low32(lhs), low32(rhs));
 	if ((hi32(lhs) | hi32(rhs)) == 0)
 	{
 		*_HighProduct = 0;
 		return lowRes;
 	}
 
-	sdltmp1 = UInt32x32To64(hi32(lhs), low32(rhs));
+	sdltmp1 = Mul32By32(hi32(lhs), low32(rhs));
 	carry = AddCarry32(0, low32(sdltmp1), hi32(lowRes), &hi32(lowRes));
 
-	hiRes = UInt32x32To64(hi32(lhs), hi32(rhs));
+	hiRes = Mul32By32(hi32(lhs), hi32(rhs));
 	carry = AddCarry32(carry, hi32(sdltmp1), low32(hiRes), &low32(hiRes));
 	AddCarry32(carry, hi32(hiRes), 0, &hi32(hiRes));
 
-	sdltmp2 = UInt32x32To64(low32(lhs), hi32(rhs));
+	sdltmp2 = Mul32By32(low32(lhs), hi32(rhs));
 	carry = AddCarry32(0, low32(sdltmp2), hi32(lowRes), &hi32(lowRes));
 	carry = AddCarry32(carry, hi32(sdltmp2), low32(hiRes), &low32(hiRes));
 	AddCarry32(carry, hi32(hiRes), 0, &hi32(hiRes));
@@ -252,7 +236,7 @@ inline uint64_t DivMod64By32_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
 	{
 		uint64_t divisor;
 		hi32(divisor) = hi;
-		hi32(divisor) = lo;
+		low32(divisor) = lo;
 
 		uint64_t res;
 		hi32(res) = static_cast<uint32_t>(divisor % ulDen);
@@ -339,43 +323,32 @@ extern "C" uint64_t DivMod128By64InPlace(uint64_t* pLow, uint64_t hi, uint64_t u
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline bool BitScanMsb32(uint32_t *Index, uint32_t Mask) {
-#ifdef _WIN32
 	return BitScanReverse((DWORD*)Index, Mask);
-#else
-	// G++/Clang __builtin_clz count LSB as 1, and MSB as 0 while BitScanReverse works in other way around
-	*Index = 31 - __builtin_clz(Mask);
-	return (Mask != 0);
-#endif
 }
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 {
-#if defined(_WIN32) && defined(_TARGET_AMD64_)
+#if defined(BitScanReverse64) || !defined(WIN32)
 	return BitScanReverse64((DWORD*)Index, Mask);
-#elif defined(__GNUC__) || defined(__CLANG__)
-	static_assert(sizeof(long) == 8, "assuming long is 64 bits");
-	*Index = 63 - __builtin_clzl(Mask);
-	return (Mask != 0);
 #else
-	unsigned char res = BitScanMsb32(Index, hi32(Mask));
-	if (res)
+	unsigned char found = BitScanMsb32(Index, hi32(Mask));
+	if (found)
 	{
 		*Index += 32;
 	}
 	else
 	{
-		res = BitScanMsb32(Index, low32(Mask));
+		found = BitScanMsb32(Index, low32(Mask));
 	}
-	return res;
+	return found;
 #endif
 }
 
-#if !defined (_TARGET_AMD64_)
+#if !defined (_TARGET_AMD64_) || !defined(_WIN32)
 inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
 {
 	return (_HighPart << _Shift) | (_LowPart >> (64 - _Shift));
 }
-#elif !defined(_WIN32)
-#define ShiftLeft128 __shiftleft128
 #endif
+

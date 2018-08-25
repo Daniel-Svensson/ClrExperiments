@@ -1,0 +1,41 @@
+Mul;x64 - previous version;x64;x86;w32 - no asm
+compared  against;oleaut;oleaut;coreclr;coreclr
+;;;;
+32 x 32 bit;>17%;14%;-1%;-2%
+32 x 32 bit with scale;>127%;126%;4%;-5%
+64 x 64 -> 64 bit result;>195%;>195%;55%;43%
+64 x 64 -> 128 bit result;144;137%;26%;25%
+64 x 64 -> 128 bit result with rescale;124;158%;67%;11%
+96 x 96 bit with overflow;>270;219%;5%;6%
+96 x 96 bit no overflow;>210%;279%;117%;10%
+Mixed input (all 00...111 bitpatterns, with all scales and signs);~160%;226%;99%;8%
+;;;;
+Add;;;;
+32 x 32 bit;11%;~9%;20%;17%
+32 x 32 bit with scale;21%;~30%;6%;7%
+64 + 32 bit varying scale;60;82%;5%;-3%
+64 x 64 bit no scale;31;31%;20%;17%
+64 x 64 bit varying scale;42;36%;8%;9%
+96 x 96 bit;67-90%;105-128%;70-78%;17%
+Mixed input (all 00...111 bitpatterns, with all scales and signs);110%;153%;70%;14%
+;;;;
+Sub;;;;
+32 x 32 bit;1%;4%;3%;0
+32 x 32 bit with scale;20%;30%;5%;6%
+64 + 32 bit varying scale;64%;85%;4%;-2%
+64 x 64 bit no scale;1%;4%;2%;0
+64 x 64 bit varying scale;36%;37%;6;8,00%
+96 x 96 bit;70-97%;110-132%;65-75%;18%
+Mixed input (all 00...111 bitpatterns, with all scales and signs);110%;153%;69%;14%
+;;;;
+Div;x64 - previous version;x64;x64 - previous version;x64
+compared  against;oleaut;oleaut;coreclr;coreclr
+;;;;
+32 x 32 bit;52;53;54;55
+32 x 32 bit with scale;38;38;40;40
+64 x 32 bit with scale;80;77;74;70
+64 x 64 bit;118;116;113;110
+64 x 64 bit with scale;101;99;97;93
+96 x 96 bit high scales;109;108;109;108
+96 x 96 bit smallar scales;105;105;106;105
+Mixed input (all 00...111 bitpatterns, with all scales and signs);;96;;97
