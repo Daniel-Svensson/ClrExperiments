@@ -6,13 +6,6 @@
 #define Div64by32(num, den) ((ULONG)((DWORDLONG)(num) / (ULONG)(den)))
 #define Mod64by32(num, den) ((ULONG)((DWORDLONG)(num) % (ULONG)(den)))
 
-inline void DECIMAL_LO64_SET(DECIMAL & dec, DWORD64 value) { dec.Lo64 = value; }
-inline DWORD64 & DECIMAL_LO64_GET(DECIMAL & dec) { return dec.Lo64; }
-inline ULONG & DECIMAL_HI32(DECIMAL &dec) { return dec.Hi32; }
-inline ULONG & DECIMAL_MID32(DECIMAL &dec) { return dec.Mid32; }
-inline ULONG & DECIMAL_LO32(DECIMAL &dec) { return dec.Lo32; }
-inline USHORT & DECIMAL_SIGNSCALE(DECIMAL &dec) { return dec.signscale; }
-
 typedef union {
 	uint64_t int64;
 	struct {
