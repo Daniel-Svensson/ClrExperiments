@@ -1,9 +1,9 @@
 LIBRARY decimalDLL
 EXPORTS
-	VarDecMul_x64 @1
-	VarDecAdd_x64 @2
-	VarDecSub_x64 @3
-	VarDecDiv_x64 @4
+	DecimalMul @1
+	DecimalAdd @2
+	DecimalSub @3
+	DecimalDiv @4
 	VarDecMul_PALRT @5
 	VarDecAdd_PALRT @6
 	VarDecSub_PALRT @7

@@ -96,7 +96,6 @@
     <MASM Include="..\coreclrtesting\udiv128.masm">
       <FileType>Document</FileType>
     </MASM>
-    <None Include="Source.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

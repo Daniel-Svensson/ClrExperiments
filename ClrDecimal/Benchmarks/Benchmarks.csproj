@@ -2,13 +2,14 @@
   <PropertyGroup>
     <OutputType>exe</OutputType>
     <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>   
-    <!--<TargetFrameworks>net47;netcoreapp2.0</TargetFrameworks>-->
-    <TargetFramework>net47</TargetFramework>
+    <TargetFrameworks>net47;netcoreapp2.0</TargetFrameworks>
+    <!--<TargetFramework>net47</TargetFramework>-->
     <OutputTypeEx>exe</OutputTypeEx>
     <!--<RuntimeIdentifier>win10-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>
     <!--<RuntimeIdentifiers>win7-x64;win7-x86</RuntimeIdentifiers>-->
     <Platforms>AnyCPU;x64;x86</Platforms>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
@@ -28,10 +29,10 @@
   </ItemGroup>
   <!-- Nuget Packages-->
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.10.9" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.11.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='net47'">
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.10.9" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.11.1" />
   </ItemGroup>
   <!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">-->
   <!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">

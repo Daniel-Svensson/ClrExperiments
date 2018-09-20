@@ -1,0 +1,1 @@
+#include "..\coreclrtesting\decimal_calc.h"

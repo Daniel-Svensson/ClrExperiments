@@ -45,10 +45,10 @@ namespace Benchmarks
 
         static void Main(string[] args)
         {
-            PrintStats(Distributions.AddPentP.LoadFile());
+            //PrintStats(Distributions.AddPentP.LoadFile());
 
             //(new Distributions.MulPentP()).NetFramework();
-            (new Distributions.DivPentP()).NetFramework();
+            //(new Distributions.DivPentP()).NetFramework();
 
             var config = DefaultConfig.Instance
                 .With(Job.MediumRun
@@ -89,13 +89,13 @@ namespace Benchmarks
             //BenchmarkRunner.Run<Add96by96_Carry>(config);
             //BenchmarkRunner.Run<Add96by96>(config);
             //BenchmarkRunner.Run<Mul96by96>(config);
-            //
+            //BenchmarkRunner.Run<Div96by96>(config);
 
             BenchmarkRunner.Run<InterestBenchmark>(config);
 
-            BenchmarkRunner.Run<Distributions.AddPentP>(config);
-            BenchmarkRunner.Run<Distributions.MulPentP>(config);
-            BenchmarkRunner.Run<Distributions.DivPentP>(config);
+            //BenchmarkRunner.Run<Distributions.AddPentP>(config);
+            //BenchmarkRunner.Run<Distributions.MulPentP>(config);
+            //BenchmarkRunner.Run<Distributions.DivPentP>(config);
 
             //BenchmarkRunner.Run<AddDummy>(config);
 
