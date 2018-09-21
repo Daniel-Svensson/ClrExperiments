@@ -131,19 +131,14 @@ const uint32_t OVFL_MAX32_1_HI = 429496729;
 inline carry_t Add96(DECIMAL *pDec, uint64_t value)
 {
 	auto carry = AddCarry64(0, low64(*pDec), value, &low64(*pDec));
-	return AddCarry32(carry, hi32(*pDec), 0, (uint32_t*)&hi32(*pDec));
+	return AddCarry32(carry, hi32(*pDec), 0, &hi32(*pDec));
 }
 
 inline carry_t Add96(uint32_t *plVal, uint64_t value)
 {
-	auto carry = AddCarry64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
-	return AddCarry32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
-}
-
-inline carry_t Add96(uint64_t *pllVal, uint64_t value)
-{
-	auto carry = AddCarry64(0, pllVal[0], value, &pllVal[0]);
-	return AddCarry32(carry, low32(pllVal[1]), 0, &low32(pllVal[1]));
+	auto carry = AddCarry32(0, plVal[0], low32(value), &plVal[0]);
+	carry = AddCarry32(carry, plVal[1], hi32(value), &plVal[1]);
+	return AddCarry32(carry, plVal[2], 0, &plVal[2]);
 }
 
 inline carry_t Add96By32(uint32_t *plVal, uint32_t value)
@@ -155,13 +150,9 @@ inline carry_t Add96By32(uint32_t *plVal, uint32_t value)
 
 inline carry_t Add96By32(uint64_t *pllVal, uint32_t value)
 {
-	return Add96By32((uint32_t*)pllVal, value);
-}
-
-inline carry_t Sub96(uint32_t *plVal, uint64_t value)
-{
-	auto carry = SubBorrow64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
-	return SubBorrow32(carry, plVal[2], 0, (uint32_t*)(&plVal[2]));
+	auto carry = AddCarry32(0, low32(pllVal[0]), value, &low32(pllVal[0]));
+	carry = AddCarry32(carry, hi32(pllVal[0]), 0, &hi32(pllVal[0]));
+	return AddCarry32(carry, low32(pllVal[1]), 0, &low32(pllVal[1]));
 }
 
 /***
@@ -250,7 +241,7 @@ PROFILE_NOINLINE
 int SearchScale64(const uint32_t(&rgulQuo)[4], int iScale)
 {
 	// TODO: use SearchScale (32) bit for 32bit code
-#if !defined(_TARGET_AMD64_) && 0
+#if !defined(_TARGET_AMD64_)
 	return SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
 #endif
 
@@ -1485,7 +1476,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 				if (ulTmp < rgulRem[0] ||
 					(ulTmp > rgulDivisor[0] || (ulTmp == rgulDivisor[0] && (rgulQuo[0] & 1)))) {
 				RoundUp:
-					Add96(rgulQuo, 1);
+					Add96By32(rgulQuo, 1);
 				}
 				break;
 			}
@@ -1505,7 +1496,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 			// since ullPwr < 2^32 and remainder < divisor
 			auto num = Mul32By32(rgulRem[0], (uint32_t)ullPwr32);
 			uint32_t ullTmp32 = DivMod64By32(low32(num), hi32(num), rgulDivisor[0], &low32(rgullRem[0]));
-			Add96(rgulQuo, ullTmp32);
+			Add96By32(rgulQuo, ullTmp32);
 		} // for (;;)
 	}
 	else {
@@ -1582,7 +1573,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 				// result is up to 96 bits
 				rgullRem[0] = Mul64By32(rgullRem[0], ullPwr32, &low32(rgullRem[1]));
 				uint32_t tmp32 = Div96By64_x64(rgullRem, ullDivisor);
-				Add96(rgulQuo, tmp32);
+				Add96By32(rgulQuo, tmp32);
 			} // for (;;)
 		}
 		else {
