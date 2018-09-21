@@ -59,17 +59,17 @@ using namespace std;
 #endif 
 
 #define TEST_MULTIPLY
-//#define TEST_ADD
+#define TEST_ADD
 //#define TEST_SUB
 //#define TEST_DIV
 //
-//#define TEST_32bit_with_0_scale
-//#define TEST_32bit_with_scale
-//#define TEST_64bit_with_scale_64bit_result
-//#define TEST_64bit_with_0_scale_128bit_result
-//#define TEST_64bit_with_scale_128bit_result
-//#define TEST_96bit_with_scale_96bit_result_and_overflow
-//#define TEST_96bit_with_scale_96bit_result_no_overflow
+#define TEST_32bit_with_0_scale
+#define TEST_32bit_with_scale
+#define TEST_64bit_with_scale_64bit_result
+#define TEST_64bit_with_0_scale_128bit_result
+#define TEST_64bit_with_scale_128bit_result
+#define TEST_96bit_with_scale_96bit_result_and_overflow
+#define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
 #define VERBOSE_OUTPUT 1
@@ -709,7 +709,7 @@ void AdditionalTests(const int &iterations)
 	vector<DECIMAL> expected(numbers.size()*numbers.size()), actual(numbers.size()*numbers.size());
 	vector<HRESULT> expected_res(numbers.size()*numbers.size()), actual_res(numbers.size()*numbers.size());
 
-
+#if WRITE_TEST_CODE
 	FILE* mul = fopen("compare_mul.cpp", "w");
 	FILE* add = fopen("compare_add.cpp", "w");
 	FILE* div = fopen("compare_div.cpp", "w");
@@ -725,6 +725,7 @@ void AdditionalTests(const int &iterations)
 	fclose(mul);
 	fclose(add);
 	fclose(div);
+#endif
 
 #ifdef TEST_MULTIPLY
 #ifdef COMPARE_OLEAUT
