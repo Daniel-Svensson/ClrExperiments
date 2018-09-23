@@ -60,7 +60,7 @@ inline const uint16_t & signscale(const DECIMAL &dec) { return DECIMAL_SIGNSCALE
 inline const uint8_t & sign(const DECIMAL &dec) { return DECIMAL_SIGN(dec); }
 inline const uint8_t & scale(const DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
 
-#if (defined(_TARGET_X86_) || defined(_TARGET_AMD64_)) && 0
+#if (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 #define AddCarry32 _addcarry_u32
 #define SubBorrow32 _subborrow_u32
 #else // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
@@ -101,7 +101,7 @@ inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *
 #if defined(_TARGET_AMD64_) && defined(WIN32)
 #define AddCarry64 _addcarry_u64
 #define SubBorrow64 _subborrow_u64
-#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_))  && defined(__clang__) && 0
+#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_))  && defined(__clang__)
 #define AddCarry64(carry, lhs,rhs, pRes) _addcarry_u64(carry, lhs, rhs, (unsigned long long int *)pRes)
 #define SubBorrow64(carry, lhs,rhs, pRes) _subborrow_u64(carry, lhs, rhs,  (unsigned long long int *)pRes)
 #else

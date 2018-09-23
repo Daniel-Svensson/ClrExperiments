@@ -136,8 +136,12 @@ inline carry_t Add96(DECIMAL *pDec, uint64_t value)
 
 inline carry_t Add96(uint32_t *plVal, uint64_t value)
 {
+#if BIGENDIAN
 	auto carry = AddCarry32(0, plVal[0], low32(value), &plVal[0]);
 	carry = AddCarry32(carry, plVal[1], hi32(value), &plVal[1]);
+#else
+	auto carry = AddCarry64(0, *(uint64_t*)&plVal[0], value, (uint64_t*)&plVal[0]);
+#endif
 	return AddCarry32(carry, plVal[2], 0, &plVal[2]);
 }
 
@@ -441,11 +445,12 @@ inline uint64_t InplaceDivide_64(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_
 }
 #endif
 
+// TOdo remove 64bit version
 PROFILE_NOINLINE
 uint64_t ReduceScale(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2)
 	int &iHiRes, _Out_ uint64_t &ullDen, _Inout_ int &iNewScale)
 {
-#if !defined(_TARGET_AMD64_)
+#if !defined(_TARGET_AMD64_) || 1
 	uint32_t ulDen;
 	// Handle up to POWER10_MAX32 scale at a time
 	if (iNewScale < POWER10_MAX32) {
@@ -878,20 +883,12 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			AddCarry64(carry, rgullNum[2], 0, &rgullNum[2]);
 #else
 			uint32_t ullPwr = (uint32_t)rgulPower10_64[iScale];
-#define TEST_SIMPLER 0
-#if TEST_SIMPLER == 1
-			// This generates only 1 add instruction more but is a bit shorter
-			rgullNum[0] = low64(*pdecL);
-			low32(rgullNum[1]) = hi32(*pdecL);
-			hi32(rgullNum[1]) = IncreaseScale96By32((uint32_t*)rgullNum, (uint32_t)ullPwr);
-#elif TEST_SIMPLER == 0
-			rgullNum[0] = Mul32By32(low32(*pdecL), (uint32_t)ullPwr);
-			auto midResult = Mul32By32(mid32(*pdecL), (uint32_t)ullPwr);
-			rgullNum[1] = Mul32By32(hi32(*pdecL), (uint32_t)ullPwr);
+			rgullNum[0] = Mul32By32(low32(*pdecL), ullPwr);
+			auto midResult = Mul32By32(mid32(*pdecL), ullPwr);
+			rgullNum[1] = Mul32By32(hi32(*pdecL), ullPwr);
 			carry = AddCarry32(0, low32(midResult), hi32(rgullNum[0]), &hi32(rgullNum[0]));
 			carry = AddCarry32(carry, hi32(midResult), low32(rgullNum[1]), &low32(rgullNum[1]));
 			AddCarry32(carry, 0, hi32(rgullNum[1]), &hi32(rgullNum[1]));
-#endif
 #endif
 
 			// TO REVIEW: we can set rgullNum[2] to 0 above for non _TARGET_AMD64_
