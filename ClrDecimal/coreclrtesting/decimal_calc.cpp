@@ -379,12 +379,43 @@ inline uint32_t Div96By32_x64(uint64_t *pdllNum, uint32_t ulDen)
 	return Div96By32_x64((uint32_t*)pdllNum, ulDen);
 }
 
-PROFILE_NOINLINE
-uint32_t InplaceDivide_32(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2) int& iHiRes, uint32_t ulDen)
+
+/***
+* ReduceScale
+*
+* Entry:
+*   rgullRes - Array of uint64_t with value, least-significant first.
+*   iHiRes  - Index of last non-zero value in rgulRes, Max 2.
+*   iNewScale  - Desired amount of scaling to be done
+*
+* Purpose:
+*   Heler for ScaleResult, perfoms inplace divide of rgullRes [0..HiRes]
+*   by 10^iNewScale (but at most POWER10_MAX32). ull
+*
+* Exit:
+*   rgullRes updated in place, all items with index <= iHiRes are updated.
+*   ulDen is set to the denominator actually divided by (power of 10).
+*   return remainder from division.
+*
+***********************************************************************/
+
+inline PROFILE_NOINLINE
+uint32_t ReduceScale(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2)
+	int &iHiRes, _Out_ uint32_t &ulDen, _Inout_ int &iNewScale)
 {
-	int iCur = iHiRes ; // convert from 64bit to 32bit indicec (+1 == always point to upper 32 bits at start)
+	int iCur = iHiRes; // convert from 64bit to 32bit indicec (+1 == always point to upper 32 bits at start)
 	uint32_t ulRemainder = 0;
 
+	// Handle up to POWER10_MAX32 scale at a time
+	if (iNewScale < POWER10_MAX32) {
+		ulDen = (uint32_t)rgulPower10_64[iNewScale];
+	}
+	else {
+		ulDen = POWER10_MAX_VALUE32;
+	}
+	iNewScale -= POWER10_MAX32;
+
+	iCur = iHiRes; // convert from 64bit to 32bit indicec (+1 == always point to upper 32 bits at start)
 	if (hi32(rgullRes[iCur]) < ulDen)
 	{
 		if (hi32(rgullRes[iCur]) == 0 && low32(rgullRes[iCur]) < ulDen)
@@ -401,7 +432,7 @@ uint32_t InplaceDivide_32(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_ra
 			ulRemainder = DivMod64By32InPlace(&low32(rgullRes[iCur]), hi32(rgullRes[iCur]), ulDen);
 			hi32(rgullRes[iCur]) = 0;
 		}
-		
+
 		iCur--;
 	}
 
@@ -414,75 +445,6 @@ uint32_t InplaceDivide_32(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_ra
 	}
 
 	return ulRemainder;
-}
-
-#if defined(_TARGET_AMD64_)
-//PROFILE_NOINLINE
-inline uint64_t InplaceDivide_64(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2) int& iHiRes, uint64_t ullDen)
-{
-	uint64_t ullRemainder;
-	int iCur = iHiRes - 1;
-
-	if (rgullRes[iHiRes] < ullDen)
-	{
-		ullRemainder = rgullRes[iHiRes];
-		rgullRes[iHiRes] = 0;
-		// If first quotient was 0, update iHiRes.
-		if (iHiRes > 0)
-			iHiRes--;
-	}
-	else
-	{
-		rgullRes[iHiRes] = DivMod64By64(rgullRes[iHiRes], ullDen, &ullRemainder);
-	}
-
-	while (iCur >= 0) {
-		ullRemainder = DivMod128By64InPlace(&rgullRes[iCur], ullRemainder, ullDen);
-		iCur--;
-	}
-
-	return ullRemainder;
-}
-#endif
-
-// TOdo remove 64bit version
-PROFILE_NOINLINE
-uint64_t ReduceScale(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2)
-	int &iHiRes, _Out_ uint64_t &ullDen, _Inout_ int &iNewScale)
-{
-#if !defined(_TARGET_AMD64_) || 1
-	uint32_t ulDen;
-	// Handle up to POWER10_MAX32 scale at a time
-	if (iNewScale < POWER10_MAX32) {
-		ulDen = (uint32_t)rgulPower10_64[iNewScale];
-	}
-	else {
-		ulDen = POWER10_MAX_VALUE32;
-	}
-	iNewScale -= POWER10_MAX32;
-	ullDen = ulDen;
-	return InplaceDivide_32(rgullRes, iHiRes, ulDen);
-#else // _TARGET_AMD64_
-
-	// Handle up to POWER10_MAX64 scale at a time
-	// with fast path for scaling by 32bit 
-	if (iNewScale < POWER10_MAX64)
-	{
-		ullDen = rgulPower10_64[iNewScale];
-		if (iNewScale <= POWER10_MAX32)
-		{
-			iNewScale = 0;
-			return InplaceDivide_32(rgullRes, iHiRes, (uint32_t)ullDen);
-		}
-	}
-	else
-	{
-		ullDen = POWER10_MAX_VALUE64;
-	}
-
-	iNewScale -= POWER10_MAX64;
-	return InplaceDivide_64(rgullRes, iHiRes, ullDen);
-#endif
 }
 
 /***
@@ -512,9 +474,9 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 
 	int     iNewScale;
 	uint32_t ulMsb;
-	uint64_t ullSticky;
-	uint64_t ullPwr;
-	uint64_t ullRemainder;
+	uint32_t ulSticky;
+	uint32_t ulPwr;
+	uint32_t ulRemainder;
 
 	// See if we need to scale the result.  The combined scale must
 	// be <= DEC_SCALE_MAX and the upper 96 bits must be zero.
@@ -563,14 +525,14 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 		// be 1 power of 10 short.
 		//
 		iScale -= iNewScale;
-		ullSticky = 0;
-		ullRemainder = 0;
+		ulSticky = 0;
+		ulRemainder = 0;
 
 		for (;;) {
 
-			ullSticky |= ullRemainder; // record remainder as sticky bit
+			ulSticky |= ulRemainder; // record remainder as sticky bit
 
-			ullRemainder = ReduceScale(rgullRes, iHiRes, ullPwr, iNewScale);
+			ulRemainder = ReduceScale(rgullRes, iHiRes, ulPwr, iNewScale);
 
 			if (iNewScale > 0)
 				continue; // scale some more
@@ -590,8 +552,8 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 			// Round final result.  See if remainder >= 1/2 of divisor.
 			// If remainder == 1/2 divisor, round up if odd or sticky bit set.
 			//
-			ullPwr >>= 1;  // power of 10 always even
-			if (ullRemainder > ullPwr || (ullRemainder == ullPwr && ((rgullRes[0] & 1) | ullSticky))) {
+			ulPwr >>= 1;  // power of 10 always even
+			if (ulRemainder > ulPwr || (ulRemainder == ulPwr && ((rgullRes[0] & 1) | ulSticky))) {
 
 				// Add 1 to first 96 bit word and check for overflow.
 				// We only scale if iHiRes was originally >= 1 so rgulRes[1] is already initalized.
@@ -605,8 +567,8 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 					//
 					assert(iHiRes == 1);
 					hi32(rgullRes[1]) = 1;
-					ullSticky = 0;  // no sticky bit
-					ullRemainder = 0; // or remainder
+					ulSticky = 0;  // no sticky bit
+					ulRemainder = 0; // or remainder
 					iNewScale = 1;
 					iScale--;
 					continue; // scale by 10
