@@ -389,8 +389,9 @@ inline uint32_t Div96By32_x64(uint64_t *pdllNum, uint32_t ulDen)
 *   iNewScale  - Desired amount of scaling to be done
 *
 * Purpose:
-*   Heler for ScaleResult, perfoms inplace divide of rgullRes [0..HiRes]
-*   by 10^iNewScale (but at most POWER10_MAX32). ull
+*   Helper for ScaleResult, perfoms inplace divide of rgullRes [0..HiRes]
+*   by 10^iNewScale (by at most 10^POWER10_MAX32), the actual denoiminator used
+*   is returned and iNewScale is decreased by the actual scaking done.
 *
 * Exit:
 *   rgullRes updated in place, all items with index <= iHiRes are updated.
@@ -621,16 +622,7 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 					return NOERROR;
 				}
 				ullPwr = rgulPower10_64[iScale];
-
-				//if (iScale <= POWER10_MAX32 && hi32(lo) < (uint32_t)ullPwr)
-				//{
-				//	ullRem = 0;
-				//	lo = DivMod64By32(low32(lo), hi32(lo), (uint32_t)ullPwr, &low32(ullRem));
-				//}
-				//else
-				//{
-					lo = DivMod64By64(lo, ullPwr, &ullRem);
-				//}
+				lo = DivMod64By64(lo, ullPwr, &ullRem);
 
 
 				// Round result towards even.  See if remainder >= 1/2 of divisor.

@@ -10,14 +10,14 @@
 // * SubBorrow32
 // * SubBorrow64
 
-// * Mul32By32
-// * Mul64By32 - 
+// * Mul32By32 - 32 by 32 bit multiply with 64 bit result
+// * Mul64By32 - 64 by 32 bit multiply with 96 (64 + 32) bit result 
 // * Mul64By64 - Same as uint64_t _umul128(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 
-
+// * DivMod32By32
+// * DivMod64By64
 // * DivMod64By32
 // * DivMod64By32InPlace
-// * DivMod64By64
 // * DivMod128By64 - only AMD64, HAS_DIVMOD128BY64 gets defined when availible
 // * DivMod128By64InPlace  - only AMD64, HAS_DIVMOD128BY64 gets defined when availible
 
@@ -191,6 +191,30 @@ inline uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 #endif // !(defined(_TARGET_AMD64_) && defined(_MSC_VER))
 
 // --------------------------- DIVISION ---------------------
+// Divides a 32bit number (ulNum) by 32bit value (ulDen)
+// returns 32bit quotient with remainder in *pRemainder
+// This results in a single div instruction on x86 platforms
+inline uint32_t DivMod32By32(uint32_t ulNum, uint32_t ulDen, _Out_ uint32_t* pRemainder)
+{
+	auto mod = ulNum % ulDen;
+	auto res = ulNum / ulDen;
+
+	*pRemainder = mod;
+	return res;
+}
+
+// Divides a 64bit number (ullNum) by 64bit value (ullDen)
+// returns 64bit quotient with remainder in *pRemainder
+// This results in a single div instruction on x64 platforms
+inline uint64_t DivMod64By64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_t* pRemainder)
+{
+	auto mod = ullNum % ullDen;
+	auto res = ullNum / ullDen;
+
+	*pRemainder = mod;
+	return res;
+}
+
 #if defined(__GNUC__) && (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 inline uint32_t DivMod64By32(uint32_t lo, uint32_t hi, uint32_t ulDen, uint32_t *remainder)
 {
@@ -271,30 +295,6 @@ inline uint32_t DivMod64By32InPlace(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 	return hi32(temp);
 }
 #endif
-
-// Divides a 32bit number (ulNum) by 32bit value (ulDen)
-// returns 32bit quotient with remainder in *pRemainder
-// This results in a single div instruction on x86 platforms
-inline uint32_t DivMod32By32(uint32_t ulNum, uint32_t ulDen, _Out_ uint32_t* pRemainder)
-{
-	auto mod = ulNum % ulDen;
-	auto res = ulNum / ulDen;
-
-	*pRemainder = mod;
-	return res;
-}
-
-// Divides a 64bit number (ullNum) by 64bit value (ullDen)
-// returns 64bit quotient with remainder in *pRemainder
-// This results in a single div instruction on x64 platforms
-inline uint64_t DivMod64By64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_t* pRemainder)
-{
-	auto mod = ullNum % ullDen;
-	auto res = ullNum / ullDen;
-
-	*pRemainder = mod;
-	return res;
-}
 
 #ifdef _TARGET_AMD64_
 #define HAS_DIVMOD128BY64
