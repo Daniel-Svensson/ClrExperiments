@@ -62,18 +62,14 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <RemoteCppCompileToolExe>clang</RemoteCppCompileToolExe>
     <RemoteLdToolExe>clang</RemoteLdToolExe>
+    <RemoteCppCompileToolExe>clang</RemoteCppCompileToolExe>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="compare.cpp" />
-    <ClCompile Include="compare_add.cpp" />
     <ClCompile Include="compare_mul.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\decimal_calc.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="src\decimal_calc.inl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compare.h" />
@@ -81,10 +77,15 @@
     <ClInclude Include="src\decimal_calc.h" />
     <ClInclude Include="src\stdafx.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="src\decimal_calc.inl" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions);_TARGET_X86_D_;_TARGET_AMD64_</PreprocessorDefinitions>
       <AdditionalOptions>-m64 -mtune=native %(AdditionalOptions)</AdditionalOptions>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
+      <DebugInformationFormat>FullDebug</DebugInformationFormat>
     </ClCompile>
     <Link>
       <AdditionalOptions>-m64</AdditionalOptions>

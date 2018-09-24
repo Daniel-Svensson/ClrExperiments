@@ -33,3 +33,45 @@
 #ifndef DECIMAL_LO64_SET
 #define DECIMAL_LO64_SET(dec,value)   {(dec).Lo64 = value; }
 #endif
+
+// oleauto on windows defines 
+struct DECIMAL
+{
+	uint16_t wReserved;
+	union {
+		struct
+		{
+			uint8_t scale;
+			uint8_t sign;
+		};
+		uint16_t signscale;
+	};
+	uint32_t Hi32;
+	union
+	{
+		struct
+		{
+			uint32_t Lo32;
+			uint32_t Mid32;
+		};
+		uint64_t Lo64;
+	};
+};
+const uint8_t DECIMAL_NEG = 0x80;
+typedef int32_t HRESULT;
+typedef HRESULT(*decimal_func)(const DECIMAL*, const DECIMAL*, DECIMAL*);
+typedef uint8_t BYTE;
+
+const HRESULT DISP_E_DIVBYZERO = 0x80020012L;
+const HRESULT DISP_E_OVERFLOW = 0x8002000AL;
+const HRESULT NOERROR = 0;
+
+#include "decimal_calc.h"
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#else // CLANG? 
+#if defined(_TARGET_X86_) || defined(_TARGET_AMD64_)
+#include <x86intrin.h>
+#endif
+#endif

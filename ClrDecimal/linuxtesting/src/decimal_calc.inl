@@ -10,14 +10,14 @@
 // * SubBorrow32
 // * SubBorrow64
 
-// * Mul32By32
-// * Mul64By32 - 
+// * Mul32By32 - 32 by 32 bit multiply with 64 bit result
+// * Mul64By32 - 64 by 32 bit multiply with 96 (64 + 32) bit result 
 // * Mul64By64 - Same as uint64_t _umul128(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 
-
+// * DivMod32By32
+// * DivMod64By64
 // * DivMod64By32
 // * DivMod64By32InPlace
-// * DivMod64By64
 // * DivMod128By64 - only AMD64, HAS_DIVMOD128BY64 gets defined when availible
 // * DivMod128By64InPlace  - only AMD64, HAS_DIVMOD128BY64 gets defined when availible
 
@@ -60,7 +60,7 @@ inline const uint16_t & signscale(const DECIMAL &dec) { return DECIMAL_SIGNSCALE
 inline const uint8_t & sign(const DECIMAL &dec) { return DECIMAL_SIGN(dec); }
 inline const uint8_t & scale(const DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
 
-#if (defined(_TARGET_X86_) || defined(_TARGET_AMD64_)) && 0
+#if (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 #define AddCarry32 _addcarry_u32
 #define SubBorrow32 _subborrow_u32
 #else // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
@@ -101,7 +101,7 @@ inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *
 #if defined(_TARGET_AMD64_) && defined(WIN32)
 #define AddCarry64 _addcarry_u64
 #define SubBorrow64 _subborrow_u64
-#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_))  && defined(__clang__) && 0
+#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_))  && defined(__clang__)
 #define AddCarry64(carry, lhs,rhs, pRes) _addcarry_u64(carry, lhs, rhs, (unsigned long long int *)pRes)
 #define SubBorrow64(carry, lhs,rhs, pRes) _subborrow_u64(carry, lhs, rhs,  (unsigned long long int *)pRes)
 #else
@@ -191,6 +191,30 @@ inline uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 #endif // !(defined(_TARGET_AMD64_) && defined(_MSC_VER))
 
 // --------------------------- DIVISION ---------------------
+// Divides a 32bit number (ulNum) by 32bit value (ulDen)
+// returns 32bit quotient with remainder in *pRemainder
+// This results in a single div instruction on x86 platforms
+inline uint32_t DivMod32By32(uint32_t ulNum, uint32_t ulDen, _Out_ uint32_t* pRemainder)
+{
+	auto mod = ulNum % ulDen;
+	auto res = ulNum / ulDen;
+
+	*pRemainder = mod;
+	return res;
+}
+
+// Divides a 64bit number (ullNum) by 64bit value (ullDen)
+// returns 64bit quotient with remainder in *pRemainder
+// This results in a single div instruction on x64 platforms
+inline uint64_t DivMod64By64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_t* pRemainder)
+{
+	auto mod = ullNum % ullDen;
+	auto res = ullNum / ullDen;
+
+	*pRemainder = mod;
+	return res;
+}
+
 #if defined(__GNUC__) && (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 inline uint32_t DivMod64By32(uint32_t lo, uint32_t hi, uint32_t ulDen, uint32_t *remainder)
 {
@@ -272,30 +296,6 @@ inline uint32_t DivMod64By32InPlace(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 }
 #endif
 
-// Divides a 32bit number (ulNum) by 32bit value (ulDen)
-// returns 32bit quotient with remainder in *pRemainder
-// This results in a single div instruction on x86 platforms
-inline uint32_t DivMod32By32(uint32_t ulNum, uint32_t ulDen, _Out_ uint32_t* pRemainder)
-{
-	auto mod = ulNum % ulDen;
-	auto res = ulNum / ulDen;
-
-	*pRemainder = mod;
-	return res;
-}
-
-// Divides a 64bit number (ullNum) by 64bit value (ullDen)
-// returns 64bit quotient with remainder in *pRemainder
-// This results in a single div instruction on x64 platforms
-inline uint64_t DivMod64By64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_t* pRemainder)
-{
-	auto mod = ullNum % ullDen;
-	auto res = ullNum / ullDen;
-
-	*pRemainder = mod;
-	return res;
-}
-
 #ifdef _TARGET_AMD64_
 #define HAS_DIVMOD128BY64
 
@@ -335,14 +335,23 @@ extern "C" uint64_t DivMod128By64InPlace(uint64_t* pLow, uint64_t hi, uint64_t u
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline bool BitScanMsb32(uint32_t *Index, uint32_t Mask) {
+#ifdef _WIN32
 	return BitScanReverse((DWORD*)Index, Mask);
+#else
+	// G++/Clang __builtin_clz count LSB as 1, and MSB as 0 while BitScanReverse works in other way around
+	*Index = 31 - __builtin_clz(Mask);
+	return (Mask != 0);
+#endif
 }
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 {
-#if defined(BitScanReverse64) || !defined(WIN32)
+#if defined(BitScanReverse64)
 	return BitScanReverse64((DWORD*)Index, Mask);
+#elif defined(__GNUC__) || defined(__CLANG__)
+	*Index = 63 - __builtin_clzll(Mask);
+	return (Mask != 0);
 #else
 	unsigned char found = BitScanMsb32(Index, hi32(Mask));
 	if (found)

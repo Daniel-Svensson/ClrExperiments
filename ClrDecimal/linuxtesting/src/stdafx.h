@@ -41,11 +41,11 @@ typedef union {
 		uint32_t Hi;
 		uint32_t Lo;
 #else
-		uint32_t Lo;
-		uint32_t Hi;
+		uint32_t LowPart;
+		uint32_t HighPart;
 #endif
 	} u;
-} SPLIT64;
+} ULARGE_INTEGER;
 
 
 #ifndef UInt32x32To64

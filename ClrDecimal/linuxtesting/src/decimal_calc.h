@@ -13,6 +13,7 @@
 #endif
 #else // ! _WIN32
 typedef int32_t HRESULT;
+#define __stdcall
 #endif
 
 #ifndef STDAPI
@@ -41,11 +42,11 @@ STDAPI DecimalMul(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
 STDAPI DecimalDiv(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
 STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, char bSign);
 
-inline HRESULT DecimalAdd(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res)
+inline HRESULT __stdcall DecimalAdd(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res)
 {
 	return DecimalAddSub(l, r, res, 0);
 }
-inline HRESULT DecimalSub(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res)
+inline HRESULT __stdcall DecimalSub(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res)
 {
 	return DecimalAddSub(l, r, res, DECIMAL_NEG);
 }

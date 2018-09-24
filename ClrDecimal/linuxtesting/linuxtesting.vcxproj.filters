@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="compare.cpp" />
-    <ClCompile Include="compare_add.cpp" />
     <ClCompile Include="compare_mul.cpp" />
     <ClCompile Include="src\decimal_calc.cpp" />
   </ItemGroup>
@@ -13,12 +12,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\decimal_calc.inl" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="compare.h" />
-    <ClInclude Include="src\decimal_calc.h" />
     <ClInclude Include="src\common.h" />
+    <ClInclude Include="src\decimal_calc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\decimal_calc.inl" />
   </ItemGroup>
 </Project>
