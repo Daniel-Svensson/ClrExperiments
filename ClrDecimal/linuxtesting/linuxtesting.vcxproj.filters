@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="compare.cpp" />
+    <ClCompile Include="compare_add.cpp" />
+    <ClCompile Include="compare_mul.cpp" />
+    <ClCompile Include="src\decimal_calc.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{0aaad7de-f850-4ab4-a0a7-5ce4903c5324}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\decimal_calc.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\stdafx.h" />
+    <ClInclude Include="compare.h" />
+    <ClInclude Include="src\decimal_calc.h" />
+    <ClInclude Include="src\common.h" />
+  </ItemGroup>
+</Project>
