@@ -66,35 +66,16 @@ inline const uint8_t & scale(const DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
 #else // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 inline carry_t AddCarry32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	*pRes = lhs + rhs;
-
-	// check for overflow
-	carry_t carry_out = (*pRes < lhs) ? 1 : 0;
-	if (carry)
-	{
-		*pRes += 1;
-
-		// Can use or + xor instead
-		if (*pRes == 0)
-			carry_out = 1;
-	}
-	return carry_out;
+	uint64_t sum = ((uint64_t)carry) + ((uint64_t)lhs) + ((uint64_t)rhs);
+	*pRes = (uint32_t)sum;
+	return (carry_t)(sum >> 32);
 }
 
 inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	*pRes = lhs - rhs;
-
-	// check for overflow
-	carry_t carry_out = (*pRes > lhs) ? 1 : 0;
-	if (carry)
-	{
-		if (*pRes == 0)
-			carry_out = 1;
-
-		*pRes -= 1;
-	}
-	return carry_out;
+	uint64_t res = ((uint64_t)lhs) - ((uint64_t)rhs) + ((uint64_t)carry);
+	*pRes = (uint32_t)res;
+	return ((carry_t)(res >> 32)) & 1;
 }
 #endif // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 
