@@ -80,7 +80,7 @@ inline carry_t AddCarry32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *p
 
 inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	uint64_t res = ((uint64_t)lhs) - ((uint64_t)rhs) + ((uint64_t)carry);
+	uint64_t res = ((uint64_t)lhs) - (((uint64_t)rhs) + ((uint64_t)carry));
 	*pRes = (uint32_t)res;
 	return ((carry_t)(res >> 32)) & 1;
 }
