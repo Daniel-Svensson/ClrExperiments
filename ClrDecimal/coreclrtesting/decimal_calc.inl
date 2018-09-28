@@ -345,7 +345,7 @@ inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 #endif
 }
 
-#if !defined(_TARGET_AMD64_) || !defined(_WIN32)
+#if !defined(ShiftLeft128)
 inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
 {
 	return (_HighPart << _Shift) | (_LowPart >> (64 - _Shift));
