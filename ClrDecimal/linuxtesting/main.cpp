@@ -27,7 +27,7 @@ int main()
 	q = DivMod64By32(lo, hi, den, &rem);
 	printf("div => q = %u & rem = %u\n", q, rem);
 	compare_mul();
-	//compare_add();
+	compare_add();
 	//compare_div();
 	printf("done \n");
 	return 0;

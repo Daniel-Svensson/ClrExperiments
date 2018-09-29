@@ -4,6 +4,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="compare.cpp" />
     <ClCompile Include="src\decimal_calc.cpp" />
+    <ClCompile Include="compare_add.cpp" />
+    <ClCompile Include="compare_mul.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">

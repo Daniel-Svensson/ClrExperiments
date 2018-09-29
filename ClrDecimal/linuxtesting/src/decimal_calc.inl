@@ -30,11 +30,11 @@
 //
 
 #ifndef FORCEDINLINE 
-	#ifdef _MSC_VER
-	#define FORCEDINLINE __forceinline
-	#else
-	#define FORCEDINLINE __attribute__((always_inline))
-	#endif
+#ifdef _MSC_VER
+#define FORCEDINLINE __forceinline
+#else
+#define FORCEDINLINE __attribute__((always_inline))
+#endif
 #endif
 typedef unsigned char carry_t;
 
@@ -89,7 +89,7 @@ inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *
 #if defined(_TARGET_AMD64_) && defined(WIN32)
 #define AddCarry64 _addcarry_u64
 #define SubBorrow64 _subborrow_u64
-#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_))  && defined(__clang__)
+#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_)) && defined(__clang__)
 #define AddCarry64(carry, lhs,rhs, pRes) _addcarry_u64(carry, lhs, rhs, (unsigned long long int *)pRes)
 #define SubBorrow64(carry, lhs,rhs, pRes) _subborrow_u64(carry, lhs, rhs,  (unsigned long long int *)pRes)
 #else
@@ -119,7 +119,7 @@ inline FORCEDINLINE uint64_t Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _H
 	auto res = _umul128(lhs, rhs, &temp);
 	*_HighProduct = (uint32_t)temp;
 	return res;
-#elif defined(_TARGET_AMD64_)
+#elif defined(__SIZEOF_INT128__)
 	__uint128_t res = ((__uint128_t)lhs) * ((__uint128_t)rhs);
 	*_HighProduct = (uint32_t)(res >> 64);
 	return (uint64_t)res;
