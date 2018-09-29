@@ -5,7 +5,6 @@
     <ClCompile Include="compare.cpp" />
     <ClCompile Include="src\decimal_calc.cpp" />
     <ClCompile Include="compare_add.cpp" />
-    <ClCompile Include="compare_mul.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">
@@ -17,6 +16,7 @@
     <ClInclude Include="compare.h" />
     <ClInclude Include="src\common.h" />
     <ClInclude Include="src\decimal_calc.h" />
+    <ClInclude Include="intrin.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\decimal_calc.inl" />

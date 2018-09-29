@@ -68,7 +68,6 @@
   <ItemGroup>
     <ClCompile Include="compare.cpp" />
     <ClCompile Include="compare_add.cpp" />
-    <ClCompile Include="compare_mul.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\decimal_calc.cpp" />
   </ItemGroup>
@@ -76,6 +75,7 @@
     <ClInclude Include="compare.h" />
     <ClInclude Include="src\common.h" />
     <ClInclude Include="src\decimal_calc.h" />
+    <ClInclude Include="intrin.h" />
     <ClInclude Include="src\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
@@ -87,6 +87,7 @@
       <AdditionalOptions>-m64 -mtune=native %(AdditionalOptions)</AdditionalOptions>
       <CppLanguageStandard>c++17</CppLanguageStandard>
       <DebugInformationFormat>FullDebug</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalOptions>-m64</AdditionalOptions>
@@ -96,28 +97,33 @@
     <ClCompile>
       <AdditionalOptions>-m32 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions);_TARGET_X86_</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions);_TARGET_X86_</PreprocessorDefinitions>
       <AdditionalOptions>-m32 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);_TARGET_AMD64_</PreprocessorDefinitions>
       <AdditionalOptions>-m64 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <PreprocessorDefinitions>_TARGET_ARM_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
       <AdditionalOptions>-march=native</AdditionalOptions>
+      <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

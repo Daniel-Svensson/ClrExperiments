@@ -29,6 +29,8 @@
 // * ShiftLeft128
 //
 
+#include <intrin.h>
+
 #ifndef FORCEDINLINE 
 #ifdef _MSC_VER
 #define FORCEDINLINE __forceinline
@@ -67,43 +69,76 @@ inline FORCEDINLINE const uint16_t & signscale(const DECIMAL &dec) { return DECI
 inline FORCEDINLINE const uint8_t & sign(const DECIMAL &dec) { return DECIMAL_SIGN(dec); }
 inline FORCEDINLINE const uint8_t & scale(const DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
 
-#if (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
+#if (defined(_TARGET_X86_) || defined(_TARGET_AMD64_)) && defined(WIN32) // clang seems to crash when compiling coreclr with these (works fine when compiled outside coreclr)
 #define AddCarry32 _addcarry_u32
 #define SubBorrow32 _subborrow_u32
 #else // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
-inline carry_t AddCarry32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
+inline FORCEDINLINE carry_t AddCarry32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
+#if defined(__clang__)
+	uint32_t carry_temp;
+	*pRes = __builtin_addc(lhs, rhs, carry, &carry_temp);
+	return (carry_t)carry_temp;
+#else
 	uint64_t sum = ((uint64_t)carry) + ((uint64_t)lhs) + ((uint64_t)rhs);
 	*pRes = (uint32_t)sum;
 	return (carry_t)(sum >> 32);
+#endif
 }
 
-inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
+inline FORCEDINLINE carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
+#if defined(__clang__)
+	uint32_t carry_temp;
+	*pRes = __builtin_subc(lhs, rhs, carry, &carry_temp);
+	return (carry_t)carry_temp;
+#else
 	uint64_t res = ((uint64_t)lhs) - (((uint64_t)rhs) + ((uint64_t)carry));
 	*pRes = (uint32_t)res;
 	return ((carry_t)(res >> 32)) & 1;
+#endif
 }
 #endif // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 
-#if defined(_TARGET_AMD64_) && defined(WIN32)
+#if defined(_TARGET_AMD64_) && defined(WIN32) 
 #define AddCarry64 _addcarry_u64
 #define SubBorrow64 _subborrow_u64
-#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_)) && defined(__clang__)
+#elif (defined(_TARGET_AMD64_) || defined(_TARGET_X86_)) && defined(__clang__) && 0  // clang seems to crash when compiling coreclr with these (works fine when compiled outside coreclr)
 #define AddCarry64(carry, lhs,rhs, pRes) _addcarry_u64(carry, lhs, rhs, (unsigned long long int *)pRes)
 #define SubBorrow64(carry, lhs,rhs, pRes) _subborrow_u64(carry, lhs, rhs,  (unsigned long long int *)pRes)
 #else
 inline FORCEDINLINE carry_t AddCarry64(carry_t carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
+#if defined(__clang__)
+	unsigned long long carry_temp;
+	*pRes = __builtin_addcll(lhs, rhs, carry, &carry_temp);
+	return (carry_t)carry_temp;
+#elif defined(__SIZEOF_INT128__)
+	uint128_t sum = ((uint128_t)carry) + ((uint128_t)lhs) + ((uint128_t)rhs);
+	*pRes = (uint32_t)sum;
+	return (carry_t)(sum >> 64);
+#else
 	carry = AddCarry32(carry, low32(lhs), low32(rhs), &low32(*pRes));
 	return AddCarry32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
+#endif
 }
 
 inline FORCEDINLINE carry_t SubBorrow64(carry_t carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
+#if defined(__clang__)
+	unsigned long long carry_temp;
+	*pRes = __builtin_subcll(lhs, rhs, carry, &carry_temp);
+	return (carry_t)carry_temp;
+#elif defined(__SIZEOF_INT128__)
+	uint128_t res = ((uint128_t)lhs) - (((uint128_t)rhs) + ((uint128_t)carry));
+	*pRes = (uint32_t)res;
+	return ((carry_t)(res >> 64)) & 1;
+#else
 	carry = SubBorrow32(carry, low32(lhs), low32(rhs), &low32(*pRes));
 	return SubBorrow32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
+#endif
 }
+
 #endif
 
 // -------------------------- MULTIPLY ----------------------
@@ -351,4 +386,3 @@ inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned cha
 	return (_HighPart << _Shift) | (_LowPart >> (64 - _Shift));
 }
 #endif
-

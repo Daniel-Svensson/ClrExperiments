@@ -1,19 +1,12 @@
 #include "common.h"
 
-//#define PROFILE_NOINLINE DECLSPEC_NOINLINE
+// Following is defined on methods where inlining can be disabled when performing profiling
 #define PROFILE_NOINLINE
 
-#ifdef min
-#undef min
+// Following is from coreclr headers
+#ifndef DEC_SCALE_MAX
+#define DEC_SCALE_MAX 28
 #endif
-
-// #undef _TARGET_X86_
-// #define _TARGET_ARM_
-#include <cassert>
-#include <functional> // swap
-#include <algorithm>
-#include <cstdint>
-
 
 #include "decimal_calc.h"
 #include "decimal_calc.inl"
@@ -531,7 +524,7 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 			// If we scaled enough, iHiRes would be 0 or 1 without anything above first 96bits.  If not,
 			// divide by 10 more.
 			//
-	
+
 			// accessing rgullRes[1] is always safe since it is always initalized
 			// if iHiRes is 0 then rgullRes[1] will be 0
 			if (iHiRes > 1 || hi32(rgullRes[1]) != 0) {
@@ -1383,7 +1376,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 		for (;;) {
 			if (rgulRem[0] == 0) {
 				if (iScale < 0) {
-					iCurScale = std::min(POWER10_MAX32, -iScale);
+					iCurScale = min(POWER10_MAX32, -iScale);
 					goto HaveScale32;
 				}
 				break;
@@ -1425,7 +1418,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 			if (iCurScale == -1)
 				return DISP_E_OVERFLOW;
 
-			iCurScale = std::min(iCurScale, POWER10_MAX32);
+			iCurScale = min(iCurScale, POWER10_MAX32);
 		HaveScale32:
 			uint32_t ullPwr32 = (uint32_t)rgulPower10_64[iCurScale];
 			iScale += iCurScale;
@@ -1475,7 +1468,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 			for (;;) {
 				if (rgullRem[0] == 0) {
 					if (iScale < 0) {
-						iCurScale = std::min(POWER10_MAX64, -iScale);
+						iCurScale = min(POWER10_MAX64, -iScale);
 						goto HaveScale64;
 					}
 					break;
@@ -1503,7 +1496,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 					return DISP_E_OVERFLOW;
 
 			HaveScale64:
-				iCurScale = std::min(iCurScale, POWER10_MAX32);
+				iCurScale = min(iCurScale, POWER10_MAX32);
 				uint32_t ullPwr32 = (uint32_t)rgulPower10_64[iCurScale];
 				iScale += iCurScale;
 
@@ -1534,7 +1527,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 			for (;;) {
 				if ((rgullRem[0] | rgulRem[2]) == 0) {
 					if (iScale < 0) {
-						iCurScale = std::min(POWER10_MAX64, -iScale);
+						iCurScale = min(POWER10_MAX64, -iScale);
 						goto HaveScale96;
 					}
 					break;
@@ -1572,7 +1565,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 			HaveScale96:
 				uint64_t quo;
 #ifndef HAS_DIVMOD128BY64
-				iCurScale = std::min(iCurScale, POWER10_MAX32);
+				iCurScale = min(iCurScale, POWER10_MAX32);
 				uint32_t ullPwr32 = (uint32_t)rgulPower10_64[iCurScale];
 				iScale += iCurScale;
 

@@ -3,20 +3,6 @@
 #ifndef _DECIMAL_CALC_
 #define _DECIMAL_CALC_
 
-#ifdef _MSC_VER
-#include <sal.h>
-#else // CLANG? 
-
-#define _In_
-#define _Out_
-#define _Inout_
-#define _In_count_(x)
-#define _In_range_(a,b)
-#define __assume(condition)
-#define __analysis_assume(condition)
-#define _In_count_(x)
-
-#endif
 
 
 STDAPI DecimalMul(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);

@@ -2,6 +2,21 @@
 
 #include "stdafx.h"
 
+#ifdef _MSC_VER
+#include <sal.h>
+#else // CLANG? 
+
+#define _In_
+#define _Out_
+#define _Inout_
+#define _In_count_(x)
+#define _In_range_(a,b)
+#define __assume(condition)
+#define __analysis_assume(condition)
+#define _In_count_(x)
+
+#endif
+
 
 #ifndef DECIMAL_SCALE
 #define DECIMAL_SCALE(dec)       ((dec).scale)
@@ -95,4 +110,9 @@ inline unsigned char BitScanReverse64(uint32_t * Index, uint64_t Mask)
 #if defined(_TARGET_X86_) || defined(_TARGET_AMD64_)
 #include <x86intrin.h>
 #endif
+#endif
+
+
+#ifndef min
+#define min std::min
 #endif
