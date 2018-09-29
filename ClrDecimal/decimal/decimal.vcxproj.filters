@@ -24,7 +24,7 @@
     <ClCompile Include="..\coreclrtesting\decimal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\coreclrtesting\decimal_calc.cpp">
+    <ClCompile Include="..\linuxtesting\src\decimal_calc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

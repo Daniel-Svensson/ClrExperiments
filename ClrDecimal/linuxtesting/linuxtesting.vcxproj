@@ -67,7 +67,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="compare.cpp" />
-    <ClCompile Include="compare_mul.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\decimal_calc.cpp" />
   </ItemGroup>

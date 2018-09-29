@@ -254,3 +254,7 @@ paket-files/
 
 BenchmarkDotNet.Artifacts/
 /ClrDecimal/Nuget.Config
+/ClrDecimal/coreclrtesting/My Amplifier Results - coreclrtesting
+/ClrDecimal/coreclrtesting/baselines
+/ClrDecimal/linuxtesting/readme/images
+/ClrDecimal/linuxtesting/readme

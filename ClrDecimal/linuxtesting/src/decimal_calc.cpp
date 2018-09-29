@@ -3,21 +3,19 @@
 //#define PROFILE_NOINLINE DECLSPEC_NOINLINE
 #define PROFILE_NOINLINE
 
-//#undef _TARGET_X86_
+#ifdef min
+#undef min
+#endif
+
+// #undef _TARGET_X86_
 // #define _TARGET_ARM_
 #include <cassert>
 #include <functional> // swap
 #include <algorithm>
 #include <cstdint>
 
-#define PROFILE_NOINLINE
 
-// Following is from coreclr headers
-#ifndef DEC_SCALE_MAX
-#define DEC_SCALE_MAX 28
-#endif
-
-//#include <intrin.h>
+#include "decimal_calc.h"
 #include "decimal_calc.inl"
 
 uint32_t IncreaseScale96By32(uint32_t *rgulNum, uint32_t ulPwr);
@@ -280,7 +278,7 @@ int SearchScale64(const uint32_t(&rgulQuo)[4], int iScale)
 	if (ulResHi != 0)
 	{
 		BitScanMsb64(&msb, ulResHi);
-		iCurScale = 63 - msb;
+		iCurScale = 63 - (int)msb;
 
 		iCurScale = ((iCurScale * 77) >> 8) + 1;
 
@@ -480,7 +478,7 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 	// 
 	auto found = BitScanMsb64(&ulMsb, rgullRes[iHiRes]);
 	assert(found);
-	iNewScale = iHiRes * 64 + ulMsb - 96;
+	iNewScale = iHiRes * 64 + (int)ulMsb - 96;
 
 	if (iNewScale >= 0) {
 		// Multiply bit position by log10(2) to figure it's power of 10.
@@ -716,7 +714,7 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 // DecimalAddSub - Decimal Add / Subtract
 //
 //**********************************************************************
-STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, char bSign)
+STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, uint8_t bSign)
 {
 	DECIMAL   decTmp;
 	DECIMAL   decRes;
@@ -743,7 +741,7 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 				// Got negative result.  Flip its sign.
 				//
 			SignFlip:
-				low64(decRes) = -(int64_t)low64(decRes);
+				low64(decRes) = (uint64_t)(-(int64_t)low64(decRes));
 				hi32(decRes) = ~hi32(decRes);
 				if (low64(decRes) == 0)
 					hi32(decRes)++;
@@ -1457,7 +1455,7 @@ STDAPI DecimalDiv(const DECIMAL *pdecL, const DECIMAL * pdecR, DECIMAL *__restri
 
 		uint32_t msb;
 		auto found = BitScanMsb32(&msb, ulTmp);
-		iCurScale = 31 - msb;
+		iCurScale = 31 - (int)msb;
 		assert(found);
 
 		// Shift both dividend and divisor left by iCurScale.

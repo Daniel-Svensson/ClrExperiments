@@ -11,7 +11,7 @@
 #define __itt_pause()
 #endif
 
-#include "decimal_calc.h"
+#include "..\linuxtesting\src\decimal_calc.h"
 
 //#include <vector>
 #include <functional>
@@ -46,9 +46,9 @@ using namespace std;
 
 
 //#define NO_VALIDATE
-//#define COMPARE_OLEAUT
+#define COMPARE_OLEAUT
 //#define COMPARE_CORECLR
-#define COMPARE_DEFAULT 
+//#define COMPARE_DEFAULT 
 
 #if defined(COMPARE_DEFAULT)
 #ifdef _AMD64_
@@ -60,7 +60,7 @@ using namespace std;
 
 #define TEST_MULTIPLY
 #define TEST_ADD
-//#define TEST_SUB
+#define TEST_SUB
 //#define TEST_DIV
 //
 #define TEST_32bit_with_0_scale
@@ -72,7 +72,7 @@ using namespace std;
 #define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
-#define VERBOSE_OUTPUT 1
+// #define VERBOSE_OUTPUT 1
 
 #ifdef _TARGET_X86_
 const char * platform = "new-x86";
@@ -1059,9 +1059,8 @@ int __cdecl main()
 	const int iterations = 2;
 	const int elements = 106;
 #else
-	const int iterations = 2;
+	const int iterations = 3;
 	const int elements = 4000;
-	//const int elements = 4000;
 #endif
 	const int bytes = 4;
 

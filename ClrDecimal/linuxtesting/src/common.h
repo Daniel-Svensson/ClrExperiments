@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 
+
 #ifndef DECIMAL_SCALE
 #define DECIMAL_SCALE(dec)       ((dec).scale)
 #endif
@@ -34,6 +35,7 @@
 #define DECIMAL_LO64_SET(dec,value)   {(dec).Lo64 = value; }
 #endif
 
+#ifndef WIN32
 // oleauto on windows defines 
 struct DECIMAL
 {
@@ -62,11 +64,30 @@ typedef int32_t HRESULT;
 typedef HRESULT(*decimal_func)(const DECIMAL*, const DECIMAL*, DECIMAL*);
 typedef uint8_t BYTE;
 
-const HRESULT DISP_E_DIVBYZERO = 0x80020012L;
-const HRESULT DISP_E_OVERFLOW = 0x8002000AL;
+const HRESULT DISP_E_DIVBYZERO = (HRESULT)0x80020012;
+const HRESULT DISP_E_OVERFLOW = (HRESULT)0x8002000A;
 const HRESULT NOERROR = 0;
+#define __stdcall
 
-#include "decimal_calc.h"
+// Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
+inline bool BitScanReverse(uint32_t *Index, uint32_t Mask) {
+	// G++/Clang __builtin_clz count LSB as 1, and MSB as 0 while BitScanReverse works in other way around
+	*Index = (uint32_t)(31 - __builtin_clz(Mask));
+	return (Mask != 0);
+}
+
+// Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
+inline unsigned char BitScanReverse64(uint32_t * Index, uint64_t Mask)
+{
+	*Index = (uint32_t)(63 - __builtin_clzll(Mask));
+	return (Mask != 0);
+}
+#endif
+
+#ifndef STDAPI
+#define STDAPI extern "C" HRESULT
+#endif
+
 
 #ifdef _MSC_VER
 #include <intrin.h>

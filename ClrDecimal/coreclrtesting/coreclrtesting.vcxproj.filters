@@ -27,13 +27,16 @@
     <ClInclude Include="x86_64bit_emulation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="decimal_calc.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="miniz.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linuxtesting\src\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linuxtesting\src\decimal_calc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -50,10 +53,10 @@
     <ClCompile Include="decimal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="decimal_calc.cpp">
+    <ClCompile Include="miniz.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="miniz.c">
+    <ClCompile Include="..\linuxtesting\src\decimal_calc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -61,8 +64,8 @@
     <MASM Include="udiv128.masm" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="decimal_calc.inl">
-      <Filter>Source Files</Filter>
+    <None Include="..\linuxtesting\src\decimal_calc.inl">
+      <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
 </Project>

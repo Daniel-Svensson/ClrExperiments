@@ -3,23 +3,6 @@
 #ifndef _DECIMAL_CALC_
 #define _DECIMAL_CALC_
 
-#if defined(_WIN32)
-#if 1
-#include <windows.h>
-#else
-#ifndef STDAPI
-#define STDAPI extern "C" long __stdcall
-#endif
-#endif
-#else // ! _WIN32
-typedef int32_t HRESULT;
-#define __stdcall
-#endif
-
-#ifndef STDAPI
-#define STDAPI extern "C" HRESULT
-#endif
-
 #ifdef _MSC_VER
 #include <sal.h>
 #else // CLANG? 
@@ -31,16 +14,14 @@ typedef int32_t HRESULT;
 #define _In_range_(a,b)
 #define __assume(condition)
 #define __analysis_assume(condition)
+#define _In_count_(x)
 
 #endif
 
-#ifndef __wtypes_h__
-struct DECIMAL;
-#endif
 
 STDAPI DecimalMul(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
 STDAPI DecimalDiv(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res);
-STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, char bSign);
+STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, uint8_t bSign);
 
 inline HRESULT __stdcall DecimalAdd(const DECIMAL* l, const DECIMAL *r, DECIMAL * __restrict res)
 {

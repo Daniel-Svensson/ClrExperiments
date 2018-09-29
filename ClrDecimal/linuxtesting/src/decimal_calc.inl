@@ -29,6 +29,13 @@
 // * ShiftLeft128
 //
 
+#ifndef FORCEDINLINE 
+	#ifdef _MSC_VER
+	#define FORCEDINLINE __forceinline
+	#else
+	#define FORCEDINLINE __attribute__((always_inline))
+	#endif
+#endif
 typedef unsigned char carry_t;
 
 // Access least significant 32 bits of 64bit value
@@ -45,20 +52,20 @@ inline const uint32_t & hi32(const uint64_t &value) {
 	return *(const uint32_t*)&((ULARGE_INTEGER*)&value)->u.HighPart;
 }
 
-inline uint64_t & low64(DECIMAL & dec) { return *(uint64_t*)&DECIMAL_LO64_GET(dec); }
-inline uint32_t & hi32(DECIMAL &dec) { return *(uint32_t*)&DECIMAL_HI32(dec); }
-inline uint32_t & mid32(DECIMAL &dec) { return *(uint32_t*)&DECIMAL_MID32(dec); }
-inline uint32_t & low32(DECIMAL &dec) { return *(uint32_t*)&DECIMAL_LO32(dec); }
-inline uint16_t & signscale(DECIMAL &dec) { return DECIMAL_SIGNSCALE(dec); }
-inline uint8_t & sign(DECIMAL &dec) { return DECIMAL_SIGN(dec); }
-inline uint8_t & scale(DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
-inline const uint64_t & low64(const DECIMAL & dec) { return *(uint64_t*)&DECIMAL_LO64_GET(dec); }
-inline const uint32_t & hi32(const DECIMAL &dec) { return *(uint32_t*)&DECIMAL_HI32(dec); }
-inline const uint32_t & mid32(const DECIMAL &dec) { return *(uint32_t*)&DECIMAL_MID32(dec); }
-inline const uint32_t & low32(const DECIMAL &dec) { return *(uint32_t*)&DECIMAL_LO32(dec); }
-inline const uint16_t & signscale(const DECIMAL &dec) { return DECIMAL_SIGNSCALE(dec); }
-inline const uint8_t & sign(const DECIMAL &dec) { return DECIMAL_SIGN(dec); }
-inline const uint8_t & scale(const DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
+inline FORCEDINLINE uint64_t & low64(DECIMAL & dec) { return *(uint64_t*)&DECIMAL_LO64_GET(dec); }
+inline FORCEDINLINE uint32_t & hi32(DECIMAL &dec) { return *(uint32_t*)&DECIMAL_HI32(dec); }
+inline FORCEDINLINE uint32_t & mid32(DECIMAL &dec) { return *(uint32_t*)&DECIMAL_MID32(dec); }
+inline FORCEDINLINE uint32_t & low32(DECIMAL &dec) { return *(uint32_t*)&DECIMAL_LO32(dec); }
+inline FORCEDINLINE uint16_t & signscale(DECIMAL &dec) { return DECIMAL_SIGNSCALE(dec); }
+inline FORCEDINLINE uint8_t & sign(DECIMAL &dec) { return DECIMAL_SIGN(dec); }
+inline FORCEDINLINE uint8_t & scale(DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
+inline FORCEDINLINE const uint64_t & low64(const DECIMAL & dec) { return *(uint64_t*)&DECIMAL_LO64_GET(dec); }
+inline FORCEDINLINE const uint32_t & hi32(const DECIMAL &dec) { return *(uint32_t*)&DECIMAL_HI32(dec); }
+inline FORCEDINLINE const uint32_t & mid32(const DECIMAL &dec) { return *(uint32_t*)&DECIMAL_MID32(dec); }
+inline FORCEDINLINE const uint32_t & low32(const DECIMAL &dec) { return *(uint32_t*)&DECIMAL_LO32(dec); }
+inline FORCEDINLINE const uint16_t & signscale(const DECIMAL &dec) { return DECIMAL_SIGNSCALE(dec); }
+inline FORCEDINLINE const uint8_t & sign(const DECIMAL &dec) { return DECIMAL_SIGN(dec); }
+inline FORCEDINLINE const uint8_t & scale(const DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
 
 #if (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 #define AddCarry32 _addcarry_u32
@@ -66,35 +73,16 @@ inline const uint8_t & scale(const DECIMAL &dec) { return  DECIMAL_SCALE(dec); }
 #else // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 inline carry_t AddCarry32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	*pRes = lhs + rhs;
-
-	// check for overflow
-	carry_t carry_out = (*pRes < lhs) ? 1 : 0;
-	if (carry)
-	{
-		*pRes += 1;
-
-		// Can use or + xor instead
-		if (*pRes == 0)
-			carry_out = 1;
-	}
-	return carry_out;
+	uint64_t sum = ((uint64_t)carry) + ((uint64_t)lhs) + ((uint64_t)rhs);
+	*pRes = (uint32_t)sum;
+	return (carry_t)(sum >> 32);
 }
 
 inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *pRes)
 {
-	*pRes = lhs - rhs;
-
-	// check for overflow
-	carry_t carry_out = (*pRes > lhs) ? 1 : 0;
-	if (carry)
-	{
-		if (*pRes == 0)
-			carry_out = 1;
-
-		*pRes -= 1;
-	}
-	return carry_out;
+	uint64_t res = ((uint64_t)lhs) - (((uint64_t)rhs) + ((uint64_t)carry));
+	*pRes = (uint32_t)res;
+	return ((carry_t)(res >> 32)) & 1;
 }
 #endif // !(defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
 
@@ -105,13 +93,13 @@ inline carry_t SubBorrow32(carry_t carry, uint32_t lhs, uint32_t rhs, uint32_t *
 #define AddCarry64(carry, lhs,rhs, pRes) _addcarry_u64(carry, lhs, rhs, (unsigned long long int *)pRes)
 #define SubBorrow64(carry, lhs,rhs, pRes) _subborrow_u64(carry, lhs, rhs,  (unsigned long long int *)pRes)
 #else
-inline carry_t AddCarry64(carry_t carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
+inline FORCEDINLINE carry_t AddCarry64(carry_t carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
 	carry = AddCarry32(carry, low32(lhs), low32(rhs), &low32(*pRes));
 	return AddCarry32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
 }
 
-inline carry_t SubBorrow64(carry_t carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
+inline FORCEDINLINE carry_t SubBorrow64(carry_t carry, uint64_t lhs, uint64_t rhs, uint64_t *pRes)
 {
 	carry = SubBorrow32(carry, low32(lhs), low32(rhs), &low32(*pRes));
 	return SubBorrow32(carry, hi32(lhs), hi32(rhs), &hi32(*pRes));
@@ -121,10 +109,10 @@ inline carry_t SubBorrow64(carry_t carry, uint64_t lhs, uint64_t rhs, uint64_t *
 // -------------------------- MULTIPLY ----------------------
 
 // Perform multiplications of 2 32bit values producing 64bit result
-inline uint64_t Mul32By32(uint32_t lhs, uint32_t rhs) { return ((uint64_t)lhs) *((uint64_t)rhs); }
+inline FORCEDINLINE uint64_t Mul32By32(uint32_t lhs, uint32_t rhs) { return ((uint64_t)lhs) *((uint64_t)rhs); }
 
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
-inline uint64_t Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _HighProduct)
+inline FORCEDINLINE uint64_t Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _HighProduct)
 {
 #if defined(_TARGET_AMD64_) && defined(_MSC_VER)
 	uint64_t temp;
@@ -152,7 +140,7 @@ inline uint64_t Mul64By32(uint64_t lhs, uint32_t rhs, uint32_t * _HighProduct)
 #define Mul64By64 _umul128
 #else
 // Performs multiplications of 2 64bit values, returns lower 64bit and store upper 64bit in _HighProduct
-inline uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
+inline FORCEDINLINE uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _HighProduct)
 {
 #if defined(__SIZEOF_INT128__)
 	// CLANG/GCC Does not contain _umul128 instrinct, but has __uint128 datatype
@@ -258,7 +246,7 @@ inline uint64_t __fastcall DivMod64By32_impl(uint32_t lo, uint32_t hi, uint32_t 
 }
 #else
 // no X86 asm support 
-inline uint64_t DivMod64By32_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
+inline FORCEDINLINE uint64_t DivMod64By32_impl(uint32_t lo, uint32_t hi, uint32_t ulDen)
 {
 	assert(hi < ulDen);
 	if (hi == 0)
@@ -335,23 +323,14 @@ extern "C" uint64_t DivMod128By64InPlace(uint64_t* pLow, uint64_t hi, uint64_t u
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline bool BitScanMsb32(uint32_t *Index, uint32_t Mask) {
-#ifdef _WIN32
 	return BitScanReverse((DWORD*)Index, Mask);
-#else
-	// G++/Clang __builtin_clz count LSB as 1, and MSB as 0 while BitScanReverse works in other way around
-	*Index = 31 - __builtin_clz(Mask);
-	return (Mask != 0);
-#endif
 }
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
 inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 {
-#if defined(BitScanReverse64)
+#if defined(BitScanReverse64) || !defined(WIN32)
 	return BitScanReverse64((DWORD*)Index, Mask);
-#elif defined(__GNUC__) || defined(__CLANG__)
-	*Index = 63 - __builtin_clzll(Mask);
-	return (Mask != 0);
 #else
 	unsigned char found = BitScanMsb32(Index, hi32(Mask));
 	if (found)
@@ -366,7 +345,7 @@ inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 #endif
 }
 
-#if !defined(_TARGET_AMD64_) || !defined(_WIN32)
+#if !defined(ShiftLeft128)
 inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
 {
 	return (_HighPart << _Shift) | (_LowPart >> (64 - _Shift));

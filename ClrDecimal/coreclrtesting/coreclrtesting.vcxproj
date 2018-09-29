@@ -121,15 +121,24 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\linuxtesting\src\common.h" />
+    <ClInclude Include="..\linuxtesting\src\decimal_calc.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="coreclr_helpers.h" />
-    <ClInclude Include="decimal_calc.h" />
     <ClInclude Include="miniz.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="x86_64bit_emulation.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\linuxtesting\src\decimal_calc.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="decimal.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="coreclr_impl.cpp" />
@@ -139,9 +148,6 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="decimal_calc.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="udiv128.masm">
@@ -150,7 +156,7 @@
     </MASM>
   </ItemGroup>
   <ItemGroup>
-    <None Include="decimal_calc.inl" />
+    <None Include="..\linuxtesting\src\decimal_calc.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
