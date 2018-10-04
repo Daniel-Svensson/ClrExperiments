@@ -32,18 +32,10 @@ inline bool FitsIn32Bit(const uint64_t* pValue)
 #undef COPYDEC
 inline void COPYDEC(DECIMAL &to, const DECIMAL &from)
 {
-#define COPYDEC_IMPL 1
-#if COPYDEC_IMPL == 1
-	signscale(to) = signscale(from);
-	hi32(to) = hi32(from);
-	low64(to) = low64(from);
-#elif  COPYDEC_IMPL == 2
-	// More stores, but everything seems to be from registers
 	scale(to) = scale(from);
 	sign(to) = sign(from);
 	hi32(to) = hi32(from);
 	low64(to) = low64(from);
-#endif
 }
 
 #undef DECIMAL_SETZERO
@@ -802,7 +794,6 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		// Remarks: iScale is in range [0, 28] which can required up to 94 bits
 		// so final result will be at most log2(10^28) + 96  < 190 bits without overflow
 		//
-
 #if defined(_TARGET_64BIT)
 		if (iScale <= POWER10_MAX64) {
 #else
@@ -813,7 +804,6 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			// fit in 128 bits (2*uint64_t) for 32bit platfrms
 			// fit in 128+32 bits (3*uint64_t) for 64bit platfrms
 			//
-
 #if defined(_TARGET_64BIT)
 			uint64_t ullPwr = rgulPower10_64[iScale];
 			uint64_t hi;
@@ -829,8 +819,6 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			rgullNum[1] = Mul32By32(hi32(*pdecL), ulPwr) + (uint64_t)hi;
 #endif
 
-			// by adding that extra write we can remove this condition
-			// and the compiler will skip this check, but write will impacte cache
 #if defined(_TARGET_64BIT)
 			if (rgullNum[2] != 0) {
 				iHiProd = 2;
