@@ -3,6 +3,9 @@
 // Following is defined on methods where inlining can be disabled when performing profiling
 #define PROFILE_NOINLINE
 
+#undef _TARGET_AMD64_
+#undef _TARGET_X86_
+
 // Following is from coreclr headers
 #ifndef DEC_SCALE_MAX
 #define DEC_SCALE_MAX 28
@@ -18,7 +21,7 @@ uint32_t IncreaseScale96By32(uint32_t *rgulNum, uint32_t ulPwr);
 // Determine if 64 bit value can be stored in 32 bits without loss (upper 32 bits are 0)
 inline bool FitsIn32Bit(const uint64_t* pValue)
 {
-#ifdef _TARGET_AMD64_
+#ifdef _TARGET_64BIT
 	return *pValue <= (uint64_t)(UINT32_MAX);
 #else
 	return hi32(*pValue) == 0;
@@ -228,7 +231,7 @@ PROFILE_NOINLINE
 int SearchScale64(const uint32_t(&rgulQuo)[4], int iScale)
 {
 	// TODO: use SearchScale (32) bit for 32bit code
-#if !defined(_TARGET_AMD64_)
+#if !defined(_TARGET_64BIT)
 	return SearchScale(rgulQuo[2], rgulQuo[1], rgulQuo[0], iScale);
 #endif
 
@@ -826,7 +829,6 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			rgullNum[1] = Mul32By32(hi32(*pdecL), ulPwr) + (uint64_t)hi;
 #endif
 
-			// TO REVIEW: we can set rgullNum[2] to 0 above for non _TARGET_AMD64_
 			// by adding that extra write we can remove this condition
 			// and the compiler will skip this check, but write will impacte cache
 #if defined(_TARGET_64BIT)
@@ -850,12 +852,9 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		else {
 			// Have to scale by a bunch.  Move the number to a buffer
 			// where it has room to grow as it's scaled.
-			// test init array after comparisons
-			// TODO? test initialise
+			// test init array after comparisons			
 			rgullNum[0] = low64(*pdecL);
 			rgullNum[1] = hi32(*pdecL);
-			// TODO?: rgullNum[2] = 0 to simplify rest of the logic
-			//rgullNum[2] = 0;
 			iHiProd = 1;
 
 			// Scan for zeros in the upper words.
@@ -875,10 +874,10 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			// Scaling loop, up to 10^19 at a time.  iHiProd stays updated
 			// with index of highest non-zero element.
 			//
-#if defined(_TARGET_64BIT)
 			uint64_t   ullPwr;
 
 			for (; iScale > 0; iScale -= POWER10_MAX64) {
+				uint64_t   ullPwr;
 				if (iScale >= POWER10_MAX64)
 					ullPwr = POWER10_MAX_VALUE64;
 				else
@@ -914,34 +913,6 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			if (rgullNum[2] != 0)
 				iHiProd = 2;
 #endif
-#else // #if defined(_TARGET_64BIT), TODO SEE IF THIS IMPROVES ANYTHING OR NOT
-
-			uint32_t   ulPwr;
-			for (; iScale > 0; iScale -= POWER10_MAX32) {
-				if (iScale >= POWER10_MAX32)
-					ulPwr = POWER10_MAX_VALUE32;
-				else
-					ulPwr = (uint32_t)rgulPower10_64[iScale];
-
-				uint32_t mul_carry;
-				carry_t add_carry = 0;
-				rgullNum[0] = Mul64By32(rgullNum[0], ulPwr, &mul_carry);
-
-				for (int iCur = 1; iCur <= iHiProd; iCur++) {
-					uint32_t tmp = mul_carry;
-					uint64_t product = Mul64By32(rgullNum[iCur], ulPwr, &mul_carry);
-					add_carry = AddCarry64(add_carry, tmp, product, &rgullNum[iCur]);
-				}
-
-				// We're extending the result by another element.
-				// Hi is at least 1 away from it's max value so we can add carry without overflow.
-				// ex: 0xffff*0xffff => "fffe0001", and it is the same pattern for all bitlenghts
-				//
-				if ((mul_carry | add_carry) != 0)
-					AddCarry64(add_carry, mul_carry, 0, &rgullNum[++iHiProd]);
-			}
-#endif
-
 			// Scaling by 10^28 (DEC_MAX_SCALE) adds upp to 94bits to the result
 			// so result will be at most 190 = 96+94 bits (so will always in fit in 3*64 = 192 bits)
 			// => iHiProd vill be at most 2
