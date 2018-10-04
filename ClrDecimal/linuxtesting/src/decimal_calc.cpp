@@ -800,7 +800,7 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		// so final result will be at most log2(10^28) + 96  < 190 bits without overflow
 		//
 
-#if defined(_TARGET_AMD64_)
+#if defined(_TARGET_64BIT)
 		if (iScale <= POWER10_MAX64) {
 #else
 		if (iScale <= POWER10_MAX32) {
@@ -811,7 +811,7 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			// fit in 128+32 bits (3*uint64_t) for 64bit platfrms
 			//
 
-#if defined(_TARGET_AMD64_)
+#if defined(_TARGET_64BIT)
 			uint64_t ullPwr = rgulPower10_64[iScale];
 			uint64_t hi;
 			rgullNum[0] = Mul64By64(low64(*pdecL), ullPwr, &hi);
@@ -819,19 +819,17 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			carry = AddCarry64(0, rgullNum[1], hi, &rgullNum[1]);
 			AddCarry64(carry, rgullNum[2], 0, &rgullNum[2]);
 #else
-			uint32_t ullPwr = (uint32_t)rgulPower10_64[iScale];
-			rgullNum[0] = Mul32By32(low32(*pdecL), ullPwr);
-			auto midResult = Mul32By32(mid32(*pdecL), ullPwr);
-			rgullNum[1] = Mul32By32(hi32(*pdecL), ullPwr);
-			carry = AddCarry32(0, low32(midResult), hi32(rgullNum[0]), &hi32(rgullNum[0]));
-			carry = AddCarry32(carry, hi32(midResult), low32(rgullNum[1]), &low32(rgullNum[1]));
-			AddCarry32(carry, 0, hi32(rgullNum[1]), &hi32(rgullNum[1]));
+			uint32_t ulPwr = (uint32_t)rgulPower10_64[iScale];
+
+			uint32_t hi;
+			rgullNum[0] = Mul64By32(low64(*pdecL), ulPwr, &hi);
+			rgullNum[1] = Mul32By32(hi32(*pdecL), ulPwr) + (uint64_t)hi;
 #endif
 
 			// TO REVIEW: we can set rgullNum[2] to 0 above for non _TARGET_AMD64_
 			// by adding that extra write we can remove this condition
 			// and the compiler will skip this check, but write will impacte cache
-#if defined(_TARGET_AMD64_)
+#if defined(_TARGET_64BIT)
 			if (rgullNum[2] != 0) {
 				iHiProd = 2;
 			}
@@ -850,21 +848,21 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			}
 		}
 		else {
-			uint64_t   ullPwr;
 			// Have to scale by a bunch.  Move the number to a buffer
 			// where it has room to grow as it's scaled.
-			//
+			// test init array after comparisons
+			// TODO? test initialise
 			rgullNum[0] = low64(*pdecL);
 			rgullNum[1] = hi32(*pdecL);
 			// TODO?: rgullNum[2] = 0 to simplify rest of the logic
-			rgullNum[2] = 0;
+			//rgullNum[2] = 0;
 			iHiProd = 1;
 
 			// Scan for zeros in the upper words.
 			//
-			if (rgullNum[1] == 0) {
+			if (hi32(*pdecL) == 0) {
 				iHiProd = 0;
-				if (rgullNum[0] == 0) {
+				if (low64(*pdecL) == 0) {
 					// Left arg is zero, return right.
 					//
 					low64(decRes) = low64(*pdecR);
@@ -877,6 +875,9 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			// Scaling loop, up to 10^19 at a time.  iHiProd stays updated
 			// with index of highest non-zero element.
 			//
+#if defined(_TARGET_64BIT)
+			uint64_t   ullPwr;
+
 			for (; iScale > 0; iScale -= POWER10_MAX64) {
 				if (iScale >= POWER10_MAX64)
 					ullPwr = POWER10_MAX_VALUE64;
@@ -902,17 +903,43 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			}
 #else
 				uint64_t hi, mul_carry;
-				rgullNum[0] = Mul64By64(ullPwr, rgullNum[0], &hi);
-				uint64_t product = Mul64By64(ullPwr, rgullNum[1], &mul_carry);
+				rgullNum[0] = Mul64By64(rgullNum[0], ullPwr,  &hi);
+				uint64_t product = Mul64By64(rgullNum[1], ullPwr, &mul_carry);
 				uint64_t product2 = ullPwr * rgullNum[2];
 
 				auto add_carry = AddCarry64(0, product, hi, &rgullNum[1]);
 				AddCarry64(add_carry, mul_carry, product2, &rgullNum[2]);
-
 		}
 
 			if (rgullNum[2] != 0)
 				iHiProd = 2;
+#endif
+#else // #if defined(_TARGET_64BIT), TODO SEE IF THIS IMPROVES ANYTHING OR NOT
+
+			uint32_t   ulPwr;
+			for (; iScale > 0; iScale -= POWER10_MAX32) {
+				if (iScale >= POWER10_MAX32)
+					ulPwr = POWER10_MAX_VALUE32;
+				else
+					ulPwr = (uint32_t)rgulPower10_64[iScale];
+
+				uint32_t mul_carry;
+				carry_t add_carry = 0;
+				rgullNum[0] = Mul64By32(rgullNum[0], ulPwr, &mul_carry);
+
+				for (int iCur = 1; iCur <= iHiProd; iCur++) {
+					uint32_t tmp = mul_carry;
+					uint64_t product = Mul64By32(rgullNum[iCur], ulPwr, &mul_carry);
+					add_carry = AddCarry64(add_carry, tmp, product, &rgullNum[iCur]);
+				}
+
+				// We're extending the result by another element.
+				// Hi is at least 1 away from it's max value so we can add carry without overflow.
+				// ex: 0xffff*0xffff => "fffe0001", and it is the same pattern for all bitlenghts
+				//
+				if ((mul_carry | add_carry) != 0)
+					AddCarry64(add_carry, mul_carry, 0, &rgullNum[++iHiProd]);
+			}
 #endif
 
 			// Scaling by 10^28 (DEC_MAX_SCALE) adds upp to 94bits to the result
