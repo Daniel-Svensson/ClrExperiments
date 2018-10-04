@@ -874,15 +874,13 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			// Scaling loop, up to 10^19 at a time.  iHiProd stays updated
 			// with index of highest non-zero element.
 			//
-			uint64_t   ullPwr;
-
 			for (; iScale > 0; iScale -= POWER10_MAX64) {
 				uint64_t   ullPwr;
 				if (iScale >= POWER10_MAX64)
 					ullPwr = POWER10_MAX_VALUE64;
 				else
 					ullPwr = rgulPower10_64[iScale];
-#if 1
+
 				uint64_t mul_carry;
 				carry_t add_carry = 0;
 				rgullNum[0] = Mul64By64(ullPwr, rgullNum[0], &mul_carry);
@@ -900,19 +898,7 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 				if ((mul_carry | add_carry) != 0)
 					AddCarry64(add_carry, mul_carry, 0, &rgullNum[++iHiProd]);
 			}
-#else
-				uint64_t hi, mul_carry;
-				rgullNum[0] = Mul64By64(rgullNum[0], ullPwr,  &hi);
-				uint64_t product = Mul64By64(rgullNum[1], ullPwr, &mul_carry);
-				uint64_t product2 = ullPwr * rgullNum[2];
 
-				auto add_carry = AddCarry64(0, product, hi, &rgullNum[1]);
-				AddCarry64(add_carry, mul_carry, product2, &rgullNum[2]);
-		}
-
-			if (rgullNum[2] != 0)
-				iHiProd = 2;
-#endif
 			// Scaling by 10^28 (DEC_MAX_SCALE) adds upp to 94bits to the result
 			// so result will be at most 190 = 96+94 bits (so will always in fit in 3*64 = 192 bits)
 			// => iHiProd vill be at most 2

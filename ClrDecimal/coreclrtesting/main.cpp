@@ -46,8 +46,8 @@ using namespace std;
 
 
 //#define NO_VALIDATE
-#define COMPARE_OLEAUT
-//#define COMPARE_CORECLR
+//#define COMPARE_OLEAUT
+#define COMPARE_CORECLR
 //#define COMPARE_DEFAULT 
 
 #if defined(COMPARE_DEFAULT)
@@ -58,7 +58,7 @@ using namespace std;
 #endif
 #endif 
 
-#define TEST_MULTIPLY
+//#define TEST_MULTIPLY
 #define TEST_ADD
 #define TEST_SUB
 //#define TEST_DIV
@@ -72,7 +72,7 @@ using namespace std;
 #define TEST_96bit_with_scale_96bit_result_no_overflow
 #define TEST_Bitpatterns_with_all_scales
 
-// #define VERBOSE_OUTPUT 1
+//#define VERBOSE_OUTPUT 1
 
 #ifdef _TARGET_X86_
 const char * platform = "new-x86";
