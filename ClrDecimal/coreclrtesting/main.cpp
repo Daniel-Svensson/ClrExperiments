@@ -167,7 +167,9 @@ void CompareResult(
 				|| (expected[result_idx].Hi32 != actual[result_idx].Hi32)
 				|| (expected[result_idx].signscale != actual[result_idx].signscale))
 			{
-				auto cmp = VarDecCmp(const_cast<DECIMAL*>(&expected[result_idx]), const_cast<DECIMAL*>(&actual[result_idx]));
+				auto cmp = actual_result[result_idx] == 0 ?
+					VarDecCmp(const_cast<DECIMAL*>(&expected[result_idx]), const_cast<DECIMAL*>(&actual[result_idx]))
+					: (expected_result[result_idx] == actual_result[result_idx] ? VARCMP_EQ  : ~VARCMP_EQ);
 				if (cmp == VARCMP_EQ)
 				{
 					if (expected_result[result_idx] != actual_result[result_idx])
