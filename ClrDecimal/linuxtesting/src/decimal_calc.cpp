@@ -3,8 +3,8 @@
 // Following is defined on methods where inlining can be disabled when performing profiling
 #define PROFILE_NOINLINE
 
-#undef _TARGET_AMD64_
-#undef _TARGET_X86_
+//#undef _TARGET_AMD64_
+//#undef _TARGET_X86_
 
 // Following is from coreclr headers
 #ifndef DEC_SCALE_MAX
@@ -572,7 +572,7 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 // 64bit optimized implementation of VarDecMul
 //
 //**********************************************************************
-STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict res)
+STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restrict pRes)
 {
 	uint64_t lo;
 	uint64_t hi;
@@ -596,7 +596,7 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 				if (iScale > 19)
 				{
 				ReturnZero:
-					DECIMAL_SETZERO(*res);
+					DECIMAL_SETZERO(*pRes);
 					return NOERROR;
 				}
 				ullPwr = rgulPower10_64[iScale];
@@ -611,8 +611,8 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 				iScale = DEC_SCALE_MAX;
 			}
 
-			hi32(*res) = 0;
-			low64(*res) = lo;
+			hi32(*pRes) = 0;
+			low64(*pRes) = lo;
 		}
 		else
 		{
@@ -624,8 +624,8 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 			if (iScale == -1)
 				return DISP_E_OVERFLOW;
 
-			low64(*res) = tmpSpace[0];
-			hi32(*res) = (uint32_t)tmpSpace[1];
+			low64(*pRes) = tmpSpace[0];
+			hi32(*pRes) = (uint32_t)tmpSpace[1];
 		}
 	}
 	else
@@ -688,12 +688,12 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 		if (iScale == -1)
 			return DISP_E_OVERFLOW;
 
-		low64(*res) = rgulProd[0];
-		hi32(*res) = (uint32_t)rgulProd[1];
+		low64(*pRes) = rgulProd[0];
+		hi32(*pRes) = (uint32_t)rgulProd[1];
 	}
 
-	sign(*res) = sign(*pdecL) ^ sign(*pdecR);
-	scale(*res) = (uint8_t)iScale;
+	sign(*pRes) = sign(*pdecL) ^ sign(*pdecR);
+	scale(*pRes) = (uint8_t)iScale;
 	return NOERROR;
 }
 
@@ -705,7 +705,8 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Out_ DECIMAL * __restrict pdecRes, uint8_t bSign)
 {
 	DECIMAL   decTmp;
-	DECIMAL   decRes;
+#define decRes *pdecRes
+//	DECIMAL   &decRes(*pdecRes);
 	uint64_t   rgullNum[3];
 	carry_t carry;
 
@@ -964,9 +965,10 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 	}
 
 RetDec:
-	COPYDEC(*pdecRes, decRes);
+	//sCOPYDEC(*pdecRes, decRes);
 	return NOERROR;
 }
+#undef decRes
 
 /***
 * Div128By96
