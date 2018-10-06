@@ -1380,7 +1380,7 @@ STDAPI VarDecNeg(LPDECIMAL pdecOprd, LPDECIMAL pdecRes)
 //
 //**********************************************************************
 
-STDAPI VarDecCmp(LPDECIMAL pdecL, LPDECIMAL pdecR)
+STDAPI VarDecCmp_PALRT(LPDECIMAL pdecL, LPDECIMAL pdecR)
 {
 	ULONG   ulSgnL;
 	ULONG   ulSgnR;

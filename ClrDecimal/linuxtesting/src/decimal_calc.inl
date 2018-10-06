@@ -41,16 +41,16 @@
 typedef unsigned char carry_t;
 
 // Access least significant 32 bits of 64bit value
-inline uint32_t & low32(uint64_t &value) { return *(uint32_t*)&((ULARGE_INTEGER*)&value)->u.LowPart; }
+inline FORCEDINLINE uint32_t & low32(uint64_t &value) { return *(uint32_t*)&((ULARGE_INTEGER*)&value)->u.LowPart; }
 // Access least significant 32 bits of 64bit value
-inline const uint32_t & low32(const uint64_t &value) {
+inline FORCEDINLINE const uint32_t & low32(const uint64_t &value) {
 	return *(const uint32_t*)&((ULARGE_INTEGER*)&value)->u.LowPart;
 }
 
 // Access most significant 32 bits of 64bit value
-inline uint32_t & hi32(uint64_t &value) { return *(uint32_t*)&((ULARGE_INTEGER*)&value)->u.HighPart; }
+inline FORCEDINLINE uint32_t & hi32(uint64_t &value) { return *(uint32_t*)&((ULARGE_INTEGER*)&value)->u.HighPart; }
 // Access most significant 32 bits of 64bit value
-inline const uint32_t & hi32(const uint64_t &value) {
+inline FORCEDINLINE const uint32_t & hi32(const uint64_t &value) {
 	return *(const uint32_t*)&((ULARGE_INTEGER*)&value)->u.HighPart;
 }
 
@@ -217,7 +217,7 @@ inline FORCEDINLINE uint64_t Mul64By64(uint64_t lhs, uint64_t rhs, uint64_t * _H
 // Divides a 32bit number (ulNum) by 32bit value (ulDen)
 // returns 32bit quotient with remainder in *pRemainder
 // This results in a single div instruction on x86 platforms
-inline uint32_t DivMod32By32(uint32_t ulNum, uint32_t ulDen, _Out_ uint32_t* pRemainder)
+inline FORCEDINLINE uint32_t DivMod32By32(uint32_t ulNum, uint32_t ulDen, _Out_ uint32_t* pRemainder)
 {
 	auto mod = ulNum % ulDen;
 	auto res = ulNum / ulDen;
@@ -229,7 +229,7 @@ inline uint32_t DivMod32By32(uint32_t ulNum, uint32_t ulDen, _Out_ uint32_t* pRe
 // Divides a 64bit number (ullNum) by 64bit value (ullDen)
 // returns 64bit quotient with remainder in *pRemainder
 // This results in a single div instruction on x64 platforms
-inline uint64_t DivMod64By64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_t* pRemainder)
+inline FORCEDINLINE uint64_t DivMod64By64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_t* pRemainder)
 {
 	auto mod = ullNum % ullDen;
 	auto res = ullNum / ullDen;
@@ -239,7 +239,7 @@ inline uint64_t DivMod64By64(uint64_t ullNum, uint64_t ullDen, _Out_ uint64_t* p
 }
 
 #if defined(__GNUC__) && (defined(_TARGET_X86_) || defined(_TARGET_AMD64_))
-inline uint32_t DivMod64By32(uint32_t lo, uint32_t hi, uint32_t ulDen, uint32_t *remainder)
+inline FORCEDINLINE uint32_t DivMod64By32(uint32_t lo, uint32_t hi, uint32_t ulDen, uint32_t *remainder)
 {
 	uint32_t eax, edx;
 
@@ -252,7 +252,7 @@ inline uint32_t DivMod64By32(uint32_t lo, uint32_t hi, uint32_t ulDen, uint32_t 
 	return eax;
 }
 
-inline uint32_t DivMod64By32InPlace(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
+inline FORCEDINLINE uint32_t DivMod64By32InPlace(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 {
 	uint32_t rem;
 	*pLow = DivMod64By32(*pLow, hi, ulDen, &rem);
@@ -304,14 +304,14 @@ inline FORCEDINLINE uint64_t DivMod64By32_impl(uint32_t lo, uint32_t hi, uint32_
 	}
 }
 #endif
-inline uint32_t DivMod64By32(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder)
+inline FORCEDINLINE uint32_t DivMod64By32(uint32_t lo, uint32_t hi, uint32_t ulDen, _Out_ uint32_t *remainder)
 {
 	uint64_t temp = DivMod64By32_impl(lo, hi, ulDen);
 	*remainder = hi32(temp);
 	return low32(temp);
 }
 
-inline uint32_t DivMod64By32InPlace(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
+inline FORCEDINLINE uint32_t DivMod64By32InPlace(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 {
 	auto temp = DivMod64By32_impl(*pLow, hi, ulDen);
 	*pLow = low32(temp);
@@ -323,7 +323,7 @@ inline uint32_t DivMod64By32InPlace(uint32_t* pLow, uint32_t hi, uint32_t ulDen)
 #define HAS_DIVMOD128BY64
 
 #if defined(__GNUC__)
-inline uint64_t DivMod128By64(uint64_t lo, uint64_t hi, uint64_t ulDen, uint64_t *remainder)
+inline FORCEDINLINE uint64_t DivMod128By64(uint64_t lo, uint64_t hi, uint64_t ulDen, uint64_t *remainder)
 {
 	uint64_t rax, rdx;
 
@@ -336,7 +336,7 @@ inline uint64_t DivMod128By64(uint64_t lo, uint64_t hi, uint64_t ulDen, uint64_t
 	return rax;
 }
 
-inline uint64_t DivMod128By64InPlace(uint64_t* pLow, uint64_t hi, uint64_t ulDen)
+inline FORCEDINLINE uint64_t DivMod128By64InPlace(uint64_t* pLow, uint64_t hi, uint64_t ulDen)
 {
 	uint64_t rem;
 	*pLow = DivMod128By64(*pLow, hi, ulDen, &rem);
@@ -357,17 +357,17 @@ extern "C" uint64_t DivMod128By64InPlace(uint64_t* pLow, uint64_t hi, uint64_t u
 #endif
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
-inline bool BitScanMsb32(uint32_t *Index, uint32_t Mask) {
+inline FORCEDINLINE bool BitScanMsb32(uint32_t *Index, uint32_t Mask) {
 	return BitScanReverse((DWORD*)Index, Mask);
 }
 
 // Returns index of most significant bit in mask if any bit is set, returns false if Mask is 0
-inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
+inline FORCEDINLINE bool BitScanMsb64(uint32_t * Index, uint64_t Mask)
 {
 #if defined(BitScanReverse64) || !defined(WIN32)
 	return BitScanReverse64((DWORD*)Index, Mask);
 #else
-	unsigned char found = BitScanMsb32(Index, hi32(Mask));
+	bool found = BitScanMsb32(Index, hi32(Mask));
 	if (found)
 	{
 		*Index += 32;
@@ -381,7 +381,7 @@ inline unsigned char BitScanMsb64(uint32_t * Index, uint64_t Mask)
 }
 
 #if !defined(ShiftLeft128)
-inline uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
+inline FORCEDINLINE uint64_t ShiftLeft128(uint64_t _LowPart, uint64_t _HighPart, unsigned char _Shift)
 {
 	return (_HighPart << _Shift) | (_LowPart >> (64 - _Shift));
 }
