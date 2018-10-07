@@ -249,7 +249,7 @@ static int ScaleResult(uint64_t *rgullRes, _In_range_(0, 2) int iHiRes, _In_rang
 			// If remainder == 1/2 divisor, round up if odd or sticky bit set.
 			//
 			ulPwr >>= 1;  // power of 10 always even
-			if (ulRemainder > ulPwr || (ulRemainder == ulPwr && ((rgullRes[0] & 1) | ulSticky))) {
+			if (ulRemainder > ulPwr || (ulRemainder == ulPwr && (((uint32_t)rgullRes[0] & 1) | ulSticky))) {
 
 				// Add 1 to first 96 bit word and check for overflow.
 				// We only scale if iHiRes was originally >= 1 so rgulRes[1] is already initalized.
