@@ -32,9 +32,8 @@ inline FORCEDINLINE void DECIMAL_SETZERO(DECIMAL &dec)
 }
 
 // ------------------------- CONSTANTS ------------------------
-const int POWER10_MAX64 = 19;
-const int POWER10_MAX32 = 9;
 
+// Lookup array containing 10^i
 static constexpr uint64_t rgulPower10_64[] = {
 	1ULL,
 	10ULL,
@@ -58,6 +57,10 @@ static constexpr uint64_t rgulPower10_64[] = {
 	10000000000000000000ULL,
 };
 
+// Exponent for largest power of 10 which fits in uint64_t value
+const int POWER10_MAX64 = 19;
+// Exponent for largest power of 10 which fits in uint32_t value
+const int POWER10_MAX32 = 9;
 static const uint64_t POWER10_MAX_VALUE64 = rgulPower10_64[POWER10_MAX64];
 static const uint32_t POWER10_MAX_VALUE32 = (uint32_t)rgulPower10_64[POWER10_MAX32];
 
@@ -69,10 +72,7 @@ inline FORCEDINLINE carry_t Add96By64(DECIMAL *pDec, uint64_t value)
 
 inline FORCEDINLINE carry_t Add96By32(uint64_t *pllVal, uint32_t value)
 {
-	// TODO: Check perf of adding ADDCARRY64
-	//auto carry = AddCarry32(0, low32(pllVal[0]), value, &low32(pllVal[0]));
-	//carry = AddCarry32(carry, hi32(pllVal[0]), 0, &hi32(pllVal[0]));
-	auto carry = AddCarry64(carry, pllVal[0], 0, &pllVal[0]); 
+	auto carry = AddCarry64(0, pllVal[0], value, &pllVal[0]);
 	return AddCarry32(carry, low32(pllVal[1]), 0, &low32(pllVal[1]));
 }
 
@@ -100,7 +100,7 @@ inline PROFILE_NOINLINE
 uint32_t ReduceScale(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(0, 2)
 	int &iHiRes, _Out_ uint32_t &ulDen, _Inout_ int &iNewScale)
 {
-	int iCur = iHiRes; // convert from 64bit to 32bit indicec (+1 == always point to upper 32 bits at start)
+	int iCur = iHiRes;
 	uint32_t ulRemainder = 0;
 
 	// Handle up to POWER10_MAX32 scale at a time
@@ -112,7 +112,6 @@ uint32_t ReduceScale(_In_count_(iHiRes) uint64_t * rgullRes, _Inout_ _In_range_(
 	}
 	iNewScale -= POWER10_MAX32;
 
-	iCur = iHiRes; // convert from 64bit to 32bit indicec (+1 == always point to upper 32 bits at start)
 	if (hi32(rgullRes[iCur]) < ulDen)
 	{
 		if (hi32(rgullRes[iCur]) == 0 && low32(rgullRes[iCur]) < ulDen)
@@ -557,7 +556,7 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 		else {
 			// Have to scale by a bunch.  Move the number to a buffer
 			// where it has room to grow as it's scaled.
-			// test init array after comparisons			
+			// test init array after comparisons
 			rgullNum[0] = low64(*pdecL);
 			rgullNum[1] = hi32(*pdecL);
 			iHiProd = 1;
@@ -580,7 +579,7 @@ STDAPI DecimalAddSub(_In_ const DECIMAL * pdecL, _In_ const DECIMAL * pdecR, _Ou
 			// with index of highest non-zero element.
 			//
 			for (; iScale > 0; iScale -= POWER10_MAX64) {
-				uint64_t   ullPwr;
+				uint64_t ullPwr;
 				if (iScale >= POWER10_MAX64)
 					ullPwr = POWER10_MAX_VALUE64;
 				else
