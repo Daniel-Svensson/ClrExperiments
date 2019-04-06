@@ -52,14 +52,14 @@ namespace Benchmarks
 
             for (int i = 0; i < Count; ++i)
             {
-                var rounding = decimals[rand.Next(0, decimals.Length - 1)];
+                var rounding = decimals[rand.Next(0, decimals.Length)];
 
                 _decAccounts[i] = new Accounts_Decimal()
                 {
                     // interest from -
-                    CurrentInterest = Random(rand, -100_000_000_000m, 100_000_000_000m),
+                    CurrentInterest = Random(rand, -9_000_000_000m, 9_000_000_000m),
                     CurrentInterestRate = Random(rand, -2m, 10m),
-                    Amount = Random(rand, -100_000_000_000_000m, 100_000_000_000_000m),
+                    Amount = Random(rand, -9_000_000_000_000m, 9_000_000_000_000m),
                     DaysInYear = days[rand.Next(0, days.Length - 1)]
                 };
 
@@ -89,12 +89,12 @@ namespace Benchmarks
         private static decimal Random(Random rand, decimal min, decimal max)
         {
             var range = (max - min);
-            var mid = (max + min) / 2;
+            var mid = (max + min) / 2m;
 
             return new decimal(rand.NextDouble()) * range - mid;
         }
 
-        [Benchmark]
+        [Benchmark(Description = "System.Decimal")]
         public void NetFramework()
         {
             var array = _decAccounts;
@@ -109,7 +109,7 @@ namespace Benchmarks
             }
         }
 
-        [Benchmark]
+        [Benchmark(Description = "P/Invoke New C++")]
         public void New()
         {
             var array = _decAccounts;
@@ -124,7 +124,7 @@ namespace Benchmarks
             }
         }
 
-        [Benchmark]
+        [Benchmark(Description = "P/Invoke oleauto32")]
         public void Oleauto32()
         {
             var array = _decAccounts;
@@ -139,7 +139,7 @@ namespace Benchmarks
             }
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void CoreRT2()
         {
             var array = _crt2Accounts;
@@ -155,7 +155,7 @@ namespace Benchmarks
         }
 
 
-        [Benchmark]
+        //[Benchmark]
         public void PInvokeDummy()
         {
             var array = _decAccounts;
