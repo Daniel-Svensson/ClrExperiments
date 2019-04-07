@@ -57,9 +57,9 @@ namespace Benchmarks
                 _decAccounts[i] = new Accounts_Decimal()
                 {
                     // interest from -
-                    CurrentInterest = Random(rand, -9_000_000_000m, 9_000_000_000m),
+                    CurrentInterest = Random(rand, -200_000m, 200_000m),
                     CurrentInterestRate = Random(rand, -2m, 10m),
-                    Amount = Random(rand, -9_000_000_000_000m, 9_000_000_000_000m),
+                    Amount = Random(rand, -200_000_000m, 200_000_000m),
                     DaysInYear = days[rand.Next(0, days.Length - 1)]
                 };
 
