@@ -20,7 +20,7 @@ namespace ConsoleApp1
 		private char[] _inputAsChars;
 		private byte[] _buffer;
 
-		[Params(5, 8, 16, 30, 34, 50, 100,/*85*/512/3)]
+		[Params(/*5, */8, 16, 20, 30, 34, 50, 100,/*85*/512 / 3)]
 		public int StringLengthInChars;
 
 		[GlobalSetup]
@@ -37,7 +37,7 @@ namespace ConsoleApp1
 			_buffer = new byte[StringLengthInChars * 2];
 		}
 
-		[Benchmark(Baseline = true)]
+//		[Benchmark(Baseline = true)]
 		public unsafe int Original()
 		{
 			fixed (char* s = _input)
@@ -63,6 +63,15 @@ namespace ConsoleApp1
 		//		return 0;
 		//}
 
+		//[Benchmark] - slower than 
+		public unsafe int Long1()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8CharsLong1(s, _input.Length, _buffer, 0);
+			}
+		}
+
 
 		[Benchmark]
 		public unsafe int Long2()
@@ -73,14 +82,23 @@ namespace ConsoleApp1
 			}
 		}
 
-		//[Benchmark]
-		//public unsafe int Simd1()
-		//{
-		//	fixed (char* s = _input)
-		//	{
-		//		return UnsafeGetUTF8CharsSimd(s, _input.Length, _buffer, 0);
-		//	}
-		//}
+		[Benchmark]
+		public unsafe int Simd1()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8CharsSimd(s, _input.Length, _buffer, 0);
+			}
+		}
+
+		[Benchmark]
+		public unsafe int SimdSSE()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8CharsSimdSSE(s, _input.Length, _buffer, 0);
+			}
+		}
 
 		//[Benchmark]
 		//public unsafe int Simd_Span()
@@ -141,6 +159,56 @@ namespace ConsoleApp1
 			}
 			return 0;
 		}
+
+		protected unsafe int UnsafeGetUTF8CharsLong1(char* chars, int charCount, byte[] buffer, int offset)
+		{
+			const int LongsPerChar = 4;
+			const uint Pattern = 0xff80ff80;
+
+			if (charCount > 0)
+			{
+				fixed (byte* _bytes = &buffer[offset])
+				{
+					byte* bytes = _bytes;
+					byte* bytesMax = &bytes[buffer.Length - offset];
+					char* charsMax = &chars[charCount];
+					char* longMax = &chars[charCount - (LongsPerChar - 1)];
+
+					while (chars < longMax)
+					{
+						uint low = *(uint*)chars;
+						uint hi = *(uint*)(chars + 2);
+
+						if (((hi | low) & Pattern) != 0)
+							break;
+
+						// 0x00aa00bb_00cc00dd => 0x00aaaabb_bbccccdd
+						*(ushort*)bytes = (ushort)(low | low >> 8);
+						*(ushort*)(bytes + 2) = (ushort)(hi | hi >> 8);
+						bytes += 4;
+						chars += 4;
+					}
+
+					while (chars < charsMax)
+					{
+						char t = *chars;
+						if (t >= 0x80)
+							break;
+
+						*bytes = (byte)t;
+						bytes++;
+						chars++;
+					}
+
+					if (chars < charsMax)
+						bytes += (_encoding ?? s_UTF8Encoding).GetBytes(chars, (int)(charsMax - chars), bytes, (int)(bytesMax - bytes));
+
+					return (int)(bytes - _bytes);
+				}
+			}
+			return 0;
+		}
+
 
 		protected unsafe int UnsafeGetUTF8CharsLong2(char* chars, int charCount, byte[] buffer, int offset)
 		{
@@ -215,11 +283,81 @@ namespace ConsoleApp1
 								var l = Vector128.Load((ushort*)chars);
 
 								if (Sse41.IsSupported ? !Sse41.TestZ(l, mask) : !Vector128.LessThanAll(l, mask))
-										break;
+									break;
 
-								*((long*)bytes) = Vector128.Narrow(l, l)
+								* ((long*)bytes) = Vector128.Narrow(l, l)
 									.AsInt64()
 									.GetElement(0);
+								bytes += Vector128<ushort>.Count;
+								chars += Vector128<ushort>.Count;
+							} while (chars < simdMax);
+						}
+					}
+
+					while (chars < longMax)
+					{
+						ulong l = *(ulong*)chars;
+						if ((l & Pattern) != 0)
+							break;
+
+						// 0x00aa00bb_00cc00dd => 0x00aaaabb_bbccccdd
+						l = l | (l >> 8);
+						*(ushort*)bytes = (ushort)l;
+						*(ushort*)(bytes + 2) = (ushort)(l >> 32);
+						bytes += 4;
+						chars += 4;
+					}
+
+					while (chars < charsMax)
+					{
+						char t = *chars;
+						if (t >= 0x80)
+							break;
+
+						*bytes = (byte)t;
+						bytes++;
+						chars++;
+					}
+
+					if (chars < charsMax)
+						bytes += (_encoding ?? s_UTF8Encoding).GetBytes(chars, (int)(charsMax - chars), bytes, (int)(bytesMax - bytes));
+
+					return (int)(bytes - _bytes);
+				}
+			}
+			return 0;
+		}
+
+		protected unsafe int UnsafeGetUTF8CharsSimdSSE(char* chars, int charCount, byte[] buffer, int offset)
+		{
+			const int LongsPerChar = 4;
+			const ulong Pattern = 0xff80ff80ff80ff80;
+
+			if (charCount > 0)
+			{
+				fixed (byte* _bytes = &buffer[offset])
+				{
+					byte* bytes = _bytes;
+					byte* bytesMax = &bytes[buffer.Length - offset];
+					char* charsMax = &chars[charCount];
+					char* simdMax = &chars[charCount - (Vector128<ushort>.Count - 1)];
+					char* longMax = &chars[charCount - (LongsPerChar - 1)];
+
+					if (Vector128.IsHardwareAccelerated)
+					{
+						if (chars < simdMax)
+						{
+							var mask = Vector128.Create(unchecked((short)0xff80));
+							do
+							{
+								var v = Sse41.LoadVector128((short*)chars);
+								if (!Sse41.TestZ(v, mask))
+								{
+//									var m = Sse42.MoveMask(Sse42.CompareLessThan(mask, v).AsByte());
+									break;
+								}
+
+								Sse41.StoreScalar((long*)bytes, Sse41.PackUnsignedSaturate(v, v).AsInt64());
 								bytes += Vector128<ushort>.Count;
 								chars += Vector128<ushort>.Count;
 							} while (chars < simdMax);

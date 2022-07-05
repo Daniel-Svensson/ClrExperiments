@@ -57,7 +57,7 @@ a.Setup();
 //a.Original();
 //a.Encoding();
 //a.Systemtext();
-a.Long();
+//a.Long();
 //a.Simd1();
 //a.Simd2();
 
