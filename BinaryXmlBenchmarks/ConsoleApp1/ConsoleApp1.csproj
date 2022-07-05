@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<!--<RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Optimize Condition="'$(Configuration)'!='Debug'">true</Optimize>
+	</PropertyGroup>
+
+
+	<ItemGroup Condition="'$(Configuration)'=='LocalBuild'">
+		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
+		<Reference Include="System.Runtime.Serialization.Xml">
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Release\net7.0\System.Runtime.Serialization.Xml.dll</HintPath>
+			<Private>true</Private>
+		</Reference>
+		<Reference Include="System.Private.DataContractSerialization">
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll</HintPath>
+			<Private>true</Private>
+		</Reference>
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Compile Remove="Xml\**" />
+	  <EmbeddedResource Remove="Xml\**" />
+	  <None Remove="Xml\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Include="..\..\..\..\..\..\dev\github\dotnet\runtime\src\libraries\Common\src\System\ThrowHelper.cs" Link="Common\ThrowHelper.cs" />
+	  <Compile Include="..\..\..\..\..\..\dev\github\dotnet\runtime\src\libraries\System.Private.DataContractSerialization\src\System\Runtime\Serialization\DiagnosticUtility.cs" Link="Common\DiagnosticUtility.cs" />
+	  <Compile Include="..\..\..\..\..\..\dev\github\dotnet\runtime\src\libraries\System.Private.DataContractSerialization\src\System\Text\SurrogateChar.cs" Link="Xml\Text\SurrogateChar.cs" />
+	  <Compile Include="Xml\BaselineWriter.cs" />
+	  <Compile Include="Xml\BytesWithOffset.cs" />
+	  <Compile Include="Xml\SpanWriter.cs" />
+	  <Compile Include="Xml\SR.cs" />
+	  <Compile Include="Xml\UnsafeWriter.cs" />
+	  <Compile Include="Xml\XmlBinaryNodeType.cs" />
+	  <Compile Include="Xml\XmlNodeWriter.cs" />
+	  <Compile Include="Xml\XmlStreamNodeWriter.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
+		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.1" />
+	</ItemGroup>
+
+</Project>

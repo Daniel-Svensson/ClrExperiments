@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "ConsoleApp1": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "COMPlus_JitDisasm": "System.Xml.*::*",
+        "COMPlus_JitDump": "System.Xml.*::*"
+      }
+    }
+  }
+}
