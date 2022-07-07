@@ -63,3 +63,6 @@ a.Setup();
 
 BenchmarkRunner.Run<Utf8Benchmarks>(DefaultConfig.Instance.AddJob(baseJob).KeepBenchmarkFiles());
 
+
+//BenchmarkRunner.Run<Utf8BenchmarksLength>(DefaultConfig.Instance.AddJob(baseJob).KeepBenchmarkFiles());
+
