@@ -22,16 +22,36 @@ namespace ConsoleApp1
 		[Params(512, 1024, 2048)]
 		public int StringLengthInChars;
 
+		[Params(Utf8Scenario.AsciiOnly, Utf8Scenario.Mixed, Utf8Scenario.OnlyNonAscii)]
+		public Utf8Scenario Scenario;
+
 		[GlobalSetup]
 		public void Setup()
 		{
-			_input = String.Create(StringLengthInChars, (object?)null, (bytes, state) =>
+			_input = Scenario switch
 			{
-				int i = 0;
-				foreach (ref char ch in bytes)
-					ch = (char)('a' + (i++ % 28));
+				Utf8Scenario.AsciiOnly => String.Create(StringLengthInChars, (object?)null, (chars, state) =>
+				{
+					int i = 0;
+					foreach (ref char ch in chars)
+						ch = (char)('a' + (i++ % 28));
 
-			});
+				}),
+				Utf8Scenario.Mixed => String.Create(StringLengthInChars, (object?)null, (chars, state) =>
+				{
+					string text = "Det här är en text med lite blandat innehåll.";
+					int i = 0;
+					foreach (ref char ch in chars)
+						ch = text[i++ % text.Length];
+				}),
+				Utf8Scenario.OnlyNonAscii => String.Create(StringLengthInChars, (object?)null, (chars, state) =>
+				{
+					string text = "åäö";
+					int i = 0;
+					foreach (ref char ch in chars)
+						ch = text[i++ % text.Length];
+				}),
+			};
 		}
 
 		[Benchmark(Baseline = true)]
