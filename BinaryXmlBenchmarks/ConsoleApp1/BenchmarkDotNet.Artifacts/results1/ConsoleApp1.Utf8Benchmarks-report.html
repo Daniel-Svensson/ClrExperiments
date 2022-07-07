@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>ConsoleApp1.Utf8Benchmarks-20220706-111545</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.1, OS=Windows 10.0.22000
+AMD Ryzen 7 5800X, 1 CPU, 16 logical and 8 physical cores
+.NET SDK=7.0.100-preview.4.22252.9
+  [Host]     : .NET 7.0.0 (7.0.22.22904), X64 RyuJIT
+  Job-FSKGDJ : .NET 7.0.0 (7.0.22.22904), X64 RyuJIT
+</code></pre>
+<pre><code>MaxRelativeError=0.01  IterationTime=250.0000 ms  
+</code></pre>
+
+<table>
+<thead><tr><th>Method</th><th>StringLengthInChars</th><th>Scenario</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th>
+</tr>
+</thead><tbody><tr><td>Original</td><td>8</td><td>AsciiOnly</td><td>4.255 ns</td><td>0.0135 ns</td><td>0.0126 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>8</td><td>AsciiOnly</td><td>7.971 ns</td><td>0.0296 ns</td><td>0.0247 ns</td><td>1.87</td><td>0.01</td>
+</tr><tr><td>Long2</td><td>8</td><td>AsciiOnly</td><td>3.185 ns</td><td>0.0116 ns</td><td>0.0091 ns</td><td>0.75</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>8</td><td>AsciiOnly</td><td>3.681 ns</td><td>0.0477 ns</td><td>0.0848 ns</td><td>0.85</td><td>0.02</td>
+</tr><tr><td>SimdSSE</td><td>8</td><td>AsciiOnly</td><td>3.347 ns</td><td>0.0140 ns</td><td>0.0124 ns</td><td>0.79</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>8</td><td>AsciiOnly</td><td>3.798 ns</td><td>0.0169 ns</td><td>0.0158 ns</td><td>0.89</td><td>0.00</td>
+</tr><tr><td>Original</td><td>8</td><td>Mixed</td><td>13.123 ns</td><td>0.0437 ns</td><td>0.0388 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>8</td><td>Mixed</td><td>11.174 ns</td><td>0.0394 ns</td><td>0.0349 ns</td><td>0.85</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>8</td><td>Mixed</td><td>13.375 ns</td><td>0.0359 ns</td><td>0.0336 ns</td><td>1.02</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>8</td><td>Mixed</td><td>13.416 ns</td><td>0.0295 ns</td><td>0.0276 ns</td><td>1.02</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>8</td><td>Mixed</td><td>13.219 ns</td><td>0.0490 ns</td><td>0.0459 ns</td><td>1.01</td><td>0.01</td>
+</tr><tr><td>Simd2</td><td>8</td><td>Mixed</td><td>13.465 ns</td><td>0.0534 ns</td><td>0.0499 ns</td><td>1.03</td><td>0.00</td>
+</tr><tr><td>Original</td><td>8</td><td>OnlyNonAscii</td><td>17.244 ns</td><td>0.0577 ns</td><td>0.0540 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>8</td><td>OnlyNonAscii</td><td>14.058 ns</td><td>0.0330 ns</td><td>0.0308 ns</td><td>0.82</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>8</td><td>OnlyNonAscii</td><td>15.106 ns</td><td>0.0199 ns</td><td>0.0166 ns</td><td>0.88</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>8</td><td>OnlyNonAscii</td><td>15.965 ns</td><td>0.0365 ns</td><td>0.0341 ns</td><td>0.93</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>8</td><td>OnlyNonAscii</td><td>14.596 ns</td><td>0.0496 ns</td><td>0.0464 ns</td><td>0.85</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>8</td><td>OnlyNonAscii</td><td>15.631 ns</td><td>0.0414 ns</td><td>0.0367 ns</td><td>0.91</td><td>0.00</td>
+</tr><tr><td>Original</td><td>16</td><td>AsciiOnly</td><td>7.228 ns</td><td>0.0387 ns</td><td>0.0362 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>16</td><td>AsciiOnly</td><td>8.821 ns</td><td>0.0260 ns</td><td>0.0231 ns</td><td>1.22</td><td>0.01</td>
+</tr><tr><td>Long2</td><td>16</td><td>AsciiOnly</td><td>4.002 ns</td><td>0.0147 ns</td><td>0.0130 ns</td><td>0.55</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>16</td><td>AsciiOnly</td><td>3.970 ns</td><td>0.0126 ns</td><td>0.0118 ns</td><td>0.55</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>16</td><td>AsciiOnly</td><td>3.550 ns</td><td>0.0069 ns</td><td>0.0058 ns</td><td>0.49</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>16</td><td>AsciiOnly</td><td>3.553 ns</td><td>0.0117 ns</td><td>0.0104 ns</td><td>0.49</td><td>0.00</td>
+</tr><tr><td>Original</td><td>16</td><td>Mixed</td><td>24.124 ns</td><td>0.0616 ns</td><td>0.0546 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>16</td><td>Mixed</td><td>14.873 ns</td><td>0.0276 ns</td><td>0.0245 ns</td><td>0.62</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>16</td><td>Mixed</td><td>16.687 ns</td><td>0.0364 ns</td><td>0.0323 ns</td><td>0.69</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>16</td><td>Mixed</td><td>17.105 ns</td><td>0.0562 ns</td><td>0.0499 ns</td><td>0.71</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>16</td><td>Mixed</td><td>16.608 ns</td><td>0.0874 ns</td><td>0.0730 ns</td><td>0.69</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>16</td><td>Mixed</td><td>17.344 ns</td><td>0.0802 ns</td><td>0.0751 ns</td><td>0.72</td><td>0.00</td>
+</tr><tr><td>Original</td><td>16</td><td>OnlyNonAscii</td><td>24.327 ns</td><td>0.1493 ns</td><td>0.1396 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>16</td><td>OnlyNonAscii</td><td>18.659 ns</td><td>0.0557 ns</td><td>0.0521 ns</td><td>0.77</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>16</td><td>OnlyNonAscii</td><td>20.359 ns</td><td>0.2145 ns</td><td>0.2385 ns</td><td>0.84</td><td>0.01</td>
+</tr><tr><td>Simd1</td><td>16</td><td>OnlyNonAscii</td><td>20.506 ns</td><td>0.0393 ns</td><td>0.0349 ns</td><td>0.84</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>16</td><td>OnlyNonAscii</td><td>18.709 ns</td><td>0.0396 ns</td><td>0.0351 ns</td><td>0.77</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>16</td><td>OnlyNonAscii</td><td>20.523 ns</td><td>0.0523 ns</td><td>0.0489 ns</td><td>0.84</td><td>0.01</td>
+</tr><tr><td>Original</td><td>30</td><td>AsciiOnly</td><td>10.419 ns</td><td>0.0615 ns</td><td>0.0575 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>30</td><td>AsciiOnly</td><td>10.308 ns</td><td>0.0243 ns</td><td>0.0215 ns</td><td>0.99</td><td>0.01</td>
+</tr><tr><td>Long2</td><td>30</td><td>AsciiOnly</td><td>7.207 ns</td><td>0.0338 ns</td><td>0.0282 ns</td><td>0.69</td><td>0.01</td>
+</tr><tr><td>Simd1</td><td>30</td><td>AsciiOnly</td><td>5.028 ns</td><td>0.0176 ns</td><td>0.0147 ns</td><td>0.48</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>30</td><td>AsciiOnly</td><td>4.610 ns</td><td>0.0104 ns</td><td>0.0092 ns</td><td>0.44</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>30</td><td>AsciiOnly</td><td>5.431 ns</td><td>0.0125 ns</td><td>0.0105 ns</td><td>0.52</td><td>0.00</td>
+</tr><tr><td>Original</td><td>30</td><td>Mixed</td><td>28.225 ns</td><td>0.0761 ns</td><td>0.0675 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>30</td><td>Mixed</td><td>16.373 ns</td><td>0.0510 ns</td><td>0.0477 ns</td><td>0.58</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>30</td><td>Mixed</td><td>18.729 ns</td><td>0.0370 ns</td><td>0.0309 ns</td><td>0.66</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>30</td><td>Mixed</td><td>18.907 ns</td><td>0.0318 ns</td><td>0.0282 ns</td><td>0.67</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>30</td><td>Mixed</td><td>18.404 ns</td><td>0.0978 ns</td><td>0.0867 ns</td><td>0.65</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>30</td><td>Mixed</td><td>19.343 ns</td><td>0.0550 ns</td><td>0.0460 ns</td><td>0.69</td><td>0.00</td>
+</tr><tr><td>Original</td><td>30</td><td>OnlyNonAscii</td><td>37.418 ns</td><td>0.2292 ns</td><td>0.2144 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>30</td><td>OnlyNonAscii</td><td>27.376 ns</td><td>0.0423 ns</td><td>0.0330 ns</td><td>0.73</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>30</td><td>OnlyNonAscii</td><td>28.850 ns</td><td>0.0799 ns</td><td>0.0667 ns</td><td>0.77</td><td>0.01</td>
+</tr><tr><td>Simd1</td><td>30</td><td>OnlyNonAscii</td><td>29.427 ns</td><td>0.2163 ns</td><td>0.1806 ns</td><td>0.79</td><td>0.01</td>
+</tr><tr><td>SimdSSE</td><td>30</td><td>OnlyNonAscii</td><td>26.141 ns</td><td>0.0853 ns</td><td>0.0713 ns</td><td>0.70</td><td>0.01</td>
+</tr><tr><td>Simd2</td><td>30</td><td>OnlyNonAscii</td><td>29.340 ns</td><td>0.1010 ns</td><td>0.0945 ns</td><td>0.78</td><td>0.00</td>
+</tr><tr><td>Original</td><td>34</td><td>AsciiOnly</td><td>11.343 ns</td><td>0.0456 ns</td><td>0.0427 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>34</td><td>AsciiOnly</td><td>9.249 ns</td><td>0.0986 ns</td><td>0.0922 ns</td><td>0.82</td><td>0.01</td>
+</tr><tr><td>Long2</td><td>34</td><td>AsciiOnly</td><td>7.532 ns</td><td>0.0430 ns</td><td>0.0402 ns</td><td>0.66</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>34</td><td>AsciiOnly</td><td>5.033 ns</td><td>0.0112 ns</td><td>0.0099 ns</td><td>0.44</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>34</td><td>AsciiOnly</td><td>4.416 ns</td><td>0.0112 ns</td><td>0.0094 ns</td><td>0.39</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>34</td><td>AsciiOnly</td><td>4.193 ns</td><td>0.0193 ns</td><td>0.0180 ns</td><td>0.37</td><td>0.00</td>
+</tr><tr><td>Original</td><td>34</td><td>Mixed</td><td>28.198 ns</td><td>0.2143 ns</td><td>0.1790 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>34</td><td>Mixed</td><td>17.832 ns</td><td>0.0324 ns</td><td>0.0271 ns</td><td>0.63</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>34</td><td>Mixed</td><td>18.956 ns</td><td>0.0359 ns</td><td>0.0336 ns</td><td>0.67</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>34</td><td>Mixed</td><td>19.349 ns</td><td>0.0511 ns</td><td>0.0478 ns</td><td>0.69</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>34</td><td>Mixed</td><td>19.149 ns</td><td>0.1696 ns</td><td>0.2082 ns</td><td>0.68</td><td>0.01</td>
+</tr><tr><td>Simd2</td><td>34</td><td>Mixed</td><td>20.003 ns</td><td>0.1046 ns</td><td>0.0928 ns</td><td>0.71</td><td>0.01</td>
+</tr><tr><td>Original</td><td>34</td><td>OnlyNonAscii</td><td>41.079 ns</td><td>0.4230 ns</td><td>0.4154 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>34</td><td>OnlyNonAscii</td><td>30.599 ns</td><td>0.3210 ns</td><td>0.3568 ns</td><td>0.75</td><td>0.01</td>
+</tr><tr><td>Long2</td><td>34</td><td>OnlyNonAscii</td><td>31.787 ns</td><td>0.0907 ns</td><td>0.0757 ns</td><td>0.77</td><td>0.01</td>
+</tr><tr><td>Simd1</td><td>34</td><td>OnlyNonAscii</td><td>32.169 ns</td><td>0.0558 ns</td><td>0.0466 ns</td><td>0.78</td><td>0.01</td>
+</tr><tr><td>SimdSSE</td><td>34</td><td>OnlyNonAscii</td><td>28.925 ns</td><td>0.1658 ns</td><td>0.1470 ns</td><td>0.70</td><td>0.01</td>
+</tr><tr><td>Simd2</td><td>34</td><td>OnlyNonAscii</td><td>32.223 ns</td><td>0.0872 ns</td><td>0.0728 ns</td><td>0.79</td><td>0.01</td>
+</tr><tr><td>Original</td><td>50</td><td>AsciiOnly</td><td>17.709 ns</td><td>0.0427 ns</td><td>0.0378 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>50</td><td>AsciiOnly</td><td>10.058 ns</td><td>0.0275 ns</td><td>0.0258 ns</td><td>0.57</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>50</td><td>AsciiOnly</td><td>9.532 ns</td><td>0.0345 ns</td><td>0.0323 ns</td><td>0.54</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>50</td><td>AsciiOnly</td><td>5.990 ns</td><td>0.0115 ns</td><td>0.0096 ns</td><td>0.34</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>50</td><td>AsciiOnly</td><td>5.157 ns</td><td>0.0252 ns</td><td>0.0223 ns</td><td>0.29</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>50</td><td>AsciiOnly</td><td>4.688 ns</td><td>0.0057 ns</td><td>0.0047 ns</td><td>0.26</td><td>0.00</td>
+</tr><tr><td>Original</td><td>50</td><td>Mixed</td><td>42.303 ns</td><td>0.4249 ns</td><td>0.4173 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>50</td><td>Mixed</td><td>20.986 ns</td><td>0.0490 ns</td><td>0.0409 ns</td><td>0.50</td><td>0.01</td>
+</tr><tr><td>Long2</td><td>50</td><td>Mixed</td><td>22.219 ns</td><td>0.0363 ns</td><td>0.0303 ns</td><td>0.53</td><td>0.01</td>
+</tr><tr><td>Simd1</td><td>50</td><td>Mixed</td><td>22.629 ns</td><td>0.0665 ns</td><td>0.0622 ns</td><td>0.54</td><td>0.01</td>
+</tr><tr><td>SimdSSE</td><td>50</td><td>Mixed</td><td>22.215 ns</td><td>0.0372 ns</td><td>0.0330 ns</td><td>0.53</td><td>0.01</td>
+</tr><tr><td>Simd2</td><td>50</td><td>Mixed</td><td>22.911 ns</td><td>0.1082 ns</td><td>0.0959 ns</td><td>0.54</td><td>0.01</td>
+</tr><tr><td>Original</td><td>50</td><td>OnlyNonAscii</td><td>53.199 ns</td><td>0.1513 ns</td><td>0.1341 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>50</td><td>OnlyNonAscii</td><td>40.552 ns</td><td>0.1473 ns</td><td>0.1378 ns</td><td>0.76</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>50</td><td>OnlyNonAscii</td><td>42.082 ns</td><td>0.1412 ns</td><td>0.1179 ns</td><td>0.79</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>50</td><td>OnlyNonAscii</td><td>42.439 ns</td><td>0.0896 ns</td><td>0.0794 ns</td><td>0.80</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>50</td><td>OnlyNonAscii</td><td>37.550 ns</td><td>0.1761 ns</td><td>0.1647 ns</td><td>0.71</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>50</td><td>OnlyNonAscii</td><td>42.411 ns</td><td>0.0637 ns</td><td>0.0565 ns</td><td>0.80</td><td>0.00</td>
+</tr><tr><td>Original</td><td>100</td><td>AsciiOnly</td><td>28.772 ns</td><td>0.1299 ns</td><td>0.1152 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>100</td><td>AsciiOnly</td><td>11.354 ns</td><td>0.0124 ns</td><td>0.0104 ns</td><td>0.39</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>100</td><td>AsciiOnly</td><td>14.640 ns</td><td>0.0508 ns</td><td>0.0451 ns</td><td>0.51</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>100</td><td>AsciiOnly</td><td>9.061 ns</td><td>0.0327 ns</td><td>0.0290 ns</td><td>0.31</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>100</td><td>AsciiOnly</td><td>7.657 ns</td><td>0.0181 ns</td><td>0.0161 ns</td><td>0.27</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>100</td><td>AsciiOnly</td><td>6.194 ns</td><td>0.0095 ns</td><td>0.0080 ns</td><td>0.22</td><td>0.00</td>
+</tr><tr><td>Original</td><td>100</td><td>Mixed</td><td>114.077 ns</td><td>0.8197 ns</td><td>0.7668 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>100</td><td>Mixed</td><td>35.569 ns</td><td>0.0355 ns</td><td>0.0315 ns</td><td>0.31</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>100</td><td>Mixed</td><td>37.778 ns</td><td>0.0837 ns</td><td>0.0699 ns</td><td>0.33</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>100</td><td>Mixed</td><td>40.630 ns</td><td>0.0801 ns</td><td>0.0710 ns</td><td>0.36</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>100</td><td>Mixed</td><td>36.922 ns</td><td>0.0510 ns</td><td>0.0398 ns</td><td>0.32</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>100</td><td>Mixed</td><td>38.380 ns</td><td>0.0833 ns</td><td>0.0739 ns</td><td>0.34</td><td>0.00</td>
+</tr><tr><td>Original</td><td>100</td><td>OnlyNonAscii</td><td>104.087 ns</td><td>0.3591 ns</td><td>0.3184 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>100</td><td>OnlyNonAscii</td><td>76.262 ns</td><td>0.5980 ns</td><td>0.5594 ns</td><td>0.73</td><td>0.01</td>
+</tr><tr><td>Long2</td><td>100</td><td>OnlyNonAscii</td><td>77.628 ns</td><td>0.0803 ns</td><td>0.0671 ns</td><td>0.75</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>100</td><td>OnlyNonAscii</td><td>78.262 ns</td><td>0.1379 ns</td><td>0.1151 ns</td><td>0.75</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>100</td><td>OnlyNonAscii</td><td>68.233 ns</td><td>0.4599 ns</td><td>0.4302 ns</td><td>0.66</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>100</td><td>OnlyNonAscii</td><td>77.977 ns</td><td>0.1651 ns</td><td>0.1464 ns</td><td>0.75</td><td>0.00</td>
+</tr><tr><td>Original</td><td>170</td><td>AsciiOnly</td><td>44.357 ns</td><td>0.1999 ns</td><td>0.1670 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>170</td><td>AsciiOnly</td><td>12.437 ns</td><td>0.0284 ns</td><td>0.0222 ns</td><td>0.28</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>170</td><td>AsciiOnly</td><td>22.521 ns</td><td>0.0885 ns</td><td>0.0828 ns</td><td>0.51</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>170</td><td>AsciiOnly</td><td>13.109 ns</td><td>0.0613 ns</td><td>0.0544 ns</td><td>0.30</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>170</td><td>AsciiOnly</td><td>13.217 ns</td><td>0.1187 ns</td><td>0.1053 ns</td><td>0.30</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>170</td><td>AsciiOnly</td><td>9.290 ns</td><td>0.0159 ns</td><td>0.0133 ns</td><td>0.21</td><td>0.00</td>
+</tr><tr><td>Original</td><td>170</td><td>Mixed</td><td>152.470 ns</td><td>1.4489 ns</td><td>1.2844 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>170</td><td>Mixed</td><td>50.955 ns</td><td>0.0844 ns</td><td>0.0659 ns</td><td>0.33</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>170</td><td>Mixed</td><td>53.423 ns</td><td>0.0816 ns</td><td>0.0723 ns</td><td>0.35</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>170</td><td>Mixed</td><td>54.373 ns</td><td>0.0765 ns</td><td>0.0639 ns</td><td>0.36</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>170</td><td>Mixed</td><td>52.389 ns</td><td>0.1289 ns</td><td>0.1076 ns</td><td>0.34</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>170</td><td>Mixed</td><td>54.189 ns</td><td>0.1646 ns</td><td>0.1459 ns</td><td>0.36</td><td>0.00</td>
+</tr><tr><td>Original</td><td>170</td><td>OnlyNonAscii</td><td>163.987 ns</td><td>0.4899 ns</td><td>0.4343 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Encoding</td><td>170</td><td>OnlyNonAscii</td><td>121.331 ns</td><td>0.1443 ns</td><td>0.1127 ns</td><td>0.74</td><td>0.00</td>
+</tr><tr><td>Long2</td><td>170</td><td>OnlyNonAscii</td><td>123.231 ns</td><td>0.5227 ns</td><td>0.4890 ns</td><td>0.75</td><td>0.00</td>
+</tr><tr><td>Simd1</td><td>170</td><td>OnlyNonAscii</td><td>123.793 ns</td><td>0.2447 ns</td><td>0.2289 ns</td><td>0.75</td><td>0.00</td>
+</tr><tr><td>SimdSSE</td><td>170</td><td>OnlyNonAscii</td><td>105.522 ns</td><td>0.5029 ns</td><td>0.4458 ns</td><td>0.64</td><td>0.00</td>
+</tr><tr><td>Simd2</td><td>170</td><td>OnlyNonAscii</td><td>123.092 ns</td><td>0.1403 ns</td><td>0.1172 ns</td><td>0.75</td><td>0.00</td>
+</tr></tbody></table>
+</body>
+</html>
