@@ -18,8 +18,8 @@ namespace ConsoleApp1
 
 		private string _input = String.Empty;
 
-		//[Params(/*85*/128 / 3, 112, /*170*/ 256 / 3, 256, 512,1024)]
-		[Params(512, 1024, 2048)]
+		[Params(/*85*/128 / 3, 112, /*170*/ 256 / 3, 256, 512,1024)]
+		//[Params(512, 1024, 2048)]
 		public int StringLengthInChars;
 
 		[Params(Utf8Scenario.AsciiOnly, Utf8Scenario.Mixed, Utf8Scenario.OnlyNonAscii)]
@@ -113,6 +113,15 @@ namespace ConsoleApp1
 			fixed (char* s = _input)
 			{
 				return UnsafeGetUTF8Length_Avx(s, _input.Length);
+			}
+		}
+
+		[Benchmark]
+		public unsafe int Vector()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8Length_Vector(s, _input.Length);
 			}
 		}
 
@@ -304,6 +313,48 @@ namespace ConsoleApp1
 			if (chars == charsMax)
 				return charCount;
 
+			return (int)(chars - (charsMax - charCount)) + GetByteCount2(new ReadOnlySpan<char>(chars, (int)(charsMax - chars)));
+		}
+
+		protected unsafe int UnsafeGetUTF8Length_Vector(char* chars, int charCount)
+		{
+			const int LongsPerChar = 4;
+			const ulong Pattern = 0xff80ff80ff80ff80;
+
+			char* charsMax = chars + charCount;
+			char* longMax = chars + charCount - (LongsPerChar - 1);
+			var charSpan = new Span<short>(chars, charCount);
+
+			var mask = new Vector<short>(unchecked((short)0xff80));
+			while (charSpan.Length >= Vector<short>.Count)
+			{
+				var l = new Vector<short>(charSpan);
+				if ((l & mask) != Vector<short>.Zero)
+					goto NonAscii;
+
+				charSpan.Slice(Vector<short>.Count);
+			}
+
+			while (chars < longMax)
+			{
+				ulong l = *(ulong*)chars;
+				if ((l & Pattern) != 0)
+					goto NonAscii;
+
+				chars += 4;
+			}
+
+			while (chars < charsMax)
+			{
+				if (*chars >= 0x80)
+					goto NonAscii;
+
+				chars++;
+			}
+
+			return charCount;
+
+		NonAscii:
 			return (int)(chars - (charsMax - charCount)) + GetByteCount2(new ReadOnlySpan<char>(chars, (int)(charsMax - chars)));
 		}
 
