@@ -22,7 +22,7 @@ namespace ConsoleApp1
 		//[Params(512, 1024, 2048)]
 		public int StringLengthInChars;
 
-		[Params(Utf8Scenario.AsciiOnly, Utf8Scenario.Mixed, Utf8Scenario.OnlyNonAscii)]
+		[Params(Utf8Scenario.AsciiOnly /*, Utf8Scenario.Mixed, Utf8Scenario.OnlyNonAscii*/)]
 		public Utf8Scenario Scenario;
 
 		[GlobalSetup]
@@ -332,24 +332,22 @@ namespace ConsoleApp1
 				if ((l & mask) != Vector<short>.Zero)
 					goto NonAscii;
 
-				charSpan.Slice(Vector<short>.Count);
+				charSpan = charSpan.Slice(Vector<short>.Count);
 			}
 
-			while (chars < longMax)
+			//while (chars < longMax)
+			//{
+			//	ulong l = *(ulong*)chars;
+			//	if ((l & Pattern) != 0)
+			//		goto NonAscii;
+
+			//	chars += 4;
+			//}
+
+			for (int i=0; i < charSpan.Length; ++i)
 			{
-				ulong l = *(ulong*)chars;
-				if ((l & Pattern) != 0)
+				if (charSpan[i] >= 0x80)
 					goto NonAscii;
-
-				chars += 4;
-			}
-
-			while (chars < charsMax)
-			{
-				if (*chars >= 0x80)
-					goto NonAscii;
-
-				chars++;
 			}
 
 			return charCount;
