@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>ConsoleApp1.Utf8Benchmarks-20220711-100913</title>
+<title>ConsoleApp1.Utf8Benchmarks-20220712-144904</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -17,54 +17,38 @@ BenchmarkDotNet=v0.13.1, OS=Windows 10.0.22000
 AMD Ryzen 5 5600U with Radeon Graphics, 1 CPU, 12 logical and 6 physical cores
 .NET SDK=7.0.100-preview.5.22307.18
   [Host]     : .NET 7.0.0 (7.0.22.30112), X64 RyuJIT
-  Job-PWFQDY : .NET 7.0.0 (7.0.22.30112), X64 RyuJIT
+  Job-VOXLHO : .NET 7.0.0 (7.0.22.30112), X64 RyuJIT
 </code></pre>
 <pre><code>MaxRelativeError=0.01  IterationTime=250.0000 ms  
 </code></pre>
 
 <table>
-<thead><tr><th> Method</th><th>StringLengthInChars</th><th>Scenario</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th>
+<thead><tr><th>Method</th><th>StringLengthInChars</th><th>Scenario</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th>
 </tr>
-</thead><tbody><tr><td>Original</td><td>8</td><td>AsciiOnly</td><td>5.542 ns</td><td>0.0353 ns</td><td>0.0313 ns</td><td>5.548 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>8</td><td>AsciiOnly</td><td>3.517 ns</td><td>0.0244 ns</td><td>0.0217 ns</td><td>3.516 ns</td><td>0.63</td><td>0.01</td>
-</tr><tr><td>SimdSSE_v3</td><td>8</td><td>AsciiOnly</td><td>3.034 ns</td><td>0.0181 ns</td><td>0.0141 ns</td><td>3.035 ns</td><td>0.55</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v4</td><td>8</td><td>AsciiOnly</td><td>3.028 ns</td><td>0.0268 ns</td><td>0.0251 ns</td><td>3.016 ns</td><td>0.55</td><td>0.00</td>
-</tr><tr><td>SimdSSE_2_128</td><td>8</td><td>AsciiOnly</td><td>4.027 ns</td><td>0.0441 ns</td><td>0.0412 ns</td><td>4.003 ns</td><td>0.73</td><td>0.01</td>
-</tr><tr><td>Original</td><td>10</td><td>AsciiOnly</td><td>6.763 ns</td><td>0.0502 ns</td><td>0.0445 ns</td><td>6.763 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>10</td><td>AsciiOnly</td><td>3.973 ns</td><td>0.0330 ns</td><td>0.0276 ns</td><td>3.965 ns</td><td>0.59</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v3</td><td>10</td><td>AsciiOnly</td><td>3.017 ns</td><td>0.0263 ns</td><td>0.0234 ns</td><td>3.016 ns</td><td>0.45</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v4</td><td>10</td><td>AsciiOnly</td><td>3.032 ns</td><td>0.0415 ns</td><td>0.0407 ns</td><td>3.011 ns</td><td>0.45</td><td>0.00</td>
-</tr><tr><td>SimdSSE_2_128</td><td>10</td><td>AsciiOnly</td><td>4.405 ns</td><td>0.0409 ns</td><td>0.0363 ns</td><td>4.392 ns</td><td>0.65</td><td>0.00</td>
-</tr><tr><td>Original</td><td>16</td><td>AsciiOnly</td><td>9.619 ns</td><td>0.0533 ns</td><td>0.0445 ns</td><td>9.608 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>16</td><td>AsciiOnly</td><td>3.752 ns</td><td>0.0330 ns</td><td>0.0309 ns</td><td>3.748 ns</td><td>0.39</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v3</td><td>16</td><td>AsciiOnly</td><td>3.309 ns</td><td>0.0453 ns</td><td>0.0664 ns</td><td>3.287 ns</td><td>0.35</td><td>0.01</td>
-</tr><tr><td>SimdSSE_v4</td><td>16</td><td>AsciiOnly</td><td>3.355 ns</td><td>0.0247 ns</td><td>0.0231 ns</td><td>3.359 ns</td><td>0.35</td><td>0.00</td>
-</tr><tr><td>SimdSSE_2_128</td><td>16</td><td>AsciiOnly</td><td>3.773 ns</td><td>0.0344 ns</td><td>0.0287 ns</td><td>3.788 ns</td><td>0.39</td><td>0.00</td>
-</tr><tr><td>Original</td><td>20</td><td>AsciiOnly</td><td>14.145 ns</td><td>0.1056 ns</td><td>0.0988 ns</td><td>14.146 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>20</td><td>AsciiOnly</td><td>4.202 ns</td><td>0.0216 ns</td><td>0.0192 ns</td><td>4.193 ns</td><td>0.30</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v3</td><td>20</td><td>AsciiOnly</td><td>3.514 ns</td><td>0.0305 ns</td><td>0.0285 ns</td><td>3.504 ns</td><td>0.25</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v4</td><td>20</td><td>AsciiOnly</td><td>3.504 ns</td><td>0.0323 ns</td><td>0.0302 ns</td><td>3.494 ns</td><td>0.25</td><td>0.00</td>
-</tr><tr><td>SimdSSE_2_128</td><td>20</td><td>AsciiOnly</td><td>4.029 ns</td><td>0.0378 ns</td><td>0.0335 ns</td><td>4.019 ns</td><td>0.29</td><td>0.00</td>
-</tr><tr><td>Original</td><td>30</td><td>AsciiOnly</td><td>16.556 ns</td><td>0.0611 ns</td><td>0.0571 ns</td><td>16.532 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>30</td><td>AsciiOnly</td><td>4.977 ns</td><td>0.0265 ns</td><td>0.0235 ns</td><td>4.971 ns</td><td>0.30</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v3</td><td>30</td><td>AsciiOnly</td><td>3.993 ns</td><td>0.0207 ns</td><td>0.0193 ns</td><td>3.987 ns</td><td>0.24</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v4</td><td>30</td><td>AsciiOnly</td><td>3.771 ns</td><td>0.0272 ns</td><td>0.0227 ns</td><td>3.766 ns</td><td>0.23</td><td>0.00</td>
-</tr><tr><td>SimdSSE_2_128</td><td>30</td><td>AsciiOnly</td><td>6.293 ns</td><td>0.2747 ns</td><td>0.7926 ns</td><td>6.027 ns</td><td>0.41</td><td>0.06</td>
-</tr><tr><td>Original</td><td>34</td><td>AsciiOnly</td><td>18.292 ns</td><td>0.1172 ns</td><td>0.1096 ns</td><td>18.273 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>34</td><td>AsciiOnly</td><td>5.004 ns</td><td>0.0239 ns</td><td>0.0223 ns</td><td>5.007 ns</td><td>0.27</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v3</td><td>34</td><td>AsciiOnly</td><td>4.948 ns</td><td>0.0493 ns</td><td>0.0411 ns</td><td>4.943 ns</td><td>0.27</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v4</td><td>34</td><td>AsciiOnly</td><td>4.251 ns</td><td>0.0166 ns</td><td>0.0155 ns</td><td>4.247 ns</td><td>0.23</td><td>0.00</td>
-</tr><tr><td>SimdSSE_2_128</td><td>34</td><td>AsciiOnly</td><td>4.485 ns</td><td>0.0275 ns</td><td>0.0257 ns</td><td>4.475 ns</td><td>0.25</td><td>0.00</td>
-</tr><tr><td>Original</td><td>50</td><td>AsciiOnly</td><td>29.884 ns</td><td>0.4651 ns</td><td>1.2966 ns</td><td>29.228 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>50</td><td>AsciiOnly</td><td>6.068 ns</td><td>0.0446 ns</td><td>0.0418 ns</td><td>6.061 ns</td><td>0.21</td><td>0.01</td>
-</tr><tr><td>SimdSSE_v3</td><td>50</td><td>AsciiOnly</td><td>5.697 ns</td><td>0.0687 ns</td><td>0.1069 ns</td><td>5.690 ns</td><td>0.19</td><td>0.01</td>
-</tr><tr><td>SimdSSE_v4</td><td>50</td><td>AsciiOnly</td><td>4.961 ns</td><td>0.0623 ns</td><td>0.0612 ns</td><td>4.960 ns</td><td>0.17</td><td>0.01</td>
-</tr><tr><td>SimdSSE_2_128</td><td>50</td><td>AsciiOnly</td><td>4.914 ns</td><td>0.0388 ns</td><td>0.0303 ns</td><td>4.908 ns</td><td>0.17</td><td>0.00</td>
-</tr><tr><td>Original</td><td>170</td><td>AsciiOnly</td><td>86.634 ns</td><td>0.7850 ns</td><td>0.7343 ns</td><td>86.290 ns</td><td>1.00</td><td>0.00</td>
-</tr><tr><td>SimdSSE</td><td>170</td><td>AsciiOnly</td><td>12.688 ns</td><td>0.0813 ns</td><td>0.0721 ns</td><td>12.650 ns</td><td>0.15</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v3</td><td>170</td><td>AsciiOnly</td><td>15.783 ns</td><td>0.1695 ns</td><td>0.1741 ns</td><td>15.711 ns</td><td>0.18</td><td>0.00</td>
-</tr><tr><td>SimdSSE_v4</td><td>170</td><td>AsciiOnly</td><td>12.037 ns</td><td>0.0618 ns</td><td>0.0483 ns</td><td>12.048 ns</td><td>0.14</td><td>0.00</td>
-</tr><tr><td>SimdSSE_2_128</td><td>170</td><td>AsciiOnly</td><td>9.500 ns</td><td>0.0587 ns</td><td>0.0491 ns</td><td>9.478 ns</td><td>0.11</td><td>0.00</td>
+</thead><tbody><tr><td>Long</td><td>8</td><td>AsciiOnly</td><td>3.908 ns</td><td>0.0523 ns</td><td>0.1137 ns</td><td>3.871 ns</td><td>1.22</td><td>0.03</td>
+</tr><tr><td>SimdSSE_v4</td><td>8</td><td>AsciiOnly</td><td>3.207 ns</td><td>0.0430 ns</td><td>0.0402 ns</td><td>3.194 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>8</td><td>AsciiOnly</td><td>6.408 ns</td><td>0.0753 ns</td><td>0.0704 ns</td><td>6.423 ns</td><td>2.00</td><td>0.04</td>
+</tr><tr><td>Long</td><td>10</td><td>AsciiOnly</td><td>4.474 ns</td><td>0.0584 ns</td><td>0.0819 ns</td><td>4.468 ns</td><td>1.28</td><td>0.03</td>
+</tr><tr><td>SimdSSE_v4</td><td>10</td><td>AsciiOnly</td><td>3.500 ns</td><td>0.0360 ns</td><td>0.0301 ns</td><td>3.500 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>10</td><td>AsciiOnly</td><td>3.377 ns</td><td>0.0469 ns</td><td>0.1019 ns</td><td>3.348 ns</td><td>0.98</td><td>0.03</td>
+</tr><tr><td>Long</td><td>16</td><td>AsciiOnly</td><td>4.879 ns</td><td>0.0386 ns</td><td>0.0840 ns</td><td>4.864 ns</td><td>1.36</td><td>0.04</td>
+</tr><tr><td>SimdSSE_v4</td><td>16</td><td>AsciiOnly</td><td>3.592 ns</td><td>0.0460 ns</td><td>0.0582 ns</td><td>3.594 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>16</td><td>AsciiOnly</td><td>3.309 ns</td><td>0.0450 ns</td><td>0.0399 ns</td><td>3.312 ns</td><td>0.92</td><td>0.02</td>
+</tr><tr><td>Long</td><td>20</td><td>AsciiOnly</td><td>5.442 ns</td><td>0.0674 ns</td><td>0.1250 ns</td><td>5.408 ns</td><td>1.34</td><td>0.04</td>
+</tr><tr><td>SimdSSE_v4</td><td>20</td><td>AsciiOnly</td><td>4.079 ns</td><td>0.0529 ns</td><td>0.0588 ns</td><td>4.089 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>20</td><td>AsciiOnly</td><td>3.836 ns</td><td>0.0522 ns</td><td>0.0641 ns</td><td>3.835 ns</td><td>0.94</td><td>0.02</td>
+</tr><tr><td>Long</td><td>30</td><td>AsciiOnly</td><td>8.695 ns</td><td>0.0815 ns</td><td>0.0723 ns</td><td>8.701 ns</td><td>1.91</td><td>0.03</td>
+</tr><tr><td>SimdSSE_v4</td><td>30</td><td>AsciiOnly</td><td>4.548 ns</td><td>0.0587 ns</td><td>0.0576 ns</td><td>4.536 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>30</td><td>AsciiOnly</td><td>3.826 ns</td><td>0.0520 ns</td><td>0.0729 ns</td><td>3.825 ns</td><td>0.84</td><td>0.02</td>
+</tr><tr><td>Long</td><td>34</td><td>AsciiOnly</td><td>8.913 ns</td><td>0.0920 ns</td><td>0.1538 ns</td><td>8.887 ns</td><td>1.64</td><td>0.09</td>
+</tr><tr><td>SimdSSE_v4</td><td>34</td><td>AsciiOnly</td><td>6.335 ns</td><td>0.3741 ns</td><td>1.0855 ns</td><td>5.828 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>34</td><td>AsciiOnly</td><td>4.354 ns</td><td>0.0434 ns</td><td>0.0339 ns</td><td>4.360 ns</td><td>0.84</td><td>0.04</td>
+</tr><tr><td>Long</td><td>50</td><td>AsciiOnly</td><td>11.476 ns</td><td>0.1278 ns</td><td>0.2582 ns</td><td>11.420 ns</td><td>1.53</td><td>0.19</td>
+</tr><tr><td>SimdSSE_v4</td><td>50</td><td>AsciiOnly</td><td>7.982 ns</td><td>0.3087 ns</td><td>0.8956 ns</td><td>7.970 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>50</td><td>AsciiOnly</td><td>6.263 ns</td><td>0.4679 ns</td><td>1.3499 ns</td><td>5.561 ns</td><td>0.79</td><td>0.16</td>
+</tr><tr><td>Long</td><td>170</td><td>AsciiOnly</td><td>30.540 ns</td><td>1.7011 ns</td><td>4.8807 ns</td><td>28.497 ns</td><td>1.88</td><td>0.32</td>
+</tr><tr><td>SimdSSE_v4</td><td>170</td><td>AsciiOnly</td><td>16.468 ns</td><td>0.2283 ns</td><td>0.6210 ns</td><td>16.431 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>170</td><td>AsciiOnly</td><td>8.298 ns</td><td>0.0900 ns</td><td>0.0963 ns</td><td>8.321 ns</td><td>0.51</td><td>0.03</td>
 </tr></tbody></table>
 </body>
 </html>

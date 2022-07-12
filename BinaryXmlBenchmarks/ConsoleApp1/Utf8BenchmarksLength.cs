@@ -18,7 +18,7 @@ namespace ConsoleApp1
 
 		private string _input = String.Empty;
 
-		[Params(/*85*/128 / 3, 112, /*170*/ 256 / 3, 256, 512,1024)]
+		[Params(/*85*/128 / 3, /*170*/ 256 / 3, 256, 512, 2024)]
 		//[Params(512, 1024, 2048)]
 		public int StringLengthInChars;
 
@@ -117,7 +117,7 @@ namespace ConsoleApp1
 		}
 
 		[Benchmark]
-		public unsafe int Vector()
+		public unsafe int VectorLength()
 		{
 			fixed (char* s = _input)
 			{
@@ -269,90 +269,57 @@ namespace ConsoleApp1
 
 		protected unsafe int UnsafeGetUTF8Length_Avx(char* chars, int charCount)
 		{
-			const int LongsPerChar = 4;
-			const ulong Pattern = 0xff80ff80ff80ff80;
-
 			char* charsMax = chars + charCount;
-			char* longMax = chars + charCount - (LongsPerChar - 1);
-			char* simdMax = chars + charCount - (Vector256<ushort>.Count - 1);
+			char* lastSimd = chars + charCount - Vector256<ushort>.Count;
 
-
-			if (Avx.IsSupported && chars < simdMax)
+			if (Avx.IsSupported && chars <= lastSimd)
 			{
 				var mask = Vector256.Create((ushort)0xff80);
-				do
+				while (chars < lastSimd)
 				{
-					var l = Vector256.Load((ushort*)chars);
-					if (Avx.IsSupported ? !Avx.TestZ(l, mask) : !Vector256.LessThanAll(l, mask))
+					var v = Vector256.Load((ushort*)chars);
+					if (Avx.IsSupported ? !Avx.TestZ(v, mask) : !(Vector256.BitwiseAnd(v, mask).Equals(Vector256<ushort>.Zero)))
 					{
-						if (Sse41.TestZ(l.GetLower(), mask.GetLower()))
+						if (Sse41.TestZ(v.GetLower(), mask.GetLower()))
 							chars += Vector128<ushort>.Count;
-						break;
+						goto NonAscii;
 					}
 					chars += Vector256<ushort>.Count;
-				} while (chars < simdMax);
+				}
+
+				if (Avx.TestZ(Vector256.Load((ushort*)chars), mask))
+					return charCount;
+				else
+					goto NonAscii;
 			}
 
-			while (chars < longMax)
-			{
-				ulong l = *(ulong*)chars;
-				if ((l & Pattern) != 0)
-					break;
-
-				chars += 4;
-			}
-
-			while (chars < charsMax)
-			{
-				if (*chars >= 0x80)
-					break;
-
-				chars++;
-			}
-
-			if (chars == charsMax)
-				return charCount;
-
+			NonAscii:
 			return (int)(chars - (charsMax - charCount)) + GetByteCount2(new ReadOnlySpan<char>(chars, (int)(charsMax - chars)));
 		}
 
 		protected unsafe int UnsafeGetUTF8Length_Vector(char* chars, int charCount)
 		{
-			const int LongsPerChar = 4;
-			const ulong Pattern = 0xff80ff80ff80ff80;
-
-			char* charsMax = chars + charCount;
-			char* longMax = chars + charCount - (LongsPerChar - 1);
-			var charSpan = new Span<short>(chars, charCount);
-
-			var mask = new Vector<short>(unchecked((short)0xff80));
-			while (charSpan.Length >= Vector<short>.Count)
+			if (Vector.IsHardwareAccelerated 
+				&& Vector<short>.Count > Vector128<short>.Count
+/*				&& charCount <= 512, 2048*/)
 			{
-				var l = new Vector<short>(charSpan);
-				if ((l & mask) != Vector<short>.Zero)
-					goto NonAscii;
+				char* lastSimd = chars + charCount - Vector<short>.Count;
+				var mask = new Vector<short>(unchecked((short)0xff80));
 
-				charSpan = charSpan.Slice(Vector<short>.Count);
+				while (chars < lastSimd)
+				{
+					if (((*(Vector<short>*)chars) & mask) != Vector<short>.Zero)
+						goto NonAscii;
+
+					chars += Vector<short>.Count;
+				}
+
+				if ((*(Vector<short>*)lastSimd & mask) == Vector<short>.Zero)
+					return charCount;
 			}
-
-			//while (chars < longMax)
-			//{
-			//	ulong l = *(ulong*)chars;
-			//	if ((l & Pattern) != 0)
-			//		goto NonAscii;
-
-			//	chars += 4;
-			//}
-
-			for (int i=0; i < charSpan.Length; ++i)
-			{
-				if (charSpan[i] >= 0x80)
-					goto NonAscii;
-			}
-
-			return charCount;
 
 		NonAscii:
+			char* charsMax = chars + charCount;
 			return (int)(chars - (charsMax - charCount)) + GetByteCount2(new ReadOnlySpan<char>(chars, (int)(charsMax - chars)));
 		}
 
