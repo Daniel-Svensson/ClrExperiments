@@ -125,6 +125,15 @@ namespace ConsoleApp1
 			}
 		}
 
+		[Benchmark]
+		public unsafe int VectorLength_Aligned()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8Length_VectorAligned(s, _input.Length);
+			}
+		}
+
 		protected unsafe int UnsafeGetUTF8Length(char* chars, int charCount)
 		{
 			char* charsMax = chars + charCount;
@@ -299,13 +308,48 @@ namespace ConsoleApp1
 
 		protected unsafe int UnsafeGetUTF8Length_Vector(char* chars, int charCount)
 		{
-			if (Vector.IsHardwareAccelerated 
+			if (Vector.IsHardwareAccelerated
 				&& Vector<short>.Count > Vector128<short>.Count
 /*				&& charCount <= 512, 2048*/)
 			{
 				char* lastSimd = chars + charCount - Vector<short>.Count;
 				var mask = new Vector<short>(unchecked((short)0xff80));
 
+				while (chars < lastSimd)
+				{
+					if (((*(Vector<short>*)chars) & mask) != Vector<short>.Zero)
+						goto NonAscii;
+
+					chars += Vector<short>.Count;
+				}
+
+				if ((*(Vector<short>*)lastSimd & mask) == Vector<short>.Zero)
+					return charCount;
+			}
+
+		NonAscii:
+			char* charsMax = chars + charCount;
+			return (int)(chars - (charsMax - charCount)) + GetByteCount2(new ReadOnlySpan<char>(chars, (int)(charsMax - chars)));
+		}
+
+
+		protected unsafe int UnsafeGetUTF8Length_VectorAligned(char* chars, int charCount)
+		{
+			if (Vector.IsHardwareAccelerated
+				&& Vector<short>.Count > Vector128<short>.Count
+				&& Vector<short>.Count <= charCount
+/*				&& charCount <= 512, 1024, 2048*/)
+			{
+				char* lastSimd = chars + charCount - Vector<short>.Count;
+				var mask = new Vector<short>(unchecked((short)0xff80));
+
+				// Unaligned
+				if (((*(Vector<short>*)chars) & mask) != Vector<short>.Zero)
+					goto NonAscii;
+				chars += Vector<short>.Count;
+				chars = unchecked((char*)((nint)chars & (nint)(-16)));
+
+				// Aligned
 				while (chars < lastSimd)
 				{
 					if (((*(Vector<short>*)chars) & mask) != Vector<short>.Zero)

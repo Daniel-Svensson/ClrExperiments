@@ -26,7 +26,7 @@ namespace ConsoleApp1
 		private char[] _inputAsChars;
 		private byte[] _buffer;
 
-		[Params(8, 10, 16, 20, 30, 34, 50, /*170*/512 / 3)]
+		[Params(/*8, 10, 16, /*20, 30, */ 34, /*50,*/ /*170*/512 / 3)]
 		//[Params(5, 8, 12, 16, 20, 30, 34, 50, /*85*/256 / 3,/*170*/512 / 3)]
 		public int StringLengthInChars;
 
@@ -151,6 +151,26 @@ namespace ConsoleApp1
 			fixed (char* s = _input)
 			{
 				return UnsafeGetUTF8CharsSimdAVX(s, _input.Length, _buffer, 0);
+			}
+		}
+
+
+		[Benchmark]
+		public unsafe int SimdAVX_2()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8CharsSimdAVX2(s, _input.Length, _buffer, 0);
+			}
+		}
+
+
+		[Benchmark]
+		public unsafe int SimdAVX_3()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8CharsSimdAVX_3(s, _input.Length, _buffer, 0);
 			}
 		}
 
@@ -321,14 +341,14 @@ namespace ConsoleApp1
 							var mask = Vector128.Create(unchecked((short)0xff80));
 							do
 							{
-								var v = Sse41.LoadVector128((short*)chars);
+								var v = Sse2.LoadVector128((short*)chars);
 								if (!Sse41.TestZ(v, mask))
 								{
 									//									var m = Sse42.MoveMask(Sse42.CompareLessThan(mask, v).AsByte());
 									break;
 								}
 
-								Sse41.StoreScalar((long*)bytes, Sse41.PackUnsignedSaturate(v, v).AsInt64());
+								Sse2.StoreScalar((long*)bytes, Sse2.PackUnsignedSaturate(v, v).AsInt64());
 								bytes += Vector128<ushort>.Count;
 								chars += Vector128<ushort>.Count;
 							} while (chars < simdMax);
@@ -393,14 +413,14 @@ namespace ConsoleApp1
 
 							if (charCount <= 16)
 							{
-								var v1 = Sse41.LoadVector128((short*)chars);
-								var v2 = Sse41.LoadVector128((short*)simdLast);
-								if (!Sse41.TestZ(Sse41.Or(v1, v2), mask))
+								var v1 = Sse2.LoadVector128((short*)chars);
+								var v2 = Sse2.LoadVector128((short*)simdLast);
+								if (!Sse41.TestZ(Sse2.Or(v1, v2), mask))
 									goto NonAscii;
 
-								var packed = Sse41.PackUnsignedSaturate(v1, v2).AsInt64();
-								Sse41.StoreScalar((long*)bytes, packed);
-								Sse41.StoreHigh((double*)(bytesMax - sizeof(long)), packed.AsDouble());
+								var packed = Sse2.PackUnsignedSaturate(v1, v2).AsInt64();
+								Sse2.StoreScalar((long*)bytes, packed);
+								Sse2.StoreHigh((double*)(bytesMax - sizeof(long)), packed.AsDouble());
 								return charCount;
 							}
 
@@ -408,14 +428,14 @@ namespace ConsoleApp1
 							{
 								do
 								{
-									var v = Sse41.LoadVector128((short*)chars);
+									var v = Sse2.LoadVector128((short*)chars);
 									if (!Sse41.TestZ(v, mask))
 									{
 										//									var m = Sse42.MoveMask(Sse42.CompareLessThan(mask, v).AsByte());
 										break;
 									}
 
-									Sse41.StoreScalar((long*)bytes, Sse41.PackUnsignedSaturate(v, v).AsInt64());
+									Sse2.StoreScalar((long*)bytes, Sse2.PackUnsignedSaturate(v, v).AsInt64());
 									bytes += Vector128<ushort>.Count;
 									chars += Vector128<ushort>.Count;
 								} while (chars <= simdLast);
@@ -482,20 +502,20 @@ namespace ConsoleApp1
 
 							while (chars < simdLast)
 							{
-								var v = Sse41.LoadVector128((short*)chars);
+								var v = Sse2.LoadVector128((short*)chars);
 								if (!Sse41.TestZ(v, mask))
 									goto NonAscii;
 
-								Sse41.StoreScalar((long*)bytes, Sse41.PackUnsignedSaturate(v, v).AsInt64());
+								Sse2.StoreScalar((long*)bytes, Sse2.PackUnsignedSaturate(v, v).AsInt64());
 								bytes += Vector128<ushort>.Count;
 								chars += Vector128<ushort>.Count;
 							}
 
-							var v2 = Sse41.LoadVector128((short*)simdLast);
+							var v2 = Sse2.LoadVector128((short*)simdLast);
 							if (!Sse41.TestZ(v2, mask))
 								goto NonAscii;
 
-							Sse41.StoreScalar((long*)(bytesMax - sizeof(long)), Sse41.PackUnsignedSaturate(v2, v2).AsInt64());
+							Sse2.StoreScalar((long*)(bytesMax - sizeof(long)), Sse2.PackUnsignedSaturate(v2, v2).AsInt64());
 							return charCount;
 						}
 					}
@@ -549,26 +569,26 @@ namespace ConsoleApp1
 					byte* bytesMax = &bytes[buffer.Length - offset];
 					char* charsMax = &chars[charCount];
 					char* longMax = &chars[charCount - (LongsPerChar - 1)];
-					char* simdMax = &chars[charCount - (2 * Vector128<ushort>.Count - 1)];
+					char* simdMax256 = &chars[charCount - (2 * Vector128<ushort>.Count - 1)];
 
 
 					var mask = Vector128.Create(unchecked((short)0xff80));
-					while (chars < simdMax)
+					while (chars < simdMax256)
 					{
 						var v1 = Vector128.Load((short*)chars);
 						var v2 = Vector128.Load((short*)(chars + Vector128<ushort>.Count));
-						if (!Sse41.TestZ(Sse41.Or(v1, v2), mask))
+						if (!Sse41.TestZ(Sse2.Or(v1, v2), mask))
 						{
 							if (Sse41.TestZ(v1, mask))
 							{
-								Sse41.StoreScalar((long*)bytes, Sse41.PackUnsignedSaturate(v1, v1).AsInt64());
+								Sse2.StoreScalar((long*)bytes, Sse2.PackUnsignedSaturate(v1, v1).AsInt64());
 								bytes += Vector128<ushort>.Count;
 								chars += Vector128<ushort>.Count;
 							}
 							break;
 						}
 
-						Sse41.PackUnsignedSaturate(v1, v2).Store(bytes);
+						Sse2.PackUnsignedSaturate(v1, v2).Store(bytes);
 						bytes += 2 * Vector128<ushort>.Count;
 						chars += 2 * Vector128<ushort>.Count;
 					}
@@ -620,16 +640,16 @@ namespace ConsoleApp1
 					if (charCount >= 8)
 					{
 						var mask = Vector256.Create(unchecked((short)0xff80));
-						if (/*charCount > 8 &&*/ charCount <= 16)
+						if (/*charCount >= 8 &&*/ charCount <= 16)
 						{
-							var v1 = Sse41.LoadVector128((short*)chars);
-							var v2 = Sse41.LoadVector128((short*)(chars + charCount - Vector128<ushort>.Count));
-							if (!Sse41.TestZ(Sse41.Or(v1, v2), mask.GetLower()))
+							var v1 = Sse2.LoadVector128((short*)chars);
+							var v2 = Sse2.LoadVector128((short*)(chars + charCount - Vector128<ushort>.Count));
+							if (!Sse41.TestZ(Sse2.Or(v1, v2), mask.GetLower()))
 								goto NonAscii;
 
-							var packed = Sse41.PackUnsignedSaturate(v1, v2).AsInt64();
-							Sse41.StoreScalar((long*)bytes, packed);
-							Sse41.StoreHigh((double*)(bytesMax - sizeof(long)), packed.AsDouble());
+							var packed = Sse2.PackUnsignedSaturate(v1, v2).AsInt64();
+							Sse2.StoreScalar((long*)bytes, packed);
+							Sse2.StoreHigh((double*)(bytesMax - sizeof(long)), packed.AsDouble());
 							return charCount;
 						}
 						else // > 16
@@ -638,23 +658,27 @@ namespace ConsoleApp1
 
 							while (chars < simdLast)
 							{
-								var v = Avx2.LoadVector256((short*)chars);
-								if (!Avx2.TestZ(v, mask))
+								var v = Avx.LoadVector256((short*)chars);
+								if (!Avx.TestZ(v, mask))
 									goto NonAscii;
 
-								var packed = Avx2.PackUnsignedSaturate(v, v);
-								packed.GetLower().Store(bytes);
+								var packed = Avx2.PackUnsignedSaturate(v, v).AsInt64();
+								Sse2.StoreScalar((long*)bytes, packed.GetLower());
+								Sse2.StoreScalar((long*)(bytes + 8), packed.GetUpper());
 								bytes += Vector256<ushort>.Count;
 								chars += Vector256<ushort>.Count;
 							}
 
-							var v2 = Avx2.LoadVector256((short*)simdLast);
-							if (!Avx2.TestZ(v2, mask))
+							var v2 = Avx.LoadVector256((short*)simdLast);
+							if (!Avx.TestZ(v2, mask))
 								goto NonAscii;
 
-							Avx2.PackUnsignedSaturate(v2, v2)
-								.GetLower()
-								.Store((bytesMax - sizeof(Vector128<short>)));
+							var packedLast = Avx2.PackUnsignedSaturate(v2, v2).AsInt64();
+							// or 
+							//packedLast = Avx2.Permute4x64(packedLast, 0x02 /*d8*/);
+							//packedLast.Store(bytes);
+							Sse41.StoreScalar((long*)bytes, packedLast.GetLower());
+							Sse41.StoreScalar((long*)(bytes + 8), packedLast.GetUpper());
 							return charCount;
 						}
 					}
@@ -687,7 +711,189 @@ namespace ConsoleApp1
 
 					return charCount;
 
-					NonAscii:
+				NonAscii:
+
+					bytes += (_encoding ?? s_UTF8Encoding).GetBytes(chars, (int)(charsMax - chars), bytes, (int)(bytesMax - bytes));
+					return (int)(bytes - _bytes);
+				}
+			}
+			return 0;
+		}
+
+
+
+		protected unsafe int UnsafeGetUTF8CharsSimdAVX2(char* chars, int charCount, byte[] buffer, int offset)
+		{
+			if (charCount > 0)
+			{
+				fixed (byte* _bytes = &buffer[offset])
+				{
+					byte* bytes = _bytes;
+					byte* bytesMax = &bytes[buffer.Length - offset];
+					char* charsMax = &chars[charCount];
+
+					if (charCount >= 8)
+					{
+						var mask = Vector256.Create(unchecked((short)0xff80));
+						if (/*charCount >= 8 &&*/ charCount <= 16)
+						{
+							var v1 = Sse2.LoadVector128((short*)chars);
+							var v2 = Sse2.LoadVector128((short*)(chars + charCount - Vector128<ushort>.Count));
+							if (!Sse41.TestZ(Sse2.Or(v1, v2), mask.GetLower()))
+								goto NonAscii;
+
+							var packed = Sse2.PackUnsignedSaturate(v1, v2).AsInt64();
+							Sse2.StoreScalar((long*)bytes, packed);
+							Sse2.StoreHigh((double*)(bytesMax - sizeof(long)), packed.AsDouble());
+							return charCount;
+						}
+						else // > 16
+						{
+							char* simdLast = &chars[charCount - Vector256<ushort>.Count];
+
+							while (chars < simdLast)
+							{
+								var v = Avx.LoadVector256((short*)chars);
+								if (!Avx.TestZ(v, mask))
+									goto NonAscii;
+
+								var packed = Avx2.PackUnsignedSaturate(v, v).AsInt64();
+								Avx2.Permute4x64(packed, 0x02 /*d8*/)
+									.GetLower().Store((long*)bytes);
+								bytes += Vector256<ushort>.Count;
+								chars += Vector256<ushort>.Count;
+							}
+
+							var v2 = Avx.LoadVector256((short*)simdLast);
+							if (!Avx.TestZ(v2, mask))
+								goto NonAscii;
+
+							var packedLast = Avx2.PackUnsignedSaturate(v2, v2).AsInt64();
+							Avx2.Permute4x64(packedLast, 0x02 /*d8*/)
+	.GetLower().Store((long*)bytes);
+
+							return charCount;
+						}
+					}
+
+					char* longMax = &chars[charCount - 3];
+					while (chars < longMax)
+					{
+						ulong l = *(ulong*)chars;
+						if ((l & 0xff80ff80ff80ff80) != 0)
+							break;
+
+						// 0x00aa00bb_00cc00dd => 0x00aaaabb_bbccccdd
+						l = l | (l >> 8);
+						*(ushort*)bytes = (ushort)l;
+						*(ushort*)(bytes + 2) = (ushort)(l >> 32);
+						bytes += 4;
+						chars += 4;
+					}
+
+					while (chars < charsMax)
+					{
+						char t = *chars;
+						if (t >= 0x80)
+							goto NonAscii;
+
+						*bytes = (byte)t;
+						bytes++;
+						chars++;
+					}
+
+					return charCount;
+
+				NonAscii:
+
+					bytes += (_encoding ?? s_UTF8Encoding).GetBytes(chars, (int)(charsMax - chars), bytes, (int)(bytesMax - bytes));
+					return (int)(bytes - _bytes);
+				}
+			}
+			return 0;
+		}
+
+
+
+		protected unsafe int UnsafeGetUTF8CharsSimdAVX_3(char* chars, int charCount, byte[] buffer, int offset)
+		{
+			if (charCount > 0)
+			{
+				fixed (byte* _bytes = &buffer[offset])
+				{
+					byte* bytes = _bytes;
+					byte* bytesMax = &bytes[buffer.Length - offset];
+					char* charsMax = &chars[charCount];
+
+					if (charCount >= 8)
+					{
+						var mask = Vector256.Create(unchecked((ushort)0xff80));
+						if (/*charCount >= 8 &&*/ charCount <= 16)
+						{
+							var v1 = Sse2.LoadVector128((short*)chars);
+							var v2 = Sse2.LoadVector128((short*)(chars + charCount - Vector128<ushort>.Count));
+							if (!Sse41.TestZ(Sse2.Or(v1, v2), mask.AsInt16().GetLower()))
+								goto NonAscii;
+
+							var packed = Sse41.PackUnsignedSaturate(v1, v2).AsInt64();
+							Sse2.StoreScalar((long*)bytes, packed);
+							Sse2.StoreHigh((double*)(bytesMax - sizeof(long)), packed.AsDouble());
+							return charCount;
+						}
+						else // > 16
+						{
+							char* simdLast = &chars[charCount - Vector256<ushort>.Count];
+
+							while (chars < simdLast)
+							{
+								var v = *(Vector256<ushort>*)chars;
+								if (Vector256.BitwiseAnd(v, mask) != Vector256<ushort>.Zero)
+									goto NonAscii;
+
+								Vector256.Narrow(v, v).GetLower().Store(bytes);
+								bytes += Vector256<ushort>.Count;
+								chars += Vector256<ushort>.Count;
+							}
+
+							var v2 = *(Vector256<ushort>*)simdLast;
+							if (!Avx.TestZ(v2, mask))
+								goto NonAscii;
+
+							Vector256.Narrow(v2, v2).GetLower().Store(bytes);
+
+							return charCount;
+						}
+					}
+
+					char* longMax = &chars[charCount - 3];
+					while (chars < longMax)
+					{
+						ulong l = *(ulong*)chars;
+						if ((l & 0xff80ff80ff80ff80) != 0)
+							break;
+
+						// 0x00aa00bb_00cc00dd => 0x00aaaabb_bbccccdd
+						l = l | (l >> 8);
+						*(ushort*)bytes = (ushort)l;
+						*(ushort*)(bytes + 2) = (ushort)(l >> 32);
+						bytes += 4;
+						chars += 4;
+					}
+
+					while (chars < charsMax)
+					{
+						char t = *chars;
+						if (t >= 0x80)
+							goto NonAscii;
+
+						*bytes = (byte)t;
+						bytes++;
+						chars++;
+					}
+
+					return charCount;
+
+				NonAscii:
 
 					bytes += (_encoding ?? s_UTF8Encoding).GetBytes(chars, (int)(charsMax - chars), bytes, (int)(bytesMax - bytes));
 					return (int)(bytes - _bytes);
