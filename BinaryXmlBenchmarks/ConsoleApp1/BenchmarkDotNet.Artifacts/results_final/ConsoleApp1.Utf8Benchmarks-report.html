@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>ConsoleApp1.Utf8Benchmarks-20220716-092931</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.1, OS=Windows 10.0.22000
+AMD Ryzen 7 5800X, 1 CPU, 16 logical and 8 physical cores
+.NET SDK=7.0.100-preview.5.22307.18
+  [Host]     : .NET 7.0.0 (7.0.22.30112), X64 RyuJIT
+  Job-GEAOSY : .NET 7.0.0 (7.0.22.30112), X64 RyuJIT
+</code></pre>
+<pre><code>MaxRelativeError=0.01  IterationTime=250.0000 ms  
+</code></pre>
+
+<table>
+<thead><tr><th>Method</th><th>StringLengthInChars</th><th>Scenario</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th>
+</tr>
+</thead><tbody><tr><td>Long</td><td>8</td><td>AsciiOnly</td><td>3.214 ns</td><td>0.0419 ns</td><td>0.0392 ns</td><td>1.22</td><td>0.02</td>
+</tr><tr><td>SimdSSE_v4</td><td>8</td><td>AsciiOnly</td><td>2.502 ns</td><td>0.0197 ns</td><td>0.0175 ns</td><td>0.95</td><td>0.01</td>
+</tr><tr><td>SimdAVX</td><td>8</td><td>AsciiOnly</td><td>2.630 ns</td><td>0.0179 ns</td><td>0.0168 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Long</td><td>10</td><td>AsciiOnly</td><td>3.656 ns</td><td>0.0115 ns</td><td>0.0102 ns</td><td>1.33</td><td>0.01</td>
+</tr><tr><td>SimdSSE_v4</td><td>10</td><td>AsciiOnly</td><td>2.913 ns</td><td>0.0112 ns</td><td>0.0100 ns</td><td>1.06</td><td>0.01</td>
+</tr><tr><td>SimdAVX</td><td>10</td><td>AsciiOnly</td><td>2.739 ns</td><td>0.0112 ns</td><td>0.0093 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Long</td><td>16</td><td>AsciiOnly</td><td>4.006 ns</td><td>0.0189 ns</td><td>0.0177 ns</td><td>1.48</td><td>0.01</td>
+</tr><tr><td>SimdSSE_v4</td><td>16</td><td>AsciiOnly</td><td>2.926 ns</td><td>0.0286 ns</td><td>0.0267 ns</td><td>1.08</td><td>0.01</td>
+</tr><tr><td>SimdAVX</td><td>16</td><td>AsciiOnly</td><td>2.711 ns</td><td>0.0184 ns</td><td>0.0172 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Long</td><td>20</td><td>AsciiOnly</td><td>4.456 ns</td><td>0.0143 ns</td><td>0.0134 ns</td><td>1.52</td><td>0.01</td>
+</tr><tr><td>SimdSSE_v4</td><td>20</td><td>AsciiOnly</td><td>3.341 ns</td><td>0.0143 ns</td><td>0.0127 ns</td><td>1.14</td><td>0.01</td>
+</tr><tr><td>SimdAVX</td><td>20</td><td>AsciiOnly</td><td>2.926 ns</td><td>0.0144 ns</td><td>0.0127 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Long</td><td>30</td><td>AsciiOnly</td><td>7.260 ns</td><td>0.0207 ns</td><td>0.0193 ns</td><td>2.50</td><td>0.01</td>
+</tr><tr><td>SimdSSE_v4</td><td>30</td><td>AsciiOnly</td><td>3.754 ns</td><td>0.0147 ns</td><td>0.0138 ns</td><td>1.29</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>30</td><td>AsciiOnly</td><td>2.907 ns</td><td>0.0054 ns</td><td>0.0042 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Long</td><td>34</td><td>AsciiOnly</td><td>7.452 ns</td><td>0.0312 ns</td><td>0.0276 ns</td><td>2.35</td><td>0.02</td>
+</tr><tr><td>SimdSSE_v4</td><td>34</td><td>AsciiOnly</td><td>4.159 ns</td><td>0.0068 ns</td><td>0.0060 ns</td><td>1.31</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>34</td><td>AsciiOnly</td><td>3.170 ns</td><td>0.0157 ns</td><td>0.0139 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Long</td><td>50</td><td>AsciiOnly</td><td>9.064 ns</td><td>0.0175 ns</td><td>0.0146 ns</td><td>2.55</td><td>0.00</td>
+</tr><tr><td>SimdSSE_v4</td><td>50</td><td>AsciiOnly</td><td>4.994 ns</td><td>0.0144 ns</td><td>0.0134 ns</td><td>1.41</td><td>0.00</td>
+</tr><tr><td>SimdAVX</td><td>50</td><td>AsciiOnly</td><td>3.552 ns</td><td>0.0043 ns</td><td>0.0036 ns</td><td>1.00</td><td>0.00</td>
+</tr><tr><td>Long</td><td>170</td><td>AsciiOnly</td><td>21.707 ns</td><td>0.0515 ns</td><td>0.0457 ns</td><td>2.67</td><td>0.02</td>
+</tr><tr><td>SimdSSE_v4</td><td>170</td><td>AsciiOnly</td><td>13.815 ns</td><td>0.1518 ns</td><td>0.3548 ns</td><td>1.87</td><td>0.20</td>
+</tr><tr><td>SimdAVX</td><td>170</td><td>AsciiOnly</td><td>7.471 ns</td><td>0.2964 ns</td><td>0.8645 ns</td><td>1.00</td><td>0.00</td>
+</tr></tbody></table>
+</body>
+</html>
