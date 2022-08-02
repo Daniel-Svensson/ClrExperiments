@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>ConsoleApp1.Utf8BenchmarksLength-20220718-141806</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.1, OS=Windows 10.0.22000
+AMD Ryzen 7 5800X, 1 CPU, 16 logical and 8 physical cores
+.NET SDK=7.0.100-preview.6.22352.1
+  [Host]     : .NET 7.0.0 (7.0.22.32404), X64 RyuJIT
+  Job-QIEUWM : .NET 7.0.0 (7.0.22.32404), X64 RyuJIT
+</code></pre>
+<pre><code>MaxRelativeError=0.01  IterationTime=250.0000 ms  
+</code></pre>
+
+<table>
+<thead><tr><th>        Method</th><th>StringLengthInChars</th><th>Scenario</th><th>Mean</th><th>Error</th><th>StdDev</th>
+</tr>
+</thead><tbody><tr><td>Encoding</td><td>42</td><td>AsciiOnly</td><td>5.047 ns</td><td>0.0167 ns</td><td>0.0148 ns</td>
+</tr><tr><td>VectorLength</td><td>42</td><td>AsciiOnly</td><td>2.087 ns</td><td>0.0069 ns</td><td>0.0058 ns</td>
+</tr><tr><td>VectorLength_Aligned</td><td>42</td><td>AsciiOnly</td><td>2.077 ns</td><td>0.0086 ns</td><td>0.0076 ns</td>
+</tr><tr><td>Encoding</td><td>85</td><td>AsciiOnly</td><td>6.113 ns</td><td>0.0233 ns</td><td>0.0218 ns</td>
+</tr><tr><td>VectorLength</td><td>85</td><td>AsciiOnly</td><td>2.755 ns</td><td>0.0149 ns</td><td>0.0139 ns</td>
+</tr><tr><td>VectorLength_Aligned</td><td>85</td><td>AsciiOnly</td><td>2.761 ns</td><td>0.0144 ns</td><td>0.0134 ns</td>
+</tr><tr><td>Encoding</td><td>256</td><td>AsciiOnly</td><td>9.585 ns</td><td>0.0339 ns</td><td>0.0317 ns</td>
+</tr><tr><td>VectorLength</td><td>256</td><td>AsciiOnly</td><td>6.839 ns</td><td>0.0227 ns</td><td>0.0201 ns</td>
+</tr><tr><td>VectorLength_Aligned</td><td>256</td><td>AsciiOnly</td><td>6.944 ns</td><td>0.0211 ns</td><td>0.0197 ns</td>
+</tr><tr><td>Encoding</td><td>512</td><td>AsciiOnly</td><td>15.959 ns</td><td>0.0308 ns</td><td>0.0288 ns</td>
+</tr><tr><td>VectorLength</td><td>512</td><td>AsciiOnly</td><td>11.452 ns</td><td>0.0327 ns</td><td>0.0290 ns</td>
+</tr><tr><td>VectorLength_Aligned</td><td>512</td><td>AsciiOnly</td><td>11.632 ns</td><td>0.0165 ns</td><td>0.0147 ns</td>
+</tr><tr><td>Encoding</td><td>2048</td><td>AsciiOnly</td><td>59.927 ns</td><td>0.1031 ns</td><td>0.0914 ns</td>
+</tr><tr><td>VectorLength</td><td>2048</td><td>AsciiOnly</td><td>36.509 ns</td><td>0.0851 ns</td><td>0.0754 ns</td>
+</tr><tr><td>VectorLength_Aligned</td><td>2048</td><td>AsciiOnly</td><td>44.433 ns</td><td>0.4511 ns</td><td>0.7154 ns</td>
+</tr></tbody></table>
+</body>
+</html>
