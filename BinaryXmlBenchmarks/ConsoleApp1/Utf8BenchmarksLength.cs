@@ -107,7 +107,7 @@ namespace ConsoleApp1
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public unsafe int Avx1()
 		{
 			fixed (char* s = _input)
@@ -126,6 +126,14 @@ namespace ConsoleApp1
 		}
 
 		[Benchmark]
+		public unsafe int Vector128Length()
+		{
+			fixed (char* s = _input)
+			{
+				return UnsafeGetUTF8Length_Vector128(s, _input.Length);
+			}
+		}
+		//[Benchmark]
 		public unsafe int VectorLength_Aligned()
 		{
 			fixed (char* s = _input)
@@ -324,6 +332,31 @@ namespace ConsoleApp1
 				}
 
 				if ((*(Vector<short>*)lastSimd & mask) == Vector<short>.Zero)
+					return charCount;
+			}
+
+		NonAscii:
+			char* charsMax = chars + charCount;
+			return (int)(chars - (charsMax - charCount)) + GetByteCount2(new ReadOnlySpan<char>(chars, (int)(charsMax - chars)));
+		}
+
+		protected unsafe int UnsafeGetUTF8Length_Vector128(char* chars, int charCount)
+		{
+			if (Vector128.IsHardwareAccelerated
+/*				&& charCount <= 512, 2048*/)
+			{
+				char* lastSimd = chars + charCount - Vector128<short>.Count;
+				var mask = Vector128.Create(unchecked((short)0xff80));
+
+				while (chars < lastSimd)
+				{
+					if (((*(Vector128<short>*)chars) & mask) != Vector128<short>.Zero)
+						goto NonAscii;
+
+					chars += Vector128<short>.Count;
+				}
+
+				if ((*(Vector128<short>*)lastSimd & mask) == Vector128<short>.Zero)
 					return charCount;
 			}
 

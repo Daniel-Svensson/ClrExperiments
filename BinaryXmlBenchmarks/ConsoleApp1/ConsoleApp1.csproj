@@ -2,12 +2,12 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFrameworks>net7.0;</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<!--<RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Optimize Condition="'$(Configuration)'!='Debug'">true</Optimize>
+		<Optimize Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='LocalDebug'">true</Optimize>
+		<Configurations>Debug;Release;LocalBuild;LocalDebug;main;main2;span;unsafe</Configurations>
 	</PropertyGroup>
 
 
@@ -23,7 +23,40 @@
 			<Private>true</Private>
 		</Reference>
 	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)'=='LocalDebug'">
+		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
+		<Reference Include="System.Runtime.Serialization.Xml">
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Debug\net7.0\System.Runtime.Serialization.Xml.dll</HintPath>
+			<Private>true</Private>
+		</Reference>
+		<Reference Include="System.Private.DataContractSerialization">
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Debug\net7.0\System.Private.DataContractSerialization.dll</HintPath>
+			<Private>true</Private>
+		</Reference>
+
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Debug\net7.0\System.Runtime.Serialization.Xml.dll" CopyToOutputDirectory="Always" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Debug\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="Always" />
+	</ItemGroup>
+
+
+	<ItemGroup Condition="'$(Configuration)'!='Release' and '$(Configuration)'!='Debug' and '$(Configuration)'!='LocalBuild' and '$(Configuration)'!='LocalDebug'">
+		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
+		<Reference Include="System.Runtime.Serialization.Xml">
+			<HintPath>C:\dev\github\Daniel-Svensson\ClrExperiments\BinaryXmlBenchmarks\ConsoleApp1\dlls\$(Configuration)\System.Runtime.Serialization.Xml.dll</HintPath>
+			<Private>true</Private>
+		</Reference>
+		<Reference Include="System.Private.DataContractSerialization">
+			<HintPath>C:\dev\github\Daniel-Svensson\ClrExperiments\BinaryXmlBenchmarks\ConsoleApp1\dlls\$(Configuration)\System.Private.DataContractSerialization.dll</HintPath>
+			<Private>true</Private>
+		</Reference>
+
+		<Content Include="C:\dev\github\Daniel-Svensson\ClrExperiments\BinaryXmlBenchmarks\ConsoleApp1\dlls\$(Configuration)\*.dll" CopyToOutputDirectory="Always" />
+	</ItemGroup>
 	
+	
+
 	<ItemGroup>
 	  <Compile Remove="Xml\**" />
 	  <EmbeddedResource Remove="Xml\**" />
