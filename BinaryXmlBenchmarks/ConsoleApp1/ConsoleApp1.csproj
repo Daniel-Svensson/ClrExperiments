@@ -2,47 +2,48 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFrameworks>net7.0;</TargetFrameworks>
+		<TargetFrameworks>net8.0;</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Nullable>annotations</Nullable>
 		<Optimize Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='LocalDebug'">true</Optimize>
 		<Configurations>Debug;Release;LocalBuild;LocalDebug;main;main2;span;unsafe</Configurations>
 	</PropertyGroup>
 
 
 	<ItemGroup Condition="'$(Configuration)'=='LocalBuild'">
-		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
-		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
+		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net8.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net8.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
 		<Reference Include="System.Runtime.Serialization.Xml">
-			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Release\net7.0\System.Runtime.Serialization.Xml.dll</HintPath>
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Release\net8.0\System.Runtime.Serialization.Xml.dll</HintPath>
 			<Private>true</Private>
 		</Reference>
 		<Reference Include="System.Private.DataContractSerialization">
-			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll</HintPath>
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net8.0\System.Private.DataContractSerialization.dll</HintPath>
 			<Private>true</Private>
 		</Reference>
 	</ItemGroup>
 	<ItemGroup Condition="'$(Configuration)'=='LocalDebug'">
-		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
-		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
+		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net8.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net8.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
 		<Reference Include="System.Runtime.Serialization.Xml">
-			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Debug\net7.0\System.Runtime.Serialization.Xml.dll</HintPath>
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Debug\net8.0\System.Runtime.Serialization.Xml.dll</HintPath>
 			<Private>true</Private>
 		</Reference>
 		<Reference Include="System.Private.DataContractSerialization">
-			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Debug\net7.0\System.Private.DataContractSerialization.dll</HintPath>
+			<HintPath>C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Debug\net8.0\System.Private.DataContractSerialization.dll</HintPath>
 			<Private>true</Private>
 		</Reference>
 
-		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Debug\net7.0\System.Runtime.Serialization.Xml.dll" CopyToOutputDirectory="Always" />
-		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Debug\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="Always" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Runtime.Serialization.Xml\Debug\net8.0\System.Runtime.Serialization.Xml.dll" CopyToOutputDirectory="Always" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Debug\net8.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="Always" />
 	</ItemGroup>
 
 
 	<ItemGroup Condition="'$(Configuration)'!='Release' and '$(Configuration)'!='Debug' and '$(Configuration)'!='LocalBuild' and '$(Configuration)'!='LocalDebug'">
-		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
-		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net7.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
+		<!--<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net8.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="C:\dev\github\dotnet\runtime\artifacts\bin\System.Private.DataContractSerialization\Release\net8.0\System.Private.DataContractSerialization.dll" CopyToOutputDirectory="PreserveNewest" />-->
 		<Reference Include="System.Runtime.Serialization.Xml">
 			<HintPath>C:\dev\github\Daniel-Svensson\ClrExperiments\BinaryXmlBenchmarks\ConsoleApp1\dlls\$(Configuration)\System.Runtime.Serialization.Xml.dll</HintPath>
 			<Private>true</Private>
@@ -54,32 +55,11 @@
 
 		<Content Include="C:\dev\github\Daniel-Svensson\ClrExperiments\BinaryXmlBenchmarks\ConsoleApp1\dlls\$(Configuration)\*.dll" CopyToOutputDirectory="Always" />
 	</ItemGroup>
-	
-	
 
 	<ItemGroup>
-	  <Compile Remove="Xml\**" />
-	  <EmbeddedResource Remove="Xml\**" />
-	  <None Remove="Xml\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Compile Include="..\..\..\..\..\..\dev\github\dotnet\runtime\src\libraries\Common\src\System\ThrowHelper.cs" Link="Common\ThrowHelper.cs" />
-	  <Compile Include="..\..\..\..\..\..\dev\github\dotnet\runtime\src\libraries\System.Private.DataContractSerialization\src\System\Runtime\Serialization\DiagnosticUtility.cs" Link="Common\DiagnosticUtility.cs" />
-	  <Compile Include="..\..\..\..\..\..\dev\github\dotnet\runtime\src\libraries\System.Private.DataContractSerialization\src\System\Text\SurrogateChar.cs" Link="Xml\Text\SurrogateChar.cs" />
-	  <Compile Include="Xml\BaselineWriter.cs" />
-	  <Compile Include="Xml\BytesWithOffset.cs" />
-	  <Compile Include="Xml\SpanWriter.cs" />
-	  <Compile Include="Xml\SR.cs" />
-	  <Compile Include="Xml\UnsafeWriter.cs" />
-	  <Compile Include="Xml\XmlBinaryNodeType.cs" />
-	  <Compile Include="Xml\XmlNodeWriter.cs" />
-	  <Compile Include="Xml\XmlStreamNodeWriter.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
-		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.1" />
+		<PackageReference Include="BenchmarkDotNet" Version="0.13.5" />
+		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.5" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.27.0" />
 	</ItemGroup>
 
 </Project>

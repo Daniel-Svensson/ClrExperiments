@@ -14,7 +14,7 @@ namespace ConsoleApp1;
 [HardwareCounters(HardwareCounter.Timer, HardwareCounter.InstructionRetired, HardwareCounter.TotalIssues, HardwareCounter.TotalCycles)]
 public class BinaryXmlBenchmarks
 {
-   private XmlDictionaryWriter _writer;
+   private XmlDictionaryWriter? _writer;
    private Guid _guid = Guid.NewGuid();
    const int ArraySize = 100;
    private Guid[] _guids = Enumerable.Repeat(Guid.NewGuid(), ArraySize).ToArray();
@@ -87,9 +87,9 @@ public class BinaryXmlBenchmarks
 
 public class BinaryWriterRunner_Extended
 {
-   private string _input;
-   private char[] _inputAsChars;
-   private XmlDictionaryWriter _writer;
+   private string? _input;
+   private char[]? _inputAsChars;
+   private XmlDictionaryWriter? _writer;
 
    [Params(4, 8, 16, 32, 64, 100, 256, 512)]
    public int StringLengthInChars;

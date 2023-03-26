@@ -16,11 +16,11 @@ public enum Source { MemoryStream, Bytes };
 //[HardwareCounters(HardwareCounter.Timer, HardwareCounter.InstructionRetired, HardwareCounter.TotalIssues, HardwareCounter.TotalCycles)]
 public class BinaryXmlReader
 {
-	private MemoryStream _longMs;
-	private MemoryStream _byteMs;
-	private MemoryStream _shortMs;
-	private MemoryStream _guidMs;
-	private MemoryStream _doubleArrayMs;
+	private MemoryStream? _longMs;
+	private MemoryStream? _byteMs;
+	private MemoryStream? _shortMs;
+	private MemoryStream? _guidMs;
+	private MemoryStream? _doubleArrayMs;
 	private Guid _guid = Guid.NewGuid();
 	const int ArraySize = 1000;
 	const int NumElements = 1_000_000;
@@ -29,11 +29,11 @@ public class BinaryXmlReader
 	private Double[] _doubles = Enumerable.Repeat(4.0 / 3.0, ArraySize).ToArray();
 	private Double[] _doubleDest = new double[ArraySize];
 	private long _valueStartPosition;
-	private XmlDictionaryReader _longRreader;
-	private XmlDictionaryReader _byteReader;
-	private XmlDictionaryReader _doubleArrReader;
-	private XmlDictionaryReader _shortReader;
-	private XmlDictionaryReader _guidsReader;
+	private XmlDictionaryReader? _longRreader;
+	private XmlDictionaryReader? _byteReader;
+	private XmlDictionaryReader? _doubleArrReader;
+	private XmlDictionaryReader? _shortReader;
+	private XmlDictionaryReader? _guidsReader;
 
 	[Params(Source.MemoryStream, Source.Bytes)]
 	public Source Source { get; set; }
