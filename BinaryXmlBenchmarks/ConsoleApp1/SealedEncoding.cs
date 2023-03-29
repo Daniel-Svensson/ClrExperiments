@@ -8,9 +8,8 @@ using System.Text;
 
 namespace ConsoleApp1
 {
-    public partial class Utf8Benchmarks2
-    {
-        sealed class SealedEncoding : UTF8Encoding
+
+        public sealed class SealedEncoding : UTF8Encoding
         {
             public SealedEncoding(bool a, bool b) : base(a, b) { }
 
@@ -199,5 +198,4 @@ namespace ConsoleApp1
 #endif
             }
         }
-    }
 }

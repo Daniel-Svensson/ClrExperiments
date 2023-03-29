@@ -9,36 +9,14 @@ using ConsoleApp1;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Perfolizer.Horology;
 
-// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+var b = new AsciiBenchmarks();
+b.StringLengthInChars = 63;
+b.Scenario = Utf8Scenario.AsciiOnly;
+b.Setup();
 
-var ms = new MemoryStream();
-var writer = XmlDictionaryWriter.CreateBinaryWriter(ms);
 
-var reader = XmlDictionaryReader.CreateBinaryReader(ms, XmlDictionaryReaderQuotas.Max);
 
-writer.WriteStartDocument();
-writer.WriteStartElement("root");
-writer.WriteStartElement("long");
-writer.WriteValue(long.MaxValue);
-writer.WriteEndElement();
-writer.WriteStartElement("int");
-writer.WriteValue(int.MaxValue);
-writer.WriteEndElement();
-writer.WriteStartElement("float");
-writer.WriteValue(1.2343);
-writer.WriteEndElement();
-writer.WriteEndElement();
-writer.WriteEndDocument();
-writer.Flush();
-ms.Position = 0;
 
-reader.ReadStartElement("root");
-Console.WriteLine($"long: {reader.ReadElementContentAsLong("long","")}");
-Console.WriteLine($"int: {reader.ReadElementContentAsInt("int","")}");
-Console.WriteLine($"float: {reader.ReadElementContentAsFloat("float","")}");
-reader.ReadEndElement();
-reader.Close();
 
 var baseJob = Job.Default
 //                   .WithWarmupCount(1) // 1 warmup is enough for our purpose
@@ -51,6 +29,7 @@ var baseJob = Job.Default
 var jobBefore = baseJob.WithId("Before").AsBaseline();
 var jobAfter = baseJob.WithCustomBuildConfiguration("LocalBuild");
 var config = DefaultConfig.Instance.AddJob(jobBefore).AddJob(jobAfter).KeepBenchmarkFiles();
+
 
 //var summary = BenchmarkRunner.Run<BinaryXmlBenchmarks>(config);
 
@@ -90,7 +69,7 @@ var config = DefaultConfig.Instance.AddJob(jobBefore).AddJob(jobAfter).KeepBench
 //        throw new Exception("wrong");
 //}
 
-BenchmarkRunner.Run<Utf8Benchmarks2>(DefaultConfig.Instance.AddJob(baseJob), args);
+BenchmarkRunner.Run<AsciiBenchmarks>(DefaultConfig.Instance.AddJob(baseJob), args);
 //BenchmarkRunner.Run<Utf8Benchmarks2>(DefaultConfig.Instance.AddJob(baseJob).KeepBenchmarkFiles(), args);
 
 //BenchmarkRunner.Run<Utf8BenchmarksLength>(DefaultConfig.Instance.AddJob(baseJob).KeepBenchmarkFiles(), args);

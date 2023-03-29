@@ -258,3 +258,5 @@ BenchmarkDotNet.Artifacts/
 /ClrDecimal/coreclrtesting/baselines
 /ClrDecimal/linuxtesting/readme/images
 /ClrDecimal/linuxtesting/readme
+/BinaryXmlBenchmarks/ConsoleApp1/BenchmarkDotNet.Artifacts/ascii/ConsoleApp1.AsciiBenchmarks-report.html
+/BinaryXmlBenchmarks/ConsoleApp1/BenchmarkDotNet.Artifacts/ascii/ConsoleApp1.AsciiBenchmarks-report-different-endings.html
