@@ -9,12 +9,16 @@ using ConsoleApp1;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Perfolizer.Horology;
 
-var b = new AsciiBenchmarks();
-b.StringLengthInChars = 63;
-b.Scenario = Utf8Scenario.AsciiOnly;
-b.Setup();
+//var b = new AsciiBenchmarks();
+//b.StringLengthInChars = 63;
+//b.Scenario = Utf8Scenario.AsciiOnly;
+//b.Setup();
+//b.Ascii_Local_NarrowUtf16ToAscii_simple_loop();
+//b.Ascii_Local_NarrowUtf16ToAscii_v2();
+//b.Ascii_Local_NarrowUtf16ToAscii_v3();
 
-
+//if (args.Length < 3)
+//   return;
 
 
 

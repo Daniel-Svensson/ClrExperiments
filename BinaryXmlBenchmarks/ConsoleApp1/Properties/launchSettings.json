@@ -3,8 +3,10 @@
     "ConsoleApp1": {
       "commandName": "Project",
       "environmentVariables": {
-        "COMPlus_JitDisasm": "System.Xml.*::*",
-        "COMPlus_JitDump": "System.Xml.*::*"
+        "DOTNET_JitDisasm": "Test.Ascii:*",
+        "DOTNET_JitDump": "Test.Ascii:*",
+        "DOTNET_TieredCompilation": "0",
+        "DOTNET_JitDumpASCII": "0"
       }
     }
   }

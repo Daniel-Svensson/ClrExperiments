@@ -43,7 +43,7 @@ namespace Test
             fixed (char* pSource = &MemoryMarshal.GetReference(source))
             fixed (byte* pDestination = &MemoryMarshal.GetReference(destination))
             {
-                nuint numElementsActuallyConverted = NarrowUtf16ToAscii(pSource, pDestination, numElementsToConvert);
+                nuint numElementsActuallyConverted = NarrowUtf16ToAscii_simple(pSource, pDestination, numElementsToConvert);
                 Debug.Assert(numElementsActuallyConverted <= numElementsToConvert);
 
                 bytesWritten = (int)numElementsActuallyConverted;
@@ -58,7 +58,7 @@ namespace Test
             Debug.Assert(pBytes != null, "Caller validates input");
 
             nuint numElementsToConvert = Math.Min(charsLength, bytesLength);
-            return NarrowUtf16ToAscii(pChars, pBytes, numElementsToConvert);
+            return NarrowUtf16ToAscii_simple(pChars, pBytes, numElementsToConvert);
         }
 
         /// <summary>
@@ -1499,7 +1499,7 @@ namespace Test
         /// of elements that were able to be converted.
         /// </summary>
         [SkipLocalsInit]
-        public static unsafe nuint NarrowUtf16ToAscii(char* pUtf16Buffer, byte* pAsciiBuffer, nuint elementCount)
+        public static unsafe nuint NarrowUtf16ToAscii_simple(char* pUtf16Buffer, byte* pAsciiBuffer, nuint elementCount)
         {
             nuint currentOffset = 0;
 
@@ -1532,7 +1532,7 @@ namespace Test
                     //    }
                     //}
 
-                    currentOffset = NarrowUtf16ToAscii_Intrinsified(pUtf16Buffer, pAsciiBuffer, elementCount);
+                    currentOffset = NarrowUtf16ToAscii_Intrinsified_simple_loop(pUtf16Buffer, pAsciiBuffer, elementCount);
                     if (currentOffset == elementCount)
                         goto Finish;
                 }
@@ -2321,7 +2321,11 @@ namespace Test
         }
 
 
-        private static readonly Vector128<ushort> VectorContainsNonAsciiCharMask = Sse2.IsSupported && !Sse41.IsSupported ? Vector128.Create((ushort)0x7F80) : Vector128.Create((ushort)0xFF80);
+        private static Vector128<ushort> VectorContainsNonAsciiCharMask
+         // Use OR with zero as a workaround for github issue .... where manually hoisted constants are reread constantly
+         => Vector128.BitwiseOr(Vector128<ushort>.Zero, 
+               ((Sse2.IsSupported && !Sse41.IsSupported)
+               ? Vector128.Create((ushort)0x7F80) : Vector128.Create((ushort)0xFF80)));
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2416,7 +2420,7 @@ namespace Test
         }
 
         [SkipLocalsInit]
-        internal static unsafe nuint NarrowUtf16ToAscii_Intrinsified(char* pUtf16Buffer, byte* pAsciiBuffer, nuint elementCount)
+        internal static unsafe nuint NarrowUtf16ToAscii_Intrinsified_simple_loop(char* pUtf16Buffer, byte* pAsciiBuffer, nuint elementCount)
         {
             // This method contains logic optimized using vector instructions for both x64 and Arm64.
             // Much of the logic in this method will be elided by JIT once we determine which specific ISAs we support.
@@ -2748,7 +2752,7 @@ namespace Test
                 currentOffsetInElements += SizeOfVector128;
             }
 
-            goto FinalVectors;
+            FinalVectors:
             // Process a last double vector doing unaligned (possibly overlapping)
             utf16VectorFirst = Vector128.LoadUnsafe(ref utf16Buffer, finalOffsetWhereCanRunLoop);
             Vector128<ushort> utf16VectorSecond2 = Vector128.LoadUnsafe(ref utf16Buffer, finalOffsetWhereCanRunLoop + SizeOfVector128 / sizeof(short));
