@@ -64,7 +64,7 @@ namespace ConsoleApp1
 			_inputAsChars = _input.ToCharArray();
 			_buffer = new byte[StringLengthInChars * 2];
 		}
-
+#if NET8_0_OR_GREATER
 		//[Benchmark(Baseline = true)]
 		public unsafe int System_Text_Ascii()
 		{
@@ -75,7 +75,7 @@ namespace ConsoleApp1
 				return bytesWritten;
 			}
 		}
-
+#endif
 		// [Benchmark]
 		public unsafe int Ascii_Local()
 		{
@@ -88,7 +88,7 @@ namespace ConsoleApp1
 		}
 
 		[Benchmark(Baseline = true)]
-		public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v2()
+		public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v2_StoreLower()
 		{
 			fixed (char* s = _input)
 			fixed (byte* _bytes = _buffer)
