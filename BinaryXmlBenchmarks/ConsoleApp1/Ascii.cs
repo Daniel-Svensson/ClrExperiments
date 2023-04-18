@@ -2662,36 +2662,25 @@ namespace Test
 
             Debug.Assert(Vector128.IsHardwareAccelerated, "Vector128 is required.");
             Debug.Assert(BitConverter.IsLittleEndian, "This implementation assumes little-endian.");
-            Debug.Assert(elementCount >= SizeOfVector128 / 2);
-
-
-            ref ushort utf16Buffer = ref *(ushort*)pUtf16Buffer;
-            ref byte asciiBuffer = ref *pAsciiBuffer;
-            Vector128<ushort> utf16VectorFirst;
-            Vector128<ushort> mask = VectorContainsNonAsciiCharMask;
-            Vector128<byte> asciiVector;
-
-            nuint currentOffsetInElements = 0;
+            Debug.Assert(elementCount >= 2 * SizeOfVector128);
 
             // First, perform an unaligned read of the first part of the input buffer.
-            utf16VectorFirst = Vector128.LoadUnsafe(ref utf16Buffer);
+            ref ushort utf16Buffer = ref *(ushort*)pUtf16Buffer;
+            Vector128<ushort> utf16VectorFirst = Vector128.LoadUnsafe(ref utf16Buffer);
+            Vector128<ushort> mask = VectorContainsNonAsciiCharMask;
 
             // If there's non-ASCII data in the first 8 elements of the vector, there's nothing we can do.
             if (VectorContainsNonAsciiChar(utf16VectorFirst, mask))
             {
-                goto Finish;
+                return 0;
             }
 
             // Turn the 8 ASCII chars we just read into 8 ASCII bytes, then copy it to the destination.
-            asciiVector = ExtractAsciiVector(utf16VectorFirst, utf16VectorFirst);
+
+            ref byte asciiBuffer = ref *pAsciiBuffer;
+            Vector128<byte> asciiVector = ExtractAsciiVector(utf16VectorFirst, utf16VectorFirst);
             StoreLower(asciiVector, ref asciiBuffer, 0);
-            currentOffsetInElements = SizeOfVector128 / 2; // we processed 8 elements so far
-
-            // TODO: Check  if (elementCount <= SizeOfVector128 + (SizeOfVector128 /2))
-            //{
-            //    goto FinalVectors;
-            //}
-
+            nuint currentOffsetInElements = SizeOfVector128 / 2; // we processed 8 elements so far
 
             // We're going to get the best performance when we have aligned writes, so we'll take the
             // hit of potentially unaligned reads in order to hit this sweet spot.
@@ -2752,8 +2741,7 @@ namespace Test
                 currentOffsetInElements += SizeOfVector128;
             }
 
-            FinalVectors:
-            // Process a last double vector doing unaligned (possibly overlapping)
+            // Process a last vector pair doing a possibly overlapping read and write
             utf16VectorFirst = Vector128.LoadUnsafe(ref utf16Buffer, finalOffsetWhereCanRunLoop);
             Vector128<ushort> utf16VectorSecond2 = Vector128.LoadUnsafe(ref utf16Buffer, finalOffsetWhereCanRunLoop + SizeOfVector128 / sizeof(short));
             Vector128<ushort> finalCombinedVector = utf16VectorFirst | utf16VectorSecond2;
@@ -2765,13 +2753,16 @@ namespace Test
 
                 asciiVector = ExtractAsciiVector(utf16VectorFirst, utf16VectorFirst);
                 StoreLower(asciiVector, ref asciiBuffer, finalOffsetWhereCanRunLoop);
-                currentOffsetInElements += SizeOfVector128 / 2;
+                currentOffsetInElements = finalOffsetWhereCanRunLoop + (SizeOfVector128 / 2);
                 goto Finish;
             }
 
+            asciiVector = ExtractAsciiVector(utf16VectorFirst, utf16VectorSecond2);
+            asciiVector.StoreUnsafe(ref asciiBuffer, finalOffsetWhereCanRunLoop);
             currentOffsetInElements = elementCount;
 
         Finish:
+
             // There might be some ASCII data left over. That's fine - we'll let our caller handle the final drain.
             return currentOffsetInElements;
 
@@ -3024,246 +3015,6 @@ namespace Test
             //}
 
             goto Finish;
-        }
-
-        /// <summary>
-        /// Copies as many ASCII bytes (00..7F) as possible from <paramref name="pAsciiBuffer"/>
-        /// to <paramref name="pUtf16Buffer"/>, stopping when the first non-ASCII byte is encountered
-        /// or once <paramref name="elementCount"/> elements have been converted. Returns the total number
-        /// of elements that were able to be converted.
-        /// </summary>
-        private static unsafe nuint WidenAsciiToUtf16(byte* pAsciiBuffer, char* pUtf16Buffer, nuint elementCount)
-        {
-            // Intrinsified in mono interpreter
-            nuint currentOffset = 0;
-
-            if (BitConverter.IsLittleEndian && Vector128.IsHardwareAccelerated && elementCount >= (uint)Vector128<byte>.Count)
-            {
-                ushort* pCurrentWriteAddress = (ushort*)pUtf16Buffer;
-
-                if (Vector256.IsHardwareAccelerated && elementCount >= (uint)Vector256<byte>.Count)
-                {
-                    // Calculating the destination address outside the loop results in significant
-                    // perf wins vs. relying on the JIT to fold memory addressing logic into the
-                    // write instructions. See: https://github.com/dotnet/runtime/issues/33002
-                    nuint finalOffsetWhereCanRunLoop = elementCount - (uint)Vector256<byte>.Count;
-
-                    do
-                    {
-                        Vector256<byte> asciiVector = Vector256.Load(pAsciiBuffer + currentOffset);
-
-                        if (asciiVector.ExtractMostSignificantBits() != 0)
-                        {
-                            break;
-                        }
-
-                        (Vector256<ushort> low, Vector256<ushort> upper) = Vector256.Widen(asciiVector);
-                        low.Store(pCurrentWriteAddress);
-                        upper.Store(pCurrentWriteAddress + Vector256<ushort>.Count);
-
-                        currentOffset += (nuint)Vector256<byte>.Count;
-                        pCurrentWriteAddress += (nuint)Vector256<byte>.Count;
-                    } while (currentOffset <= finalOffsetWhereCanRunLoop);
-                }
-                else
-                {
-                    // Calculating the destination address outside the loop results in significant
-                    // perf wins vs. relying on the JIT to fold memory addressing logic into the
-                    // write instructions. See: https://github.com/dotnet/runtime/issues/33002
-                    nuint finalOffsetWhereCanRunLoop = elementCount - (uint)Vector128<byte>.Count;
-
-                    do
-                    {
-                        Vector128<byte> asciiVector = Vector128.Load(pAsciiBuffer + currentOffset);
-
-                        if (VectorContainsNonAsciiChar(asciiVector))
-                        {
-                            break;
-                        }
-
-                        // Vector128.Widen is not used here as it less performant on ARM64
-                        Vector128<ushort> utf16HalfVector = Vector128.WidenLower(asciiVector);
-                        utf16HalfVector.Store(pCurrentWriteAddress);
-                        utf16HalfVector = Vector128.WidenUpper(asciiVector);
-                        utf16HalfVector.Store(pCurrentWriteAddress + Vector128<ushort>.Count);
-
-                        currentOffset += (nuint)Vector128<byte>.Count;
-                        pCurrentWriteAddress += (nuint)Vector128<byte>.Count;
-                    } while (currentOffset <= finalOffsetWhereCanRunLoop);
-                }
-            }
-            else if (Vector.IsHardwareAccelerated)
-            {
-                uint SizeOfVector = (uint)sizeof(Vector<byte>); // JIT will make this a const
-
-                // Only bother vectorizing if we have enough data to do so.
-                if (elementCount >= SizeOfVector)
-                {
-                    // Note use of SBYTE instead of BYTE below; we're using the two's-complement
-                    // representation of negative integers to act as a surrogate for "is ASCII?".
-
-                    nuint finalOffsetWhereCanLoop = elementCount - SizeOfVector;
-                    do
-                    {
-                        Vector<sbyte> asciiVector = Unsafe.ReadUnaligned<Vector<sbyte>>(pAsciiBuffer + currentOffset);
-                        if (Vector.LessThanAny(asciiVector, Vector<sbyte>.Zero))
-                        {
-                            break; // found non-ASCII data
-                        }
-
-                        Vector.Widen(Vector.AsVectorByte(asciiVector), out Vector<ushort> utf16LowVector, out Vector<ushort> utf16HighVector);
-
-                        // TODO: Is the below logic also valid for big-endian platforms?
-                        Unsafe.WriteUnaligned<Vector<ushort>>(pUtf16Buffer + currentOffset, utf16LowVector);
-                        Unsafe.WriteUnaligned<Vector<ushort>>(pUtf16Buffer + currentOffset + Vector<ushort>.Count, utf16HighVector);
-
-                        currentOffset += SizeOfVector;
-                    } while (currentOffset <= finalOffsetWhereCanLoop);
-                }
-            }
-
-            Debug.Assert(currentOffset <= elementCount);
-            nuint remainingElementCount = elementCount - currentOffset;
-
-            // Try to widen 32 bits -> 64 bits at a time.
-            // We needn't update remainingElementCount after this point.
-
-            uint asciiData;
-
-            if (remainingElementCount >= 4)
-            {
-                nuint finalOffsetWhereCanLoop = currentOffset + remainingElementCount - 4;
-                do
-                {
-                    asciiData = Unsafe.ReadUnaligned<uint>(pAsciiBuffer + currentOffset);
-                    if (!AllBytesInUInt32AreAscii(asciiData))
-                    {
-                        goto FoundNonAsciiData;
-                    }
-
-                    WidenFourAsciiBytesToUtf16AndWriteToBuffer(ref pUtf16Buffer[currentOffset], asciiData);
-                    currentOffset += 4;
-                } while (currentOffset <= finalOffsetWhereCanLoop);
-            }
-
-            // Try to widen 16 bits -> 32 bits.
-
-            if (((uint)remainingElementCount & 2) != 0)
-            {
-                asciiData = Unsafe.ReadUnaligned<ushort>(pAsciiBuffer + currentOffset);
-                if (!AllBytesInUInt32AreAscii(asciiData))
-                {
-                    if (!BitConverter.IsLittleEndian)
-                    {
-                        asciiData <<= 16;
-                    }
-                    goto FoundNonAsciiData;
-                }
-
-                if (BitConverter.IsLittleEndian)
-                {
-                    pUtf16Buffer[currentOffset] = (char)(byte)asciiData;
-                    pUtf16Buffer[currentOffset + 1] = (char)(asciiData >> 8);
-                }
-                else
-                {
-                    pUtf16Buffer[currentOffset + 1] = (char)(byte)asciiData;
-                    pUtf16Buffer[currentOffset] = (char)(asciiData >> 8);
-                }
-
-                currentOffset += 2;
-            }
-
-            // Try to widen 8 bits -> 16 bits.
-
-            if (((uint)remainingElementCount & 1) != 0)
-            {
-                asciiData = pAsciiBuffer[currentOffset];
-                if (((byte)asciiData & 0x80) != 0)
-                {
-                    goto Finish;
-                }
-
-                pUtf16Buffer[currentOffset] = (char)asciiData;
-                currentOffset++;
-            }
-
-        Finish:
-
-            return currentOffset;
-
-        FoundNonAsciiData:
-
-            Debug.Assert(!AllBytesInUInt32AreAscii(asciiData), "Shouldn't have reached this point if we have an all-ASCII input.");
-
-            // Drain ASCII bytes one at a time.
-
-            if (BitConverter.IsLittleEndian)
-            {
-                while (((byte)asciiData & 0x80) == 0)
-                {
-                    pUtf16Buffer[currentOffset] = (char)(byte)asciiData;
-                    currentOffset++;
-                    asciiData >>= 8;
-                }
-            }
-            else
-            {
-                while ((asciiData & 0x80000000) == 0)
-                {
-                    asciiData = BitOperations.RotateLeft(asciiData, 8);
-                    pUtf16Buffer[currentOffset] = (char)(byte)asciiData;
-                    currentOffset++;
-                }
-            }
-
-            goto Finish;
-        }
-
-        /// <summary>
-        /// Given a DWORD which represents a buffer of 4 bytes, widens the buffer into 4 WORDs and
-        /// writes them to the output buffer with machine endianness.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void WidenFourAsciiBytesToUtf16AndWriteToBuffer(ref char outputBuffer, uint value)
-        {
-            Debug.Assert(AllBytesInUInt32AreAscii(value));
-
-            if (AdvSimd.Arm64.IsSupported)
-            {
-                Vector128<byte> vecNarrow = AdvSimd.DuplicateToVector128(value).AsByte();
-                Vector128<ulong> vecWide = AdvSimd.Arm64.ZipLow(vecNarrow, Vector128<byte>.Zero).AsUInt64();
-                Unsafe.WriteUnaligned<ulong>(ref Unsafe.As<char, byte>(ref outputBuffer), vecWide.ToScalar());
-            }
-            else if (Vector128.IsHardwareAccelerated)
-            {
-                Vector128<byte> vecNarrow = Vector128.CreateScalar(value).AsByte();
-                Vector128<ulong> vecWide = Vector128.WidenLower(vecNarrow).AsUInt64();
-                Unsafe.WriteUnaligned<ulong>(ref Unsafe.As<char, byte>(ref outputBuffer), vecWide.ToScalar());
-            }
-            else
-            {
-                if (BitConverter.IsLittleEndian)
-                {
-                    outputBuffer = (char)(byte)value;
-                    value >>= 8;
-                    Unsafe.Add(ref outputBuffer, 1) = (char)(byte)value;
-                    value >>= 8;
-                    Unsafe.Add(ref outputBuffer, 2) = (char)(byte)value;
-                    value >>= 8;
-                    Unsafe.Add(ref outputBuffer, 3) = (char)value;
-                }
-                else
-                {
-                    Unsafe.Add(ref outputBuffer, 3) = (char)(byte)value;
-                    value >>= 8;
-                    Unsafe.Add(ref outputBuffer, 2) = (char)(byte)value;
-                    value >>= 8;
-                    Unsafe.Add(ref outputBuffer, 1) = (char)(byte)value;
-                    value >>= 8;
-                    outputBuffer = (char)value;
-                }
-            }
         }
     }
 }
