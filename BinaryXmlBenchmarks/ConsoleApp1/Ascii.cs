@@ -2420,6 +2420,7 @@ namespace Test
         }
 
         [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe nuint NarrowUtf16ToAscii_Intrinsified_simple_loop(char* pUtf16Buffer, byte* pAsciiBuffer, nuint elementCount)
         {
             // This method contains logic optimized using vector instructions for both x64 and Arm64.
@@ -2567,6 +2568,8 @@ namespace Test
 
 
         [SkipLocalsInit]
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe nuint NarrowUtf16ToAscii_Intrinsified_v3_double_write(char* pUtf16Buffer, byte* pAsciiBuffer, nuint elementCount)
         {
             // This method contains logic optimized using vector instructions for both x64 and Arm64.
@@ -2708,6 +2711,8 @@ namespace Test
 
 
         [SkipLocalsInit]
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe nuint NarrowUtf16ToAscii_Intrinsified_v4_if(char* pUtf16Buffer, byte* pAsciiBuffer, nuint elementCount)
         {
             // This method contains logic optimized using vector instructions for both x64 and Arm64.
