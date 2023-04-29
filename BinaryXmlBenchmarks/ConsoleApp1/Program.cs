@@ -23,8 +23,8 @@ using Perfolizer.Horology;
 
 
 var baseJob = Job.Default
-//                   .WithWarmupCount(1) // 1 warmup is enough for our purpose
-                   .WithIterationTime(TimeInterval.FromMilliseconds(250.0)) // the default is 0.5s per iteration
+                   .WithWarmupCount(1) // 1 warmup is enough for our purpose
+                   .WithIterationTime(TimeInterval.FromMilliseconds(300.0)) // the default is 0.5s per iteration
                    .WithMaxRelativeError(0.01)
                    //.WithToolchain(new CoreRunToolchain(new FileInfo(@"C:\dev\github\dotnet\runtime\artifacts\bin\coreclr\windows.x64.Release\corerun.exe")))
                    ;
