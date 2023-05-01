@@ -89,12 +89,9 @@ namespace ConsoleApp1
 		//[Benchmark(Baseline = true)]
 		public unsafe int System_Text_Ascii()
 		{
-			fixed (char* s = _input)
-			fixed (byte* _bytes = _buffer)
-			{
-				System.Text.Ascii.FromUtf16(new ReadOnlySpan<char>(s, _input.Length), new Span<byte>(_bytes, _buffer.Length), out int bytesWritten);
-				return bytesWritten;
-			}
+
+			System.Text.Ascii.FromUtf16(new ReadOnlySpan<char>(_pString, _input.Length), new Span<byte>(_pBuffer, _buffer.Length), out int bytesWritten);
+			return bytesWritten;
 		}
 #endif
 		// [Benchmark]
@@ -128,21 +125,17 @@ namespace ConsoleApp1
 			return Test.Ascii.NarrowUtf16ToAscii_v3_store(_pString, _pBuffer, (uint)Math.Min(_input.Length, _buffer.Length));
 		}
 
-        [Benchmark]
-        public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v3b()
-        {
-            fixed (char* s = _input)
-            fixed (byte* _bytes = _buffer)
-                return Test.Ascii.NarrowUtf16ToAscii_v3b_store(s, _bytes, (uint)Math.Min(_input.Length, _buffer.Length));
-        }
+		[Benchmark]
+		public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v3b_singlev256()
+		{
+			return Test.Ascii.NarrowUtf16ToAscii_v3b_store(_pString, _pBuffer, (uint)Math.Min(_input.Length, _buffer.Length));
+		}
 
-        [Benchmark]
-        public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v3c()
-        {
-            fixed (char* s = _input)
-            fixed (byte* _bytes = _buffer)
-                return Test.Ascii.NarrowUtf16ToAscii_v3c_store(s, _bytes, (uint)Math.Min(_input.Length, _buffer.Length));
-        }
+		[Benchmark]
+		public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v3c_doublev256()
+		{
+			return Test.Ascii.NarrowUtf16ToAscii_v3c_store(_pString, _pBuffer, (uint)Math.Min(_input.Length, _buffer.Length));
+		}
 
 		//[Benchmark]
 		public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v4_if()
