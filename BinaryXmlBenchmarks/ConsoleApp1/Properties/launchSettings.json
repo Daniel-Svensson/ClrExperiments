@@ -3,10 +3,11 @@
     "ConsoleApp1": {
       "commandName": "Project",
       "environmentVariables": {
-        "DOTNET_JitDisasm": "Test.Ascii:*",
-        "DOTNET_JitDump": "Test.Ascii:*",
-        "DOTNET_TieredCompilation": "0",
-        "DOTNET_JitDumpASCII": "0"
+        //"DOTNET_JitDisasm": "Test.Ascii:*",
+        //"DOTNET_JitDump": "Test.Ascii:*",
+        //"DOTNET_TieredCompilation": "0",
+        //"DOTNET_JitDumpASCII": "0",
+        //"DOTNET_EnableAVX": "1"
       }
     }
   }
