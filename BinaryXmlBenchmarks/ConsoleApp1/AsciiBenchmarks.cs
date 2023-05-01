@@ -111,6 +111,22 @@ namespace ConsoleApp1
 				return Test.Ascii.NarrowUtf16ToAscii_v3_store(s, _bytes, (uint)Math.Min(_input.Length, _buffer.Length));
 		}
 
+        [Benchmark]
+        public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v3b()
+        {
+            fixed (char* s = _input)
+            fixed (byte* _bytes = _buffer)
+                return Test.Ascii.NarrowUtf16ToAscii_v3b_store(s, _bytes, (uint)Math.Min(_input.Length, _buffer.Length));
+        }
+
+        [Benchmark]
+        public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v3c()
+        {
+            fixed (char* s = _input)
+            fixed (byte* _bytes = _buffer)
+                return Test.Ascii.NarrowUtf16ToAscii_v3c_store(s, _bytes, (uint)Math.Min(_input.Length, _buffer.Length));
+        }
+
 		//[Benchmark]
 		public unsafe nuint Ascii_Local_NarrowUtf16ToAscii_v4_if()
 		{
