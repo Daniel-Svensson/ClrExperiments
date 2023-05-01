@@ -101,7 +101,7 @@ namespace Test
 					//    }
 					//}
 
-					currentOffset = NarrowUtf16ToAscii_Intrinsified_v2(pUtf16Buffer, pAsciiBuffer, elementCount);
+					currentOffset = NarrowUtf16ToAscii_Intrinsified_v1(pUtf16Buffer, pAsciiBuffer, elementCount);
 				}
 			}
 			else if (Vector.IsHardwareAccelerated)
@@ -1954,7 +1954,7 @@ namespace Test
 
 			if (Vector128.IsHardwareAccelerated && BitConverter.IsLittleEndian)
 			{
-				if (elementCount >= 2*(uint)Vector128<ushort>.Count)
+				if (elementCount >= 2 * (uint)Vector128<ushort>.Count)
 				{
 					// Since there's overhead to setting up the vectorized code path, we only want to
 					// call into it after a quick probe to ensure the next immediate characters really are ASCII.
@@ -2663,12 +2663,18 @@ namespace Test
 		}
 
 
-		private static Vector128<ushort> VectorContainsNonAsciiCharMask
-		 // Use OR with zero as a workaround for github issue .... where manually hoisted constants are reread constantly
-		 => Vector128.BitwiseOr(Vector128<ushort>.Zero,
-				 ((Sse2.IsSupported && !Sse41.IsSupported)
-				 ? Vector128.Create((ushort)0x7F80) : Vector128.Create((ushort)0xFF80)));
+		//private static Vector128<ushort> VectorContainsNonAsciiCharMask
+		// // Use OR with zero as a workaround for github issue .... where manually hoisted constants are reread constantly
+		// => Vector128.BitwiseOr(Vector128<ushort>.Zero,
+		//		 ((Sse2.IsSupported && !Sse41.IsSupported)
+		//		 ? Vector128.Create((ushort)0x7F80) : Vector128.Create((ushort)0xFF80)));
 
+
+		private static Vector128<ushort> VectorContainsNonAsciiCharMask
+ // Use OR with zero as a workaround for github issue .... where manually hoisted constants are reread constantly
+ =>
+		 ((Sse2.IsSupported && !Sse41.IsSupported)
+		 ? Vector128.Create((ushort)0x7F80) : Vector128.Create((ushort)0xFF80));
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool VectorContainsNonAsciiChar(Vector128<ushort> utf16Vector, Vector128<ushort> mask)
@@ -3100,7 +3106,7 @@ namespace Test
 			StoreLower(asciiVector, ref asciiBuffer, 0);
 			currentOffsetInElements = SizeOfVector128 / 2; // we processed 8 elements so far
 
-			if (elementCount <= 3 * SizeOfVector128)
+			if (elementCount <= 3 * SizeOfVector128 / 2)
 				goto FinalVectors;
 
 			// We're going to get the best performance when we have aligned writes, so we'll take the

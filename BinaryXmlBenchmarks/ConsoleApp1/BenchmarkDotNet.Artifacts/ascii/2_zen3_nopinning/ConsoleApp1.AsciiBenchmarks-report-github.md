@@ -1,0 +1,120 @@
+``` ini
+
+BenchmarkDotNet=v0.13.5, OS=Windows 11 (10.0.22621.1555/22H2/2022Update/SunValley2)
+AMD Ryzen 9 5900X, 1 CPU, 24 logical and 12 physical cores
+.NET SDK=8.0.100-preview.2.23157.25
+  [Host]     : .NET 8.0.0 (8.0.23.12803), X64 RyuJIT AVX2
+  Job-NBUDUF : .NET 8.0.0 (8.0.23.12803), X64 RyuJIT AVX2
+
+MaxRelativeError=0.01  IterationTime=300.0000 ms  WarmupCount=1  
+
+```
+|                                       Method | StringLengthInChars |  Scenario |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |
+|--------------------------------------------- |-------------------- |---------- |---------:|----------:|----------:|---------:|------:|--------:|
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                   **5** | **AsciiOnly** | **1.674 ns** | **0.0268 ns** | **0.0250 ns** | **1.667 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                   5 | AsciiOnly | 1.701 ns | 0.0106 ns | 0.0089 ns | 1.698 ns |  1.02 |    0.02 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                   5 | AsciiOnly | 1.885 ns | 0.0284 ns | 0.0458 ns | 1.862 ns |  1.14 |    0.03 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                   5 | AsciiOnly | 1.668 ns | 0.0131 ns | 0.0116 ns | 1.669 ns |  1.00 |    0.02 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                   5 | AsciiOnly | 1.871 ns | 0.0156 ns | 0.0138 ns | 1.876 ns |  1.12 |    0.02 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                   **8** | **AsciiOnly** | **2.078 ns** | **0.0228 ns** | **0.0202 ns** | **2.069 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                   8 | AsciiOnly | 2.089 ns | 0.0176 ns | 0.0156 ns | 2.095 ns |  1.01 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                   8 | AsciiOnly | 2.679 ns | 0.0317 ns | 0.0297 ns | 2.676 ns |  1.29 |    0.02 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                   8 | AsciiOnly | 2.085 ns | 0.0221 ns | 0.0254 ns | 2.077 ns |  1.01 |    0.02 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                   8 | AsciiOnly | 2.090 ns | 0.0197 ns | 0.0154 ns | 2.092 ns |  1.00 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **15** | **AsciiOnly** | **2.766 ns** | **0.0269 ns** | **0.0239 ns** | **2.768 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  15 | AsciiOnly | 2.740 ns | 0.0128 ns | 0.0107 ns | 2.738 ns |  0.99 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  15 | AsciiOnly | 2.634 ns | 0.0209 ns | 0.0196 ns | 2.631 ns |  0.95 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  15 | AsciiOnly | 2.753 ns | 0.0207 ns | 0.0184 ns | 2.752 ns |  1.00 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  15 | AsciiOnly | 2.773 ns | 0.0118 ns | 0.0105 ns | 2.771 ns |  1.00 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **16** | **AsciiOnly** | **2.716 ns** | **0.0310 ns** | **0.0304 ns** | **2.715 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  16 | AsciiOnly | 2.738 ns | 0.0380 ns | 0.0317 ns | 2.734 ns |  1.01 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  16 | AsciiOnly | 2.469 ns | 0.0279 ns | 0.0247 ns | 2.460 ns |  0.91 |    0.02 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  16 | AsciiOnly | 2.676 ns | 0.0193 ns | 0.0151 ns | 2.676 ns |  0.98 |    0.02 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  16 | AsciiOnly | 2.279 ns | 0.0342 ns | 0.0642 ns | 2.278 ns |  0.84 |    0.03 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **19** | **AsciiOnly** | **3.068 ns** | **0.0201 ns** | **0.0188 ns** | **3.060 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  19 | AsciiOnly | 3.131 ns | 0.0392 ns | 0.0481 ns | 3.120 ns |  1.02 |    0.02 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  19 | AsciiOnly | 2.566 ns | 0.0332 ns | 0.0311 ns | 2.559 ns |  0.84 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  19 | AsciiOnly | 2.586 ns | 0.0372 ns | 0.0751 ns | 2.571 ns |  0.84 |    0.03 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  19 | AsciiOnly | 2.822 ns | 0.0357 ns | 0.0334 ns | 2.821 ns |  0.92 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **31** | **AsciiOnly** | **4.220 ns** | **0.0499 ns** | **0.0467 ns** | **4.220 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  31 | AsciiOnly | 4.279 ns | 0.0470 ns | 0.0703 ns | 4.269 ns |  1.02 |    0.02 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  31 | AsciiOnly | 2.549 ns | 0.0208 ns | 0.0194 ns | 2.544 ns |  0.60 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  31 | AsciiOnly | 2.840 ns | 0.0374 ns | 0.0430 ns | 2.843 ns |  0.67 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  31 | AsciiOnly | 3.148 ns | 0.0343 ns | 0.0304 ns | 3.140 ns |  0.75 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **33** | **AsciiOnly** | **3.380 ns** | **0.0464 ns** | **0.1347 ns** | **3.342 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  33 | AsciiOnly | 2.946 ns | 0.0341 ns | 0.0319 ns | 2.927 ns |  0.88 |    0.04 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  33 | AsciiOnly | 2.857 ns | 0.0184 ns | 0.0154 ns | 2.857 ns |  0.84 |    0.03 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  33 | AsciiOnly | 3.124 ns | 0.0164 ns | 0.0137 ns | 3.119 ns |  0.92 |    0.04 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  33 | AsciiOnly | 2.937 ns | 0.0214 ns | 0.0200 ns | 2.937 ns |  0.87 |    0.04 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **36** | **AsciiOnly** | **3.542 ns** | **0.0177 ns** | **0.0166 ns** | **3.536 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  36 | AsciiOnly | 3.528 ns | 0.0201 ns | 0.0178 ns | 3.521 ns |  1.00 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  36 | AsciiOnly | 2.787 ns | 0.0333 ns | 0.0370 ns | 2.773 ns |  0.79 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  36 | AsciiOnly | 2.686 ns | 0.0178 ns | 0.0167 ns | 2.682 ns |  0.76 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  36 | AsciiOnly | 2.348 ns | 0.0345 ns | 0.0323 ns | 2.349 ns |  0.66 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **39** | **AsciiOnly** | **4.035 ns** | **0.0221 ns** | **0.0207 ns** | **4.034 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  39 | AsciiOnly | 3.404 ns | 0.0140 ns | 0.0124 ns | 3.401 ns |  0.84 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  39 | AsciiOnly | 2.883 ns | 0.0354 ns | 0.0331 ns | 2.875 ns |  0.71 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  39 | AsciiOnly | 2.769 ns | 0.0337 ns | 0.0263 ns | 2.766 ns |  0.69 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  39 | AsciiOnly | 2.899 ns | 0.0393 ns | 0.0483 ns | 2.884 ns |  0.72 |    0.02 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **41** | **AsciiOnly** | **3.349 ns** | **0.0267 ns** | **0.0249 ns** | **3.337 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  41 | AsciiOnly | 3.544 ns | 0.0155 ns | 0.0145 ns | 3.538 ns |  1.06 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  41 | AsciiOnly | 3.285 ns | 0.0258 ns | 0.0241 ns | 3.279 ns |  0.98 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  41 | AsciiOnly | 3.107 ns | 0.0147 ns | 0.0123 ns | 3.107 ns |  0.93 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  41 | AsciiOnly | 2.868 ns | 0.0210 ns | 0.0196 ns | 2.865 ns |  0.86 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **44** | **AsciiOnly** | **3.313 ns** | **0.0185 ns** | **0.0164 ns** | **3.307 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  44 | AsciiOnly | 3.357 ns | 0.0450 ns | 0.0701 ns | 3.336 ns |  1.03 |    0.03 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  44 | AsciiOnly | 3.137 ns | 0.0178 ns | 0.0148 ns | 3.132 ns |  0.95 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  44 | AsciiOnly | 3.118 ns | 0.0183 ns | 0.0153 ns | 3.112 ns |  0.94 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  44 | AsciiOnly | 2.723 ns | 0.0382 ns | 0.0689 ns | 2.742 ns |  0.81 |    0.02 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **48** | **AsciiOnly** | **3.530 ns** | **0.0287 ns** | **0.0254 ns** | **3.514 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  48 | AsciiOnly | 3.530 ns | 0.0247 ns | 0.0231 ns | 3.520 ns |  1.00 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  48 | AsciiOnly | 3.147 ns | 0.0296 ns | 0.0231 ns | 3.143 ns |  0.89 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  48 | AsciiOnly | 3.109 ns | 0.0074 ns | 0.0066 ns | 3.109 ns |  0.88 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  48 | AsciiOnly | 2.601 ns | 0.0163 ns | 0.0144 ns | 2.602 ns |  0.74 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **63** | **AsciiOnly** | **4.569 ns** | **0.0357 ns** | **0.0334 ns** | **4.564 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  63 | AsciiOnly | 4.599 ns | 0.0401 ns | 0.0313 ns | 4.607 ns |  1.01 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  63 | AsciiOnly | 3.889 ns | 0.0153 ns | 0.0119 ns | 3.889 ns |  0.85 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  63 | AsciiOnly | 3.761 ns | 0.0183 ns | 0.0162 ns | 3.761 ns |  0.82 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  63 | AsciiOnly | 3.588 ns | 0.0331 ns | 0.0309 ns | 3.588 ns |  0.79 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **64** | **AsciiOnly** | **3.975 ns** | **0.0229 ns** | **0.0215 ns** | **3.965 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  64 | AsciiOnly | 3.776 ns | 0.0325 ns | 0.0304 ns | 3.762 ns |  0.95 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  64 | AsciiOnly | 3.828 ns | 0.0272 ns | 0.0254 ns | 3.829 ns |  0.96 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  64 | AsciiOnly | 3.549 ns | 0.0208 ns | 0.0184 ns | 3.554 ns |  0.89 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  64 | AsciiOnly | 3.535 ns | 0.0233 ns | 0.0207 ns | 3.533 ns |  0.89 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **71** | **AsciiOnly** | **4.977 ns** | **0.0438 ns** | **0.0388 ns** | **4.954 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  71 | AsciiOnly | 4.432 ns | 0.0298 ns | 0.0265 ns | 4.434 ns |  0.89 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  71 | AsciiOnly | 4.483 ns | 0.0514 ns | 0.0592 ns | 4.476 ns |  0.90 |    0.02 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  71 | AsciiOnly | 3.676 ns | 0.0207 ns | 0.0194 ns | 3.676 ns |  0.74 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  71 | AsciiOnly | 4.002 ns | 0.0231 ns | 0.0204 ns | 4.005 ns |  0.80 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **79** | **AsciiOnly** | **4.474 ns** | **0.0252 ns** | **0.0210 ns** | **4.470 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  79 | AsciiOnly | 4.697 ns | 0.0281 ns | 0.0263 ns | 4.697 ns |  1.05 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  79 | AsciiOnly | 4.617 ns | 0.0442 ns | 0.0413 ns | 4.592 ns |  1.03 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  79 | AsciiOnly | 3.996 ns | 0.0333 ns | 0.0296 ns | 3.982 ns |  0.89 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  79 | AsciiOnly | 3.978 ns | 0.0305 ns | 0.0408 ns | 3.975 ns |  0.89 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **87** | **AsciiOnly** | **5.476 ns** | **0.0296 ns** | **0.0277 ns** | **5.485 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  87 | AsciiOnly | 5.452 ns | 0.0237 ns | 0.0198 ns | 5.445 ns |  1.00 |    0.01 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  87 | AsciiOnly | 5.061 ns | 0.0452 ns | 0.0423 ns | 5.038 ns |  0.92 |    0.01 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  87 | AsciiOnly | 3.968 ns | 0.0202 ns | 0.0168 ns | 3.966 ns |  0.72 |    0.01 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  87 | AsciiOnly | 5.567 ns | 0.0538 ns | 0.0503 ns | 5.560 ns |  1.02 |    0.01 |
+|                                              |                     |           |          |           |           |          |       |         |
+| **Ascii_Local_NarrowUtf16ToAscii_v1_StoreLower** |                  **95** | **AsciiOnly** | **4.919 ns** | **0.0539 ns** | **0.0839 ns** | **4.875 ns** |  **1.00** |    **0.00** |
+|     Ascii_Local_NarrowUtf16ToAscii_v2_Inline |                  95 | AsciiOnly | 4.869 ns | 0.0271 ns | 0.0227 ns | 4.874 ns |  0.98 |    0.02 |
+|   Ascii_Local_NarrowUtf16ToAscii_simple_loop |                  95 | AsciiOnly | 5.723 ns | 0.0199 ns | 0.0176 ns | 5.717 ns |  1.15 |    0.02 |
+|            Ascii_Local_NarrowUtf16ToAscii_v3 |                  95 | AsciiOnly | 4.381 ns | 0.0164 ns | 0.0137 ns | 4.378 ns |  0.88 |    0.02 |
+|         Ascii_Local_NarrowUtf16ToAscii_v4_if |                  95 | AsciiOnly | 4.437 ns | 0.0278 ns | 0.0217 ns | 4.435 ns |  0.89 |    0.02 |
