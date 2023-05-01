@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>ConsoleApp1.AsciiBenchmarks-20230501-103258</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.5, OS=Windows 11 (10.0.22621.1555/22H2/2022Update/SunValley2)
+AMD Ryzen 7 5800X, 1 CPU, 16 logical and 8 physical cores
+.NET SDK=8.0.100-preview.1.23115.2
+  [Host]     : .NET 8.0.0 (8.0.23.11008), X64 RyuJIT SSE4.2
+  Job-LVUIAG : .NET 8.0.0 (8.0.23.11008), X64 RyuJIT SSE4.2
+</code></pre>
+<pre><code>MaxRelativeError=0.01  IterationTime=250.0000 ms  WarmupCount=3  
+</code></pre>
+
+<table>
+<thead><tr><th>                      Method</th><th>StringLengthInChars</th><th>Scenario</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th>
+</tr>
+</thead><tbody><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3</td><td>8</td><td>AsciiOnly</td><td>3.535 ns</td><td>0.0189 ns</td><td>0.0157 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3b</td><td>8</td><td>AsciiOnly</td><td>3.530 ns</td><td>0.0423 ns</td><td>0.0353 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3c</td><td>8</td><td>AsciiOnly</td><td>3.750 ns</td><td>0.0316 ns</td><td>0.0281 ns</td><td>1.06</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3</td><td>20</td><td>AsciiOnly</td><td>4.150 ns</td><td>0.0190 ns</td><td>0.0178 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3b</td><td>20</td><td>AsciiOnly</td><td>4.196 ns</td><td>0.0308 ns</td><td>0.0273 ns</td><td>1.01</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3c</td><td>20</td><td>AsciiOnly</td><td>4.676 ns</td><td>0.0358 ns</td><td>0.0317 ns</td><td>1.13</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3</td><td>33</td><td>AsciiOnly</td><td>4.349 ns</td><td>0.0195 ns</td><td>0.0183 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3b</td><td>33</td><td>AsciiOnly</td><td>4.351 ns</td><td>0.0141 ns</td><td>0.0118 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3c</td><td>33</td><td>AsciiOnly</td><td>4.390 ns</td><td>0.0381 ns</td><td>0.0338 ns</td><td>1.01</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3</td><td>65</td><td>AsciiOnly</td><td>5.207 ns</td><td>0.0135 ns</td><td>0.0127 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3b</td><td>65</td><td>AsciiOnly</td><td>5.184 ns</td><td>0.0133 ns</td><td>0.0125 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3c</td><td>65</td><td>AsciiOnly</td><td>4.995 ns</td><td>0.0146 ns</td><td>0.0137 ns</td><td>0.96</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3</td><td>100</td><td>AsciiOnly</td><td>6.036 ns</td><td>0.0259 ns</td><td>0.0242 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3b</td><td>100</td><td>AsciiOnly</td><td>6.055 ns</td><td>0.0228 ns</td><td>0.0214 ns</td><td>1.00</td>
+</tr><tr><td>Ascii_Local_NarrowUtf16ToAscii_v3c</td><td>100</td><td>AsciiOnly</td><td>5.829 ns</td><td>0.0144 ns</td><td>0.0128 ns</td><td>0.97</td>
+</tr></tbody></table>
+</body>
+</html>
