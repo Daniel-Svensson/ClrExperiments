@@ -356,7 +356,7 @@ STDAPI DecimalMul(const DECIMAL* pdecL, const DECIMAL *pdecR, DECIMAL * __restri
 		// At least one operand has bits set in the upper 64 bits.
 		//
 		// Compute and accumulate the 9 partial products into a 
-		// 192-bit (24-uint8_t) result.
+		// 192-bit (24-byte) result.
 		//
 		//                [l-hi][l-lo]   left high32, low64
 		//             x  [r-hi][r-lo]   right high32, low64

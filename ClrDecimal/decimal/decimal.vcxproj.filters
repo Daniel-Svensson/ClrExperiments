@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="..\coreclrtesting\udiv128.masm" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\coreclrtesting\coreclr_impl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -27,10 +24,5 @@
     <ClCompile Include="..\linuxtesting\src\decimal_calc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="prototype_x64_impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

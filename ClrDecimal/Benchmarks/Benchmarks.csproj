@@ -1,62 +1,54 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>exe</OutputType>
-    <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>   
-    <TargetFrameworks>net47;netcoreapp2.0</TargetFrameworks>
-    <!--<TargetFramework>net47</TargetFramework>-->
-    <OutputTypeEx>exe</OutputTypeEx>
-    <!--<RuntimeIdentifier>win10-x64</RuntimeIdentifier>-->
-    <RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>
-    <!--<RuntimeIdentifiers>win7-x64;win7-x86</RuntimeIdentifiers>-->
-    <Platforms>AnyCPU;x64;x86</Platforms>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
-  <PropertyGroup Condition="'$(TargetFramework)'=='net47'">
-    <RuntimeIdentifier>win10-$(Platform)</RuntimeIdentifier>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net47|x64'">
-    <DebugType>full</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Remove="BenchmarkDotNet.Artifacts\**" />
-    <EmbeddedResource Remove="BenchmarkDotNet.Artifacts\**" />
-    <None Remove="BenchmarkDotNet.Artifacts\**" />
-  </ItemGroup>
-  <!-- Nuget Packages-->
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.11.1" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net47'">
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.11.1" />
-  </ItemGroup>
-  <!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">-->
-  <!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">
+	<PropertyGroup>
+		<OutputType>exe</OutputType>
+		<TargetFrameworks>net8.0</TargetFrameworks>
+		<!--<TargetFramework>net47</TargetFramework>-->
+		<OutputTypeEx>exe</OutputTypeEx>
+		<!--<RuntimeIdentifier>win10-x64</RuntimeIdentifier>-->
+		<!--<RuntimeIdentifiers>win10-x64;win10-x86</RuntimeIdentifiers>-->
+		<!--<RuntimeIdentifiers>win7-x64;win7-x86</RuntimeIdentifiers>-->
+		<Platforms>AnyCPU;x64;x86</Platforms>
+		<LangVersion>latest</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<EnablePreviewFeatures>true</EnablePreviewFeatures>
+	  <DefineConstants Condition="'$(Platform)'=='x86'">TARGET_32BIT;$(DefineConstants)</DefineConstants>
+	  <DefineConstants Condition="'$(Platform)'=='x64'">TARGET_64BIT;$(DefineConstants)</DefineConstants>
+
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="BenchmarkDotNet.Artifacts\**" />
+		<EmbeddedResource Remove="BenchmarkDotNet.Artifacts\**" />
+		<None Remove="BenchmarkDotNet.Artifacts\**" />
+	</ItemGroup>
+	<!-- Nuget Packages-->
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet" Version="0.11.1" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)'=='net47'">
+		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.11.1" />
+	</ItemGroup>
+	<!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">-->
+	<!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">
     <PackageReference Include="System.Diagnostics.FileVersionInfo" Version="4.3.0" />
   </ItemGroup>-->
-  <!-- dll -->
-  <ItemGroup>
-    <Content Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Condition="'$(Platform)'=='x64'" Include="..\x64\$(Configuration)\decimalDLL.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CoreRT\CoreRT.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="Distributions\decimals.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  
+	<!-- dll -->
+	<ItemGroup>
+		<Content Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Condition="'$(Platform)'=='x64'" Include="..\x64\$(Configuration)\decimalDLL.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="Properties\" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="Distributions\decimals.txt">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<Using Include="System" />
+	</ItemGroup>
 </Project>

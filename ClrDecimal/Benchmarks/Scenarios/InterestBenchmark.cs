@@ -17,19 +17,19 @@ namespace Benchmarks
         public decimal DaysInYear;
     }
 
-    public struct Accounts_CoreRT2
+    public struct Accounts_CoreRT
     {
-        public CoreRT.Decimal2 NewInterest;
-        public CoreRT.Decimal2 CurrentInterest;
-        public CoreRT.Decimal2 CurrentInterestRate;
-        public CoreRT.Decimal2 Amount;
-        public CoreRT.Decimal2 DaysInYear;
+        public Managed.New.Decimal NewInterest;
+        public Managed.New.Decimal CurrentInterest;
+        public Managed.New.Decimal CurrentInterestRate;
+        public Managed.New.Decimal Amount;
+        public Managed.New.Decimal DaysInYear;
     }
 
     public class InterestBenchmark
     {
         public Accounts_Decimal[] _decAccounts;
-        public Accounts_CoreRT2[] _crt2Accounts;
+        public Accounts_CoreRT[] _crt2Accounts;
 
         //[Params(100, 100000)]
         [Params(100000)]
@@ -45,7 +45,7 @@ namespace Benchmarks
         {
             var rand = new Random(321);
             _decAccounts = new Accounts_Decimal[Count];
-            _crt2Accounts = new Accounts_CoreRT2[Count];
+            _crt2Accounts = new Accounts_CoreRT[Count];
             var days = new decimal[] { 360, 360, 360, 360, 365, 365, 365, 365, 366 };
 
             var decimals = new int[] { 2, 2, 2, 2, 3, 3, 5, 10, 0 };
@@ -76,7 +76,7 @@ namespace Benchmarks
                     _decAccounts[i].DaysInYear /= 3m;
                 }
 
-                _crt2Accounts[i] = new Accounts_CoreRT2()
+                _crt2Accounts[i] = new Accounts_CoreRT()
                 {
                     CurrentInterest = _decAccounts[i].CurrentInterest,
                     CurrentInterestRate = _decAccounts[i].CurrentInterestRate,

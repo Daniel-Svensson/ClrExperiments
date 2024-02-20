@@ -12,10 +12,10 @@ namespace Benchmarks
     {
         readonly decimal a;
         readonly decimal b;
-        readonly CoreRT.Decimal a2;
-        readonly CoreRT.Decimal b2;
-        readonly CoreRT.Decimal2 a3;
-        readonly CoreRT.Decimal2 b3;
+        readonly Managed.New.Decimal a2;
+        readonly Managed.New.Decimal b2;
+        //readonly Managed.New.Decimal2 a3;
+        //readonly Managed.New.Decimal2 b3;
 
         public Add96by96()
         {
@@ -24,8 +24,8 @@ namespace Benchmarks
             b = new decimal(32, 23, 2, false, 0);
             a2 = a;
             b2 = b;
-            a3 = a;
-            b3 = b;
+            //a3 = a;
+            //b3 = b;
         }
 
         //[Benchmark]
@@ -52,14 +52,9 @@ namespace Benchmarks
         }
 
         [Benchmark]
-        public CoreRT.Decimal CoreCRTManaged()
+        public Managed.New.Decimal CoreCRTManaged()
         {
             return ClrClassLibrary.Methods.AddCoreRTManaged(a2, b2);
-        }
-        [Benchmark]
-        public CoreRT.Decimal2 CoreCRTManaged2()
-        {
-            return ClrClassLibrary.Methods.AddCoreRTManaged(a3, b3);
         }
     }
 }

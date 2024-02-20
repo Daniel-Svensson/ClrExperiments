@@ -96,24 +96,24 @@ namespace Benchmarks
         }
 
 
-        [Benchmark]
-        public CoreRT.Decimal2[] CoreCRTManaged2()
-        {
-            int dest = 0;
-            foreach (var lhs in lhs_corert2)
-                foreach (var rhs in rhs_corert2)
-                {
-                    try
-                    {
-                        res_corert2[dest++] = ClrClassLibrary.Methods.DivCoreRTManaged(lhs, rhs);
-                    }
-                    catch (Exception)
-                    {
-                        dest++;
-                    }
-                }
-            return res_corert2;
-        }
+        //[Benchmark]
+        //public Managed.New.Decimal2[] CoreCRTManaged2()
+        //{
+        //    int dest = 0;
+        //    foreach (var lhs in lhs_corert2)
+        //        foreach (var rhs in rhs_corert2)
+        //        {
+        //            try
+        //            {
+        //                res_corert2[dest++] = ClrClassLibrary.Methods.DivCoreRTManaged(lhs, rhs);
+        //            }
+        //            catch (Exception)
+        //            {
+        //                dest++;
+        //            }
+        //        }
+        //    return res_corert2;
+        //}
 
         [Benchmark]
         public decimal[] PInvokeDummy()

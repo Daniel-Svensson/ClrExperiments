@@ -57,7 +57,7 @@ namespace Benchmarks
         }
 
         [Benchmark]
-        public CoreRT.Decimal[] CoreCRTManaged()
+        public Managed.New.Decimal[] CoreCRTManaged()
         {
             int dest = 0;
             foreach (var lhs in lhs_corert)
@@ -66,15 +66,15 @@ namespace Benchmarks
             return res_corert;
         }
 
-        [Benchmark]
-        public CoreRT.Decimal2[] CoreCRTManaged2()
-        {
-            int dest = 0;
-            foreach (var lhs in lhs_corert2)
-                foreach (var rhs in rhs_corert2)
-                    res_corert2[dest++] = ClrClassLibrary.Methods.AddCoreRTManaged(lhs, rhs);
-            return res_corert2;
-        }
+        //[Benchmark]
+        //public Managed.New.Decimal2[] CoreCRTManaged2()
+        //{
+        //    int dest = 0;
+        //    foreach (var lhs in lhs_corert2)
+        //        foreach (var rhs in rhs_corert2)
+        //            res_corert2[dest++] = ClrClassLibrary.Methods.AddCoreRTManaged(lhs, rhs);
+        //    return res_corert2;
+        //}
 
         [Benchmark]
         public decimal[] PInvokeDummy()
