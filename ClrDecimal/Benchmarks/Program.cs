@@ -1,30 +1,26 @@
-﻿#define TEST_32bit_with_0_scale
+﻿//#define TEST_32bit_with_0_scale
 //#define TEST_32bit_with_scale
 //#define TEST_64bit_with_scale_64bit_result
 //#define TEST_64bit_with_0_scale_128bit_result
-//#define TEST_64bit_with_scale_128bit_result
-//#define TEST_96bit_with_scale_96bit_result_and_overflow
-//#define TEST_96bit_with_scale_96bit_result_no_overflow
+#define TEST_64bit_with_scale_128bit_result
+#define TEST_96bit_with_scale_96bit_result_and_overflow
+#define TEST_96bit_with_scale_96bit_result_no_overflow
 //#define TEST_Bitpatterns_with_all_scales
 
-using System;
-using System.Collections.Generic;
+//#define TEST_MULTIPLY
+//#define TEST_ADD
+//#define TEST_SUB
+#define TEST_DIV
+
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
-using BenchmarkDotNet.Horology;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
-using BenchmarkDotNet.Toolchains;
-using BenchmarkDotNet.Toolchains.InProcess;
+using CommandLine;
 
 namespace Benchmarks
 {
@@ -39,7 +35,7 @@ namespace Benchmarks
 
         unsafe static void Main(string[] args)
         {
-            Console.WriteLine($"Bitness is {IntPtr.Size * 4}");
+            Console.WriteLine($"Bitness is {IntPtr.Size * 8}");
 #if TARGET_64BIT
             Console.WriteLine($"TARGET_64BIT is defined");
 #endif
@@ -47,19 +43,94 @@ namespace Benchmarks
             Console.WriteLine($"TARGET_32BIT is defined");
 #endif
 
+            //Managed.New.Decimal a = new decimal(1023, 412, 213, false, 2), b = new decimal(32, 3, 0, false, 3);
+            //Managed.New.Decimal res;
+
+            //for (int i = 0; 0 < 500; ++i)
+            //    res = a / b;
+            //Console.WriteLine("\n\n----------------- SLEEP ------------------------");
+            //Thread.Sleep(10_000);
+
+            //for (int i = 0; 0 < 100_000; ++i)
+            //    res = a / b;
+            //return;
+
+            var mul = new Multiply();
+            foreach(var testCase in mul.TestCases())
+            {
+                var expected = mul.NetFramework((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+                var actual = mul.New((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+
+                Console.Write($"Verifying: {testCase[2]} ");
+                if (actual != expected)
+                    Console.WriteLine($"- FAILED: {actual} but expected {expected}");
+                else
+                    Console.WriteLine($"- PASS");
+
+                Debug.Assert(actual == expected);
+            }
+
+            var div = new Divide();
+            foreach (var testCase in div.TestCases())
+            {
+                var expected = div.NetFramework((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+                var actual = div.New((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+
+                Console.Write($"Verifying: {testCase[2]} ");
+                if (actual != expected)
+                    Console.WriteLine($"- FAILED: {actual} but expected {expected}");
+                else
+                    Console.WriteLine($"- PASS");
+
+                Debug.Assert(actual == expected);
+            }
+            
+            //BenchmarkRunner.Run<Multiply>();
+            BenchmarkRunner.Run<Divide>();
+            return;
+
+            var config = DefaultConfig.Instance
+                //.AddHardwareCounters(
+                //[
+                //HardwareCounter.BranchInstructionRetired,
+                //HardwareCounter.BranchInstructions,
+                //HardwareCounter.BranchMispredictions,
+                //HardwareCounter.CacheMisses,
+                //HardwareCounter.TotalIssues,
+                //HardwareCounter.LlcReference,
+                //HardwareCounter.LlcMisses])
+                ;
+                
+              //.With(Job.Core)
+              //.With(Job.RyuJitX64, Job.LegacyJitX86)
+              ;
+
+            //#if NET47
+            //            if (Is64Bit)
+            //            {
+            //                config = config.With(Job.RyuJitX64, Job.LegacyJitX64);
+            //            }
+            //#endif
+
+            //BenchmarkRunner.Run<Add96by96_Carry>(config);
+            //BenchmarkRunner.Run<Add96by96>(config);
+            //BenchmarkRunner.Run<Mul96by96>(config);
+            //BenchmarkRunner.Run<Div96by96>(config);
+
+            //BenchmarkRunner.Run<InterestBenchmark>(config);
+
             //PrintStats(Distributions.AddPentP.LoadFile());
 
             //(new Distributions.MulPentP()).NetFramework();
             //(new Distributions.DivPentP()).NetFramework();
 
+
+
             var program = new Program();
 
             Console.WriteLine("----------------- WARMUP ------------------------");
-            //program.run_benchmarks(iterations: 10, elements: 500, bytes:4,
-            //baseline_name: "System.Decimal", func_name: "Managed.New",
-            //baseline: &Decimal.Divide,
-            //func: CastPointer<Managed.New.Decimal>(&Managed.New.Decimal.Divide));
 
+#if TEST_DIV
             program.run_benchmarks(iterations: 10, elements: 500, bytes: 4,
             baseline_name: "Managed.Main.Divide", func_name: "Managed.New.Divide",
             baseline: CastPointer<Managed.Main.Decimal>(&Managed.Main.Decimal.Divide),
@@ -69,7 +140,9 @@ namespace Benchmarks
 baseline_name: "Ole32 Div", func_name: "System. Div",
 baseline: &ClrClassLibrary.Methods.DivOle32,
 func: &decimal.Divide);
+#endif
 
+#if TEST_MULTIPLY
             program.run_benchmarks(iterations: 10, elements: 500, bytes: 4,
 baseline_name: "Managed.Main Multiply", func_name: "Managed.New Multiply",
 baseline: CastPointer<Managed.Main.Decimal>(&Managed.Main.Decimal.Multiply),
@@ -79,7 +152,7 @@ func: CastPointer<Managed.New.Decimal>(&Managed.New.Decimal.Multiply));
 baseline_name: "MulOle32", func_name: "System. Multiply",
 baseline: &ClrClassLibrary.Methods.MulOle32,
 func: &decimal.Multiply);
-
+#endif
             Console.WriteLine("\n\n----------------- SLEEP ------------------------");
             Thread.Sleep(10_000);
 
@@ -90,8 +163,9 @@ func: &decimal.Multiply);
             //baseline: &Decimal.Divide,
             //func: CastPointer<Managed.New.Decimal>(&Managed.New.Decimal.Divide));
 
+#if TEST_DIV
             program.run_benchmarks(iterations: 1, elements: 4_000, bytes: 4,
-            baseline_name: "Managed.Main", func_name: "Managed.New",
+            baseline_name: "Managed.Main.Div", func_name: "Managed.New.Div",
             baseline: CastPointer<Managed.Main.Decimal>(&Managed.Main.Decimal.Divide),
             func: CastPointer<Managed.New.Decimal>(&Managed.New.Decimal.Divide));
 
@@ -99,56 +173,22 @@ func: &decimal.Multiply);
 baseline_name: "Ole32 Div", func_name: "System. Div",
 baseline: &ClrClassLibrary.Methods.DivOle32,
 func: &decimal.Divide);
+#endif
 
+#if TEST_MULTIPLY
             program.run_benchmarks(iterations: 1, elements: 6_000, bytes: 4,
-            baseline_name: "Managed.Main", func_name: "Managed.New",
+            baseline_name: "Managed.Main Multiply", func_name: "Managed.New Multiply",
             baseline: CastPointer<Managed.Main.Decimal>(&Managed.Main.Decimal.Multiply),
             func: CastPointer<Managed.New.Decimal>(&Managed.New.Decimal.Multiply));
 
             program.run_benchmarks(iterations: 1, elements: 6_000, bytes: 4,
-baseline_name: "MulOle32", func_name: "Syste. Mul",
+baseline_name: "MulOle32", func_name: "System. Multiply",
 baseline: &ClrClassLibrary.Methods.MulOle32,
 func: &decimal.Multiply);
-
+#endif
             return;
 
 
-
-            var config = DefaultConfig.Instance
-                .With(Job.MediumRun
-                        // Job.Default
-#if !NET47
-
-                        .With(InProcessToolchain.Instance)
-#endif // !NET47
-                        //.WithMinIterationTime(TimeInterval.Millisecond * 100)
-                        )
-                .With(BenchmarkDotNet.Validators.ExecutionValidator.FailOnError)
-#if NET47
-                 .With(MemoryDiagnoser.Default)
-                .With(new[]
-                {
-                HardwareCounter.BranchInstructionRetired,
-                HardwareCounter.BranchInstructions,
-                HardwareCounter.BranchMispredictions,
-                HardwareCounter.CacheMisses,
-                HardwareCounter.TotalIssues,
-                HardwareCounter.LlcReference,
-                HardwareCounter.LlcMisses,
-
-                }
-                )
-#endif
-                //.With(Job.Core)
-                //.With(Job.RyuJitX64, Job.LegacyJitX86)
-                ;
-
-            //#if NET47
-            //            if (Is64Bit)
-            //            {
-            //                config = config.With(Job.RyuJitX64, Job.LegacyJitX64);
-            //            }
-            //#endif
 
             //BenchmarkRunner.Run<Add96by96_Carry>(config);
             //BenchmarkRunner.Run<Add96by96>(config);
@@ -403,7 +443,7 @@ func: &decimal.Multiply);
             for (int i = 0; i < numbers.Length; ++i)
             {
                 numbersAsCalc[i].Mid = UInt32.RotateLeft(numbersAsCalc[i].Low, 14);
-                numbersAsCalc[i].scale = random_scale(2, 9);
+                numbersAsCalc[i].scale = random_scale(7, 15);
             }
 
             compare_benchmark("64bit values -> 65-128 bit results and scale", baseline_name, func_name, iterations, numbers, numbers, targetA, hresultA, targetC, hresultC, baseline, func);
@@ -422,7 +462,7 @@ func: &decimal.Multiply);
 #if TEST_96bit_with_scale_96bit_result_no_overflow
             for (int i = 0; i < numbers.Length; ++i)
             {
-                numbersAsCalc[i].scale = random_scale(minScale, maxScale);
+                numbersAsCalc[i].scale = random_scale(minScale + 5, maxScale);
                 numbersAsCalc[i].High = numbersAsCalc[i].Mid = numbersAsCalc[i].Low;
             }
 
@@ -474,7 +514,7 @@ func: &decimal.Multiply);
             {
                 ulong number = 0;
                 for (int i = 0; i < bytes; ++i)
-                    number = (number << 8) | (ulong)(rand.Next() & 0x00ff);
+                    number = (ulong)(number << 8) | (ulong)((uint)rand.Next() & 0x00ffu);
 
                 Debug.Assert(number == (number & allBits));
                 //random.NextBytes((byte*)&number, bytes);
@@ -486,8 +526,6 @@ func: &decimal.Multiply);
 
         void test_round_to_nearest()
         {
-            decimal a, b;
-
             TestMultiply(new decimal(32, 0, 0, false, 10), new decimal(3, 0, 0, false, 19)); // 96
 
             //a = 95;

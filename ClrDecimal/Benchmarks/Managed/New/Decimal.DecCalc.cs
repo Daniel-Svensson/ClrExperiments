@@ -88,7 +88,7 @@ namespace Managed.New
             public int Scale
             {
                 get => (byte)(uflags >> ScaleShift);
-             }
+            }
 
 
             public ulong Low64
@@ -443,7 +443,31 @@ namespace Managed.New
             /// <returns>Returns quotient. Remainder overwrites lower 64-bits of dividend.</returns>
 #if TARGET_64BIT
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+            private unsafe static ulong Div128By64(Buf16* bufRem, ulong den)
+            {
+                Debug.Assert(den > bufRem->High64);
+
+                if (X86.X86Base.X64.IsSupported)
+                {
+                    // Assert above states: den > bufNum.High64 so den > bufNum.U2 and we can be sure we will not overflow
+                    (ulong quotient, bufRem->Low64) = X86.X86Base.X64.DivRem(bufRem->Low64, bufRem->High64, den);
+                    return quotient;
+                }
+                else
+                {
+                    uint hiBits = Div96By64(ref *(Buf12*)&bufRem->U1, den);
+                    uint loBits = Div96By64(ref *(Buf12*)&bufRem, den);
+                    return ((ulong)hiBits << 32 | loBits);
+                }
+            }
+
+            /// <summary>
+            /// Do partial divide, yielding 32-bit result and 64-bit remainder.
+            /// Divisor must be larger than upper 64 bits of dividend.
+            /// </summary>
+            /// <param name="bufNum">96-bit dividend as array of uints, least-sig first</param>
+            /// <param name="den">64-bit divisor</param>
+            /// <returns>Returns quotient. Remainder overwrites lower 64-bits of dividend.</returns>
             private static uint Div96By64(ref Buf12 bufNum, ulong den)
             {
                 Debug.Assert(den > bufNum.High64);
@@ -525,21 +549,26 @@ namespace Managed.New
                 return quo;
             }
 
+            /// <summary>
+            /// Perform multiplication between 64 and 32 bit numbers, returning lower 64 bits in <paramref name="low"/>
+            /// </summary>
+            /// <returns>hi bits of the result</returns>
+            /// <remarks>returns nuint instead of uint to skip clearing upper 32bits on 64bit platforms</remarks>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static uint BigMul64By32(ulong a, uint b, out ulong low)
+            private static nuint BigMul64By32(ulong a, uint b, out ulong low)
             {
 #if TARGET_64BIT
-                    return (uint)Math.BigMul(a, b, out low);
+                return (nuint)Math.BigMul(a, b, out low);
 #else
-                    uint al = (uint)a;
-                    uint ah = (uint)(a >> 32);
-                    uint bl = (uint)b;
+                uint al = (uint)a;
+                uint ah = (uint)(a >> 32);
+                uint bl = b;
 
-                    ulong mull = ((ulong)al) * bl;
-                    ulong t = ((ulong)ah) * bl + (mull >> 32);
+                ulong prodL = ((ulong)al) * bl;
+                ulong prodH = ((ulong)ah) * bl + (prodL >> 32);
 
-                    low = (t << 32 | mull);
-                    return (uint)(t >> 32);
+                low = (prodH << 32 | (uint)prodL);
+                return (nuint)(prodH >> 32);
 #endif
             }
 
@@ -581,7 +610,7 @@ namespace Managed.New
                 // Compute full remainder, rem = dividend - (quo * divisor).
                 //
                 ulong prod1;
-                uint prod2 = BigMul64By32(bufDen.Low64, quo, out prod1);
+                uint prod2 = (uint)BigMul64By32(bufDen.Low64, quo, out prod1);
                 ulong num = bufNum.Low64 - prod1;
                 remainder -= (uint)prod2;
 
@@ -650,19 +679,8 @@ namespace Managed.New
             /// <param name="power">Scale factor to multiply by</param>
             private static void IncreaseScale64(ref Buf12 bufNum, uint power)
             {
-                if (IntPtr.Size == 8)
-                {
-                    bufNum.U2 = (uint)Math.BigMul(bufNum.Low64, power, out ulong low);
-                    bufNum.Low64 = low;
-                }
-                else
-                {
-                    ulong tmp = MathBigMul(bufNum.U0, power);
-                    bufNum.U0 = (uint)tmp;
-                    tmp >>= 32;
-                    tmp += MathBigMul(bufNum.U1, power);
-                    bufNum.High64 = tmp;
-                }
+                bufNum.U2 = (uint)BigMul64By32(bufNum.Low64, power, out ulong low64);
+                bufNum.Low64 = low64;
             }
 
             /// <summary>
@@ -1347,8 +1365,8 @@ namespace Managed.New
                     if (pdecIn.High != 0)
                         goto ThrowOverflow;
                     uint pwr = UInt32Powers10[-scale];
-                    ulong high = MathBigMul(pwr, pdecIn.Mid);
-                    if (high > uint.MaxValue)
+                    nuint high = BigMul64By32(pdecIn.Low, pwr, out ulong low);
+                    if (high != 0)
                         goto ThrowOverflow;
                     ulong low = MathBigMul(pwr, pdecIn.Low);
                     low += high <<= 32;
@@ -1527,7 +1545,7 @@ namespace Managed.New
                     else
                     {
                         // Left value is 32-bit, result fits in 4 uints
-                        uint hiTemp = BigMul64By32(d2.Low64, d1.Low, out tmp);
+                        nuint hiTemp = BigMul64By32(d2.Low64, d1.Low, out tmp);
                         bufProd.Low64 = tmp;
 
                         tmp = hiTemp;
@@ -1548,7 +1566,7 @@ namespace Managed.New
                 else if ((d2.High | d2.Mid) == 0)
                 {
                     // Right value is 32-bit, result fits in 4 uints
-                    uint hiTemp = BigMul64By32(d1.Low64, d2.Low, out tmp);
+                    nuint hiTemp = BigMul64By32(d1.Low64, d2.Low, out tmp);
                     bufProd.Low64 = tmp;
 
                     tmp = hiTemp;
@@ -1582,42 +1600,38 @@ namespace Managed.New
                     //          [ l*h][l*h ]         l-hi * r-lo => 32 + 64 bit result
                     //          [ h*h]               l-hi * r-hi => 32 + 32 bit result
                     // ------------------------------
-                    //          [p-2 ][p-1 ][p-0 ]   prod[] array
+                    //          [Hi64][Mid64][Low64]   bufProd "array"
                     // 
                     // 
-                    // We can add 2 32bit numers to a 32bit*32bit result withaout overflow / carry
-                    //  This is the reason that adding 
-                    //  The maximum value of the "hi" result of the middle products are MAXuint32_t-1 each
-                    //  so adding their carry to the addition will only result in a 32bit value at most MAXuint32_t
-                    //  so this will never generate a carry.
 
-
-                    ulong tmpMid = Math.BigMul(d1.Low64, d2.Low64, out tmp);
+                    ulong mid64 = Math.BigMul(d1.Low64, d2.Low64, out tmp);
                     bufProd.Low64 = tmp;
 
                     if ((d1.High | d2.High) > 0)
                     {
-                        bufProd.High64 = MathBigMul(d1.High, d2.High);
+                        // We can add 2 32bit numers to a 32bit*32bit result without overflow / carry out
+                        //  This is the reason that hi64 will not overflow below
+                        ulong hi64 = MathBigMul(d1.High, d2.High);
 
                         // Do crosswise multiplications between upper 32bit and lower 64 bits
-                        // tmpSum keeps value for tmpSum (initialized from first multiply)
-                        // Add low64 and result to tmpSum and propagate upper bits (hi) to rgulProd[2]
-                        ulong tmpHi = BigMul64By32(d1.Low64, d2.High, out tmp);
-                        tmpMid += tmp;
-                        ulong carry1 = (tmpMid < tmp) ? 1UL : 0UL;
-                        bufProd.High64 = bufProd.High64 + carry1 + tmpHi; // This will not overflow
+                        hi64 += BigMul64By32(d1.Low64, d2.High, out tmp);
+                        mid64 += tmp;
+                        // propagate carry, can be simplified if https://github.com/dotnet/runtime/issues/48247 is done
+                        if (mid64 < tmp)
+                            ++hi64;
 
-                        tmpHi = BigMul64By32(d2.Low64, d1.High, out tmp);
-                        tmpMid += tmp;
-                        ulong carry2 = (tmpMid < tmp) ? 1UL : 0UL;
-                        bufProd.High64 = bufProd.High64 + carry2 + tmpHi; // This will not overflow
+                        hi64 += BigMul64By32(d2.Low64, d1.High, out tmp);
+                        mid64 += tmp;
+                        if (mid64 < tmp)
+                            ++hi64;
 
-                        bufProd.Mid64 = tmpMid;
+                        bufProd.Mid64 = mid64;
+                        bufProd.High64 = hi64;
                         hiProd = 5;
                     }
                     else
                     {
-                        bufProd.Mid64 = tmpMid;
+                        bufProd.Mid64 = mid64;
                         hiProd = 3;
                     }
                 }
@@ -2152,8 +2166,7 @@ namespace Managed.New
                         // (currently 96 bits spread over 4 uints) will be < divisor.
                         //
                         bufQuo.U2 = 0;
-                        bufQuo.U1 = Div96By64(ref *(Buf12*)&bufRem.U1, divisor);
-                        bufQuo.U0 = Div96By64(ref *(Buf12*)&bufRem, divisor);
+                        bufQuo.Low64 = Div128By64(&bufRem, divisor);
 
                         while (true)
                         {
