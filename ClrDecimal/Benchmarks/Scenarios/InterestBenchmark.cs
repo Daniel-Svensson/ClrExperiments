@@ -124,7 +124,7 @@ namespace Benchmarks
             }
         }
 
-        [Benchmark(Description = "P/Invoke oleauto32")]
+        //[Benchmark(Description = "P/Invoke oleauto32")]
         public void Oleauto32()
         {
             var array = _decAccounts;
@@ -154,20 +154,5 @@ namespace Benchmarks
             }
         }
 
-
-        //[Benchmark]
-        public void PInvokeDummy()
-        {
-            var array = _decAccounts;
-
-            for (int i = 0; i < array.Length; ++i)
-            {
-                var dayFactor = Methods.DivNoop(days, array[i].DaysInYear);
-
-                array[i].NewInterest =
-                    Methods.AddNoop(array[i].CurrentInterest,
-                        Methods.MulNoop(array[i].Amount, Methods.MulNoop(array[i].CurrentInterestRate, dayFactor)));
-            }
-        }
     }
 }

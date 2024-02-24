@@ -21,6 +21,7 @@ namespace Benchmarks
                 [new decimal(1023, 412, 213, false, 0), new decimal(32, 32, 1, false, 0), "96bit / 96bit"],
                 [new decimal(1023, 412, 213, false, 2), new decimal(32, 3, 0, false, 3), "96bit / 64bit"],
                 [new decimal(int.MaxValue, int.MaxValue, 5, false, 2), new decimal(3, 0, 0, false, 1), "96bit / 32bit"],
+                [new decimal(int.MaxValue, 2, 5, false, 2), new decimal(33, 0, 0, false, 1), "34bit / 32bit"],
             ];
         }
 

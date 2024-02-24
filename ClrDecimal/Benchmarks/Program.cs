@@ -43,16 +43,26 @@ namespace Benchmarks
             Console.WriteLine($"TARGET_32BIT is defined");
 #endif
 
-            //Managed.New.Decimal a = new decimal(1023, 412, 213, false, 2), b = new decimal(32, 3, 0, false, 3);
+            //Managed.New.Decimal a = new decimal(1023, 412, 213, false, 2), b = new decimal(32, 0, 0, false, 3);
             //Managed.New.Decimal res;
+            //Managed.Main.Decimal a2 = new decimal(1023, 412, 213, false, 2), b2 = new decimal(32, 0, 0, false, 3);
+            //Managed.Main.Decimal res2;
 
-            //for (int i = 0; 0 < 500; ++i)
+            //for (int i = 0; i < 100_000; ++i)
+            //{
             //    res = a / b;
+            //    res2 = a2 / b2;
+            //}
+                
             //Console.WriteLine("\n\n----------------- SLEEP ------------------------");
-            //Thread.Sleep(10_000);
+            //Thread.Sleep(7_000);
 
-            //for (int i = 0; 0 < 100_000; ++i)
+            //for (int i = 0; i < 200_000_000; ++i)
+            //{
             //    res = a / b;
+            //    res2 = a2 / b2;
+            //}
+
             //return;
 
             var mul = new Multiply();
@@ -85,7 +95,7 @@ namespace Benchmarks
                 Debug.Assert(actual == expected);
             }
             
-            //BenchmarkRunner.Run<Multiply>();
+            BenchmarkRunner.Run<Multiply>();
             BenchmarkRunner.Run<Divide>();
             return;
 
