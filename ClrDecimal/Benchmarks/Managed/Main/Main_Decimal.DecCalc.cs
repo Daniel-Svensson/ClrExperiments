@@ -20,14 +20,14 @@ namespace Managed.Main
 
         internal ulong Low64 => _lo64;
 
-        public static ref DecCalc AsMutable(ref Decimal d) => ref Unsafe.As<Decimal, DecCalc>(ref d);
-        public static ref DecCalc AsMutable(ref System.Decimal d) => ref Unsafe.As<System.Decimal, DecCalc>(ref d);
+        public static ref DecCalc_Main AsMutable(ref Decimal d) => ref Unsafe.As<Decimal, DecCalc_Main>(ref d);
+        public static ref DecCalc_Main AsMutable(ref System.Decimal d) => ref Unsafe.As<System.Decimal, DecCalc_Main>(ref d);
 
         #region APIs need by number formatting.
 
         internal static uint DecDivMod1E9(ref Decimal value)
         {
-            return DecCalc.DecDivMod1E9(ref AsMutable(ref value));
+            return DecCalc_Main.DecDivMod1E9(ref AsMutable(ref value));
         }
 
         #endregion
@@ -38,7 +38,7 @@ namespace Managed.Main
         [StructLayout(LayoutKind.Explicit)]
         [CLSCompliant(false)]
         [SkipLocalsInit()]
-        public struct DecCalc
+        public struct DecCalc_Main
         {
             [FieldOffset(2)]
             public byte scale;
@@ -260,7 +260,7 @@ namespace Managed.Main
                 return (uint)(BitConverter.DoubleToUInt64Bits(d) >> 52) & 0x7FFu;
             }
 
-            private static void UInt64x64To128(ulong a, ulong b, ref DecCalc result)
+            private static void UInt64x64To128(ulong a, ulong b, ref DecCalc_Main result)
             {
                 ulong high = Math.BigMul(a, b, out ulong low);
                 if (high > uint.MaxValue)
@@ -275,7 +275,6 @@ namespace Managed.Main
             /// <param name="bufNum">96-bit dividend as array of uints, least-sig first</param>
             /// <param name="den">32-bit divisor</param>
             /// <returns>Returns remainder. Quotient overwrites dividend.</returns>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static uint Div96By32(ref Buf12 bufNum, uint den)
             {
                 // TODO: https://github.com/dotnet/runtime/issues/5213
@@ -403,9 +402,6 @@ namespace Managed.Main
             /// <param name="bufNum">96-bit dividend as array of uints, least-sig first</param>
             /// <param name="den">64-bit divisor</param>
             /// <returns>Returns quotient. Remainder overwrites lower 64-bits of dividend.</returns>
-#if TARGET_64BIT
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
             private static uint Div96By64(ref Buf12 bufNum, ulong den)
             {
                 Debug.Assert(den > bufNum.High64);
@@ -478,24 +474,6 @@ namespace Managed.Main
 
                 bufNum.Low64 = num;
                 return quo;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static uint BigMul64By32(ulong a, uint b, out ulong low)
-            {
-#if TARGET_64BIT
-                return (uint)Math.BigMul(a, b, out low);
-#else
-                    uint al = (uint)a;
-                    uint ah = (uint)(a >> 32);
-                    uint bl = (uint)b;
-
-                    ulong mull = ((ulong)al) * bl;
-                    ulong t = ((ulong)ah) * bl + (mull >> 32);
-
-                    low = (t << 32 | mull);
-                    return (uint)(t >> 32);
-#endif
             }
 
             /// <summary>
@@ -584,7 +562,7 @@ namespace Managed.Main
             /// <param name="bufNum">96-bit number as array of uints, least-sig first</param>
             /// <param name="power">Scale factor to multiply by</param>
             /// <returns>Returns highest 32 bits of product</returns>
-            private static uint IncreaseScale(ref Buf12 bufNum, uint power)
+            private static uint IncreaseScale_Main(ref Buf12 bufNum, uint power)
             {
                 ulong tmp = MathBigMul(bufNum.U0, power);
                 bufNum.U0 = (uint)tmp;
@@ -620,7 +598,7 @@ namespace Managed.Main
             /// <param name="hiRes">Index of last non-zero value in bufRes</param>
             /// <param name="scale">Scale factor for this value, range 0 - 2 * DEC_SCALE_MAX</param>
             /// <returns>Returns new scale factor. bufRes updated in place, always 3 uints.</returns>
-            private static unsafe int ScaleResult(Buf24* bufRes, uint hiRes, int scale)
+            private static unsafe int ScaleResult_Main(Buf24* bufRes, uint hiRes, int scale)
             {
                 Debug.Assert(hiRes < Buf24.Length);
                 uint* result = (uint*)bufRes;
@@ -817,7 +795,7 @@ namespace Managed.Main
             /// Adjust the quotient to deal with an overflow.
             /// We need to divide by 10, feed in the high bit to undo the overflow and then round as required.
             /// </summary>
-            private static int OverflowUnscale(ref Buf12 bufQuo, int scale, bool sticky)
+            private static int OverflowUnscale_Main(ref Buf12 bufQuo, int scale, bool sticky)
             {
                 if (--scale < 0)
                     Number.ThrowOverflowException(SR.Overflow_Decimal);
@@ -958,7 +936,7 @@ namespace Managed.Main
             /// <param name="d1">First decimal to add or subtract.</param>
             /// <param name="d2">Second decimal to add or subtract.</param>
             /// <param name="sign">True means subtract and false means add.</param>
-            internal static unsafe void DecAddSub(ref DecCalc d1, ref DecCalc d2, bool sign)
+            internal static unsafe void DecAddSub(ref DecCalc_Main d1, ref DecCalc_Main d2, bool sign)
             {
                 ulong low64 = d1.Low64;
                 uint high = d1.High, flags = d1.uflags, d2flags = d2.uflags;
@@ -1178,7 +1156,7 @@ namespace Managed.Main
 
                     bufNum.Low64 = low64;
                     bufNum.U2 = high;
-                    scale = ScaleResult(&bufNum, hiProd, (byte)(flags >> ScaleShift));
+                    scale = ScaleResult_Main(&bufNum, hiProd, (byte)(flags >> ScaleShift));
                     flags = (flags & ~ScaleMask) | ((uint)scale << ScaleShift);
                     low64 = bufNum.Low64;
                     high = bufNum.U2;
@@ -1282,7 +1260,7 @@ namespace Managed.Main
             /// <summary>
             /// Convert Decimal to Currency (similar to OleAut32 api.)
             /// </summary>
-            internal static long VarCyFromDec(ref DecCalc pdecIn)
+            internal static long VarCyFromDec(ref DecCalc_Main pdecIn)
             {
                 long value;
 
@@ -1429,7 +1407,7 @@ namespace Managed.Main
             /// <summary>
             /// Decimal Multiply
             /// </summary>
-            internal static unsafe void VarDecMul(ref DecCalc d1, ref DecCalc d2)
+            internal static unsafe void VarDecMul_Main(ref DecCalc_Main d1, ref DecCalc_Main d2)
             {
                 int scale = (byte)(d1.uflags + d2.uflags >> ScaleShift);
 
@@ -1474,10 +1452,12 @@ namespace Managed.Main
                     else
                     {
                         // Left value is 32-bit, result fits in 4 uints
-                        uint hiTemp = BigMul64By32(d2.Low64, d1.Low, out tmp);
-                        bufProd.Low64 = tmp;
+                        tmp = MathBigMul(d1.Low, d2.Low);
+                        bufProd.U0 = (uint)tmp;
 
-                        tmp = hiTemp;
+                        tmp = MathBigMul(d1.Low, d2.Mid) + (tmp >> 32);
+                        bufProd.U1 = (uint)tmp;
+                        tmp >>= 32;
                         if (d2.High != 0)
                         {
                             tmp += MathBigMul(d1.Low, d2.High);
@@ -1495,10 +1475,12 @@ namespace Managed.Main
                 else if ((d2.High | d2.Mid) == 0)
                 {
                     // Right value is 32-bit, result fits in 4 uints
-                    uint hiTemp = BigMul64By32(d1.Low64, d2.Low, out tmp);
-                    bufProd.Low64 = tmp;
+                    tmp = MathBigMul(d2.Low, d1.Low);
+                    bufProd.U0 = (uint)tmp;
 
-                    tmp = hiTemp;
+                    tmp = MathBigMul(d2.Low, d1.Mid) + (tmp >> 32);
+                    bufProd.U1 = (uint)tmp;
+                    tmp >>= 32;
 
                     if (d1.High != 0)
                     {
@@ -1515,55 +1497,80 @@ namespace Managed.Main
                 }
                 else
                 {
-                    // At least one operand has bits set in the upper 64 bits.
+                    // Both operands have bits set in the upper 64 bits.
                     //
-                    // Compute and accumulate the 9 partial products into a 
+                    // Compute and accumulate the 9 partial products into a
                     // 192-bit (24-byte) result.
                     //
-                    //                [l-hi][l-lo]   left high32, low64
-                    //             x  [r-hi][r-lo]   right high32, low64
-                    // -------------------------------
-                    //
-                    //                [ 0-h][0-l ]   l-lo * r-lo => 64 + 64 bit result
-                    //          [ h*l][h*l ]         l-lo * r-hi => 32 + 64 bit result
-                    //          [ l*h][l*h ]         l-hi * r-lo => 32 + 64 bit result
-                    //          [ h*h]               l-hi * r-hi => 32 + 32 bit result
+                    //        [l-h][l-m][l-l]      left high, middle, low
+                    //         x    [r-h][r-m][r-l]      right high, middle, low
                     // ------------------------------
-                    //          [p-2 ][p-1 ][p-0 ]   prod[] array
-                    // 
-                    // 
-                    // We can add 2 32bit numers to a 32bit*32bit result withaout overflow / carry
-                    //  This is the reason that adding 
-                    //  The maximum value of the "hi" result of the middle products are MAXuint32_t-1 each
-                    //  so adding their carry to the addition will only result in a 32bit value at most MAXuint32_t
-                    //  so this will never generate a carry.
+                    //
+                    //             [0-h][0-l]      l-l * r-l
+                    //        [1ah][1al]      l-l * r-m
+                    //        [1bh][1bl]      l-m * r-l
+                    //       [2ah][2al]          l-m * r-m
+                    //       [2bh][2bl]          l-l * r-h
+                    //       [2ch][2cl]          l-h * r-l
+                    //      [3ah][3al]          l-m * r-h
+                    //      [3bh][3bl]          l-h * r-m
+                    // [4-h][4-l]              l-h * r-h
+                    // ------------------------------
+                    // [p-5][p-4][p-3][p-2][p-1][p-0]      prod[] array
+                    //
 
+                    tmp = MathBigMul(d1.Low, d2.Low);
+                    bufProd.U0 = (uint)tmp;
 
-                    ulong tmpMid = Math.BigMul(d1.Low64, d2.Low64, out tmp);
-                    bufProd.Low64 = tmp;
+                    ulong tmp2 = MathBigMul(d1.Low, d2.Mid) + (tmp >> 32);
+
+                    tmp = MathBigMul(d1.Mid, d2.Low);
+                    tmp += tmp2; // this could generate carry
+                    bufProd.U1 = (uint)tmp;
+                    if (tmp < tmp2) // detect carry
+                        tmp2 = (tmp >> 32) | (1UL << 32);
+                    else
+                        tmp2 = tmp >> 32;
+
+                    tmp = MathBigMul(d1.Mid, d2.Mid) + tmp2;
 
                     if ((d1.High | d2.High) > 0)
                     {
-                        bufProd.High64 = MathBigMul(d1.High, d2.High);
+                        // Highest 32 bits is non-zero.     Calculate 5 more partial products.
+                        //
+                        tmp2 = MathBigMul(d1.Low, d2.High);
+                        tmp += tmp2; // this could generate carry
+                        uint tmp3 = 0;
+                        if (tmp < tmp2) // detect carry
+                            tmp3 = 1;
 
-                        // Do crosswise multiplications between upper 32bit and lower 64 bits
-                        // tmpSum keeps value for tmpSum (initialized from first multiply)
-                        // Add low64 and result to tmpSum and propagate upper bits (hi) to rgulProd[2]
-                        ulong tmpHi = BigMul64By32(d1.Low64, d2.High, out tmp);
-                        tmpMid += tmp;
-                        ulong carry1 = (tmpMid < tmp) ? 1UL : 0UL;
-                        bufProd.High64 = bufProd.High64 + carry1 + tmpHi; // This will not overflow
+                        tmp2 = MathBigMul(d1.High, d2.Low);
+                        tmp += tmp2; // this could generate carry
+                        bufProd.U2 = (uint)tmp;
+                        if (tmp < tmp2) // detect carry
+                            tmp3++;
+                        tmp2 = ((ulong)tmp3 << 32) | (tmp >> 32);
 
-                        tmpHi = BigMul64By32(d2.Low64, d1.High, out tmp);
-                        tmpMid += tmp;
-                        ulong carry2 = (tmpMid < tmp) ? 1UL : 0UL;
-                        bufProd.High64 = bufProd.High64 + carry2 + tmpHi; // This will not overflow
+                        tmp = MathBigMul(d1.Mid, d2.High);
+                        tmp += tmp2; // this could generate carry
+                        tmp3 = 0;
+                        if (tmp < tmp2) // detect carry
+                            tmp3 = 1;
+
+                        tmp2 = MathBigMul(d1.High, d2.Mid);
+                        tmp += tmp2; // this could generate carry
+                        bufProd.U3 = (uint)tmp;
+                        if (tmp < tmp2) // detect carry
+                            tmp3++;
+                        tmp = ((ulong)tmp3 << 32) | (tmp >> 32);
+
+                        bufProd.High64 = MathBigMul(d1.High, d2.High) + tmp;
 
                         hiProd = 5;
                     }
                     else
                     {
-                        bufProd.Mid64 = tmpMid;
+                        bufProd.Mid64 = tmp;
                         hiProd = 3;
                     }
                 }
@@ -1581,7 +1588,7 @@ namespace Managed.Main
             SkipScan:
                 if (hiProd > 2 || scale > DEC_SCALE_MAX)
                 {
-                    scale = ScaleResult(&bufProd, hiProd, scale);
+                    scale = ScaleResult_Main(&bufProd, hiProd, scale);
                 }
 
                 d1.Low64 = bufProd.Low64;
@@ -1596,7 +1603,7 @@ namespace Managed.Main
             /// <summary>
             /// Convert float to Decimal
             /// </summary>
-            internal static void VarDecFromR4(float input, out DecCalc result)
+            internal static void VarDecFromR4(float input, out DecCalc_Main result)
             {
                 result = default;
 
@@ -1758,15 +1765,23 @@ namespace Managed.Main
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static ulong MathBigMul(uint a, uint b)
+            private unsafe static ulong MathBigMul(uint a, uint b)
             {
+#if TARGET_32BIT
+                if (X86.Bmi2.IsSupported)
+                {
+                    uint low;
+                    uint high = X86.Bmi2.MultiplyNoFlags(a, b, &low);
+                    return (((ulong)high) << 32) | low;
+                }
+#endif
                 return (ulong)a * b;
             }
 
             /// <summary>
             /// Convert double to Decimal
             /// </summary>
-            internal static void VarDecFromR8(double input, out DecCalc result)
+            internal static void VarDecFromR8(double input, out DecCalc_Main result)
             {
                 result = default;
 
@@ -1983,7 +1998,7 @@ namespace Managed.Main
             /// Divides two decimal values.
             /// On return, d1 contains the result of the operation.
             /// </summary>
-            internal static unsafe void VarDecDiv(ref DecCalc d1, ref DecCalc d2)
+            internal static unsafe void VarDecDiv_Main(ref DecCalc_Main d1, ref DecCalc_Main d2)
             {
                 Unsafe.SkipInit(out Buf12 bufQuo);
 
@@ -2053,7 +2068,7 @@ namespace Managed.Main
                         power = UInt32Powers10[curScale];
                         scale += curScale;
 
-                        if (IncreaseScale(ref bufQuo, power) != 0)
+                        if (IncreaseScale_Main(ref bufQuo, power) != 0)
                             goto ThrowOverflow;
 
                         ulong num = MathBigMul(remainder, power);
@@ -2063,7 +2078,7 @@ namespace Managed.Main
 
                         if (!Add32To96(ref bufQuo, div))
                         {
-                            scale = OverflowUnscale(ref bufQuo, scale, remainder != 0);
+                            scale = OverflowUnscale_Main(ref bufQuo, scale, remainder != 0);
                             break;
                         }
                     } // while (true)
@@ -2136,14 +2151,14 @@ namespace Managed.Main
                             power = UInt32Powers10[curScale];
                             scale += curScale;
 
-                            if (IncreaseScale(ref bufQuo, power) != 0)
+                            if (IncreaseScale_Main(ref bufQuo, power) != 0)
                                 goto ThrowOverflow;
 
                             IncreaseScale64(ref *(Buf12*)&bufRem, power);
                             tmp = Div96By64(ref *(Buf12*)&bufRem, divisor);
                             if (!Add32To96(ref bufQuo, tmp))
                             {
-                                scale = OverflowUnscale(ref bufQuo, scale, bufRem.Low64 != 0);
+                                scale = OverflowUnscale_Main(ref bufQuo, scale, bufRem.Low64 != 0);
                                 break;
                             }
                         } // while (true)
@@ -2207,14 +2222,14 @@ namespace Managed.Main
                             power = UInt32Powers10[curScale];
                             scale += curScale;
 
-                            if (IncreaseScale(ref bufQuo, power) != 0)
+                            if (IncreaseScale_Main(ref bufQuo, power) != 0)
                                 goto ThrowOverflow;
 
-                            bufRem.U3 = IncreaseScale(ref *(Buf12*)&bufRem, power);
+                            bufRem.U3 = IncreaseScale_Main(ref *(Buf12*)&bufRem, power);
                             tmp = Div128By96(ref bufRem, ref bufDivisor);
                             if (!Add32To96(ref bufQuo, tmp))
                             {
-                                scale = OverflowUnscale(ref bufQuo, scale, (bufRem.Low64 | bufRem.High64) != 0);
+                                scale = OverflowUnscale_Main(ref bufQuo, scale, (bufRem.Low64 | bufRem.High64) != 0);
                                 break;
                             }
                         } // while (true)
@@ -2244,7 +2259,7 @@ namespace Managed.Main
                 {
                     if (++bufQuo.Low64 == 0 && ++bufQuo.U2 == 0)
                     {
-                        scale = OverflowUnscale(ref bufQuo, scale, true);
+                        scale = OverflowUnscale_Main(ref bufQuo, scale, true);
                     }
                     goto Unscale;
                 }
@@ -2257,7 +2272,7 @@ namespace Managed.Main
             /// Computes the remainder between two decimals.
             /// On return, d1 contains the result of the operation and d2 is trashed.
             /// </summary>
-            internal static void VarDecMod(ref DecCalc d1, ref DecCalc d2)
+            internal static void VarDecMod(ref DecCalc_Main d1, ref DecCalc_Main d2)
             {
                 if ((d2.ulo | d2.umid | d2.uhi) == 0)
                     throw new DivideByZeroException();
@@ -2268,7 +2283,7 @@ namespace Managed.Main
                 // In the operation x % y the sign of y does not matter. Result will have the sign of x.
                 d2.uflags = (d2.uflags & ~SignMask) | (d1.uflags & SignMask);
 
-                int cmp = VarDecCmpSub(in Unsafe.As<DecCalc, Decimal>(ref d1), in Unsafe.As<DecCalc, Decimal>(ref d2));
+                int cmp = VarDecCmpSub(in Unsafe.As<DecCalc_Main, Decimal>(ref d1), in Unsafe.As<DecCalc_Main, Decimal>(ref d2));
                 if (cmp == 0)
                 {
                     d1.ulo = 0;
@@ -2352,7 +2367,7 @@ namespace Managed.Main
                 } while (scale < 0);
             }
 
-            private static unsafe void VarDecModFull(ref DecCalc d1, ref DecCalc d2, int scale)
+            private static unsafe void VarDecModFull(ref DecCalc_Main d1, ref DecCalc_Main d2, int scale)
             {
                 // Divisor has bits set in the upper 64 bits.
                 //
@@ -2444,7 +2459,7 @@ namespace Managed.Main
             }
 
             // Does an in-place round by the specified scale
-            internal static void InternalRound(ref DecCalc d, uint scale, MidpointRounding mode)
+            internal static void InternalRound(ref DecCalc_Main d, uint scale, MidpointRounding mode)
             {
                 // the scale becomes the desired decimal count
                 d.uflags -= scale << ScaleShift;
@@ -2562,7 +2577,7 @@ namespace Managed.Main
                 return;
             }
 
-            internal static uint DecDivMod1E9(ref DecCalc value)
+            internal static uint DecDivMod1E9(ref DecCalc_Main value)
             {
                 ulong high64 = ((ulong)value.uhi << 32) + value.umid;
                 ulong div64 = high64 / TenToPowerNine;

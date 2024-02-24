@@ -181,14 +181,14 @@ namespace Managed.Main
         //
         public Decimal(float value)
         {
-            DecCalc.VarDecFromR4(value, out AsMutable(ref this));
+            DecCalc_Main.VarDecFromR4(value, out AsMutable(ref this));
         }
 
         // Constructs a Decimal from a double value.
         //
         public Decimal(double value)
         {
-            DecCalc.VarDecFromR8(value, out AsMutable(ref this));
+            DecCalc_Main.VarDecFromR8(value, out AsMutable(ref this));
         }
 
         private Decimal(SerializationInfo info, StreamingContext context)
@@ -238,7 +238,7 @@ namespace Managed.Main
 
         public static long ToOACurrency(Decimal value)
         {
-            return DecCalc.VarCyFromDec(ref AsMutable(ref value));
+            return DecCalc_Main.VarCyFromDec(ref AsMutable(ref value));
         }
 
         private static bool IsValid(int flags) => (flags & ~(SignMask | ScaleMask)) == 0 && ((uint)(flags & ScaleMask) <= (28 << ScaleShift));
@@ -364,7 +364,7 @@ namespace Managed.Main
         //
         public static Decimal Add(Decimal d1, Decimal d2)
         {
-            DecCalc.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), false);
+            DecCalc_Main.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), false);
             return d1;
         }
 
@@ -374,7 +374,7 @@ namespace Managed.Main
         {
             int flags = d._flags;
             if ((flags & ScaleMask) != 0)
-                DecCalc.InternalRound(ref AsMutable(ref d), (byte)(flags >> ScaleShift), MidpointRounding.ToPositiveInfinity);
+                DecCalc_Main.InternalRound(ref AsMutable(ref d), (byte)(flags >> ScaleShift), MidpointRounding.ToPositiveInfinity);
             return d;
         }
 
@@ -383,7 +383,7 @@ namespace Managed.Main
         //
         public static int Compare(Decimal d1, Decimal d2)
         {
-            return DecCalc.VarDecCmp(in d1, in d2);
+            return DecCalc_Main.VarDecCmp(in d1, in d2);
         }
 
         // Compares this object to another object, returning an integer that
@@ -400,19 +400,19 @@ namespace Managed.Main
                 throw new ArgumentException(SR.Arg_MustBeDecimal);
 
             Decimal other = (Decimal)value;
-            return DecCalc.VarDecCmp(in this, in other);
+            return DecCalc_Main.VarDecCmp(in this, in other);
         }
 
         public int CompareTo(Decimal value)
         {
-            return DecCalc.VarDecCmp(in this, in value);
+            return DecCalc_Main.VarDecCmp(in this, in value);
         }
 
         // Divides two Decimal values.
         //
         public static Decimal Divide(Decimal d1, Decimal d2)
         {
-            DecCalc.VarDecDiv(ref AsMutable(ref d1), ref AsMutable(ref d2));
+            DecCalc_Main.VarDecDiv_Main(ref AsMutable(ref d1), ref AsMutable(ref d2));
             return d1;
         }
 
@@ -422,21 +422,21 @@ namespace Managed.Main
         //
         public override bool Equals([NotNullWhen(true)] object? value) =>
             value is Decimal other &&
-            DecCalc.VarDecCmp(in this, in other) == 0;
+            DecCalc_Main.VarDecCmp(in this, in other) == 0;
 
         public bool Equals(Decimal value) =>
-            DecCalc.VarDecCmp(in this, in value) == 0;
+            DecCalc_Main.VarDecCmp(in this, in value) == 0;
 
         // Returns the hash code for this Decimal.
         //
-        public override int GetHashCode() => DecCalc.GetHashCode(in this);
+        public override int GetHashCode() => DecCalc_Main.GetHashCode(in this);
 
         // Compares two Decimal values for equality. Returns true if the two
         // Decimal values are equal, or false if they are not equal.
         //
         public static bool Equals(Decimal d1, Decimal d2)
         {
-            return DecCalc.VarDecCmp(in d1, in d2) == 0;
+            return DecCalc_Main.VarDecCmp(in d1, in d2) == 0;
         }
 
         // Rounds a Decimal to an integer value. The Decimal argument is rounded
@@ -446,7 +446,7 @@ namespace Managed.Main
         {
             int flags = d._flags;
             if ((flags & ScaleMask) != 0)
-                DecCalc.InternalRound(ref AsMutable(ref d), (byte)(flags >> ScaleShift), MidpointRounding.ToNegativeInfinity);
+                DecCalc_Main.InternalRound(ref AsMutable(ref d), (byte)(flags >> ScaleShift), MidpointRounding.ToNegativeInfinity);
             return d;
         }
 
@@ -526,7 +526,7 @@ namespace Managed.Main
 
         public static Decimal Remainder(Decimal d1, Decimal d2)
         {
-            DecCalc.VarDecMod(ref AsMutable(ref d1), ref AsMutable(ref d2));
+            DecCalc_Main.VarDecMod(ref AsMutable(ref d1), ref AsMutable(ref d2));
             return d1;
         }
 
@@ -534,7 +534,7 @@ namespace Managed.Main
         //
         public static Decimal Multiply(Decimal d1, Decimal d2)
         {
-            DecCalc.VarDecMul(ref AsMutable(ref d1), ref AsMutable(ref d2));
+            DecCalc_Main.VarDecMul_Main(ref AsMutable(ref d1), ref AsMutable(ref d2));
             return d1;
         }
 
@@ -568,7 +568,7 @@ namespace Managed.Main
 
             int scale = d.Scale - decimals;
             if (scale > 0)
-                DecCalc.InternalRound(ref AsMutable(ref d), (uint)scale, mode);
+                DecCalc_Main.InternalRound(ref AsMutable(ref d), (uint)scale, mode);
             return d;
         }
 
@@ -576,7 +576,7 @@ namespace Managed.Main
         //
         public static Decimal Subtract(Decimal d1, Decimal d2)
         {
-            DecCalc.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), true);
+            DecCalc_Main.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), true);
             return d1;
         }
 
@@ -595,7 +595,7 @@ namespace Managed.Main
         {
             int flags = d._flags;
             if ((flags & ScaleMask) != 0)
-                DecCalc.InternalRound(ref AsMutable(ref d), (byte)(flags >> ScaleShift), MidpointRounding.ToZero);
+                DecCalc_Main.InternalRound(ref AsMutable(ref d), (byte)(flags >> ScaleShift), MidpointRounding.ToZero);
         }
 
         public static implicit operator Decimal(System.Decimal value) 
@@ -630,9 +630,9 @@ namespace Managed.Main
 
         public static implicit operator System.Decimal(Decimal value) => Unsafe.As<Decimal, System.Decimal>(ref value);
 
-        public static explicit operator float(Decimal value) => DecCalc.VarR4FromDec(in value);
+        public static explicit operator float(Decimal value) => DecCalc_Main.VarR4FromDec(in value);
 
-        public static explicit operator double(Decimal value) => DecCalc.VarR8FromDec(in value);
+        public static explicit operator double(Decimal value) => DecCalc_Main.VarR8FromDec(in value);
 
         public static Decimal operator +(Decimal d) => d;
 
@@ -646,54 +646,54 @@ namespace Managed.Main
 
         public static Decimal operator +(Decimal d1, Decimal d2)
         {
-            DecCalc.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), false);
+            DecCalc_Main.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), false);
             return d1;
         }
 
         public static Decimal operator -(Decimal d1, Decimal d2)
         {
-            DecCalc.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), true);
+            DecCalc_Main.DecAddSub(ref AsMutable(ref d1), ref AsMutable(ref d2), true);
             return d1;
         }
 
         /// <inheritdoc cref="IMultiplyOperators{TSelf, TOther, TResult}.op_Multiply(TSelf, TOther)" />
         public static Decimal operator *(Decimal d1, Decimal d2)
         {
-            DecCalc.VarDecMul(ref AsMutable(ref d1), ref AsMutable(ref d2));
+            DecCalc_Main.VarDecMul_Main(ref AsMutable(ref d1), ref AsMutable(ref d2));
             return d1;
         }
 
         /// <inheritdoc cref="IDivisionOperators{TSelf, TOther, TResult}.op_Division(TSelf, TOther)" />
         public static Decimal operator /(Decimal d1, Decimal d2)
         {
-            DecCalc.VarDecDiv(ref AsMutable(ref d1), ref AsMutable(ref d2));
+            DecCalc_Main.VarDecDiv_Main(ref AsMutable(ref d1), ref AsMutable(ref d2));
             return d1;
         }
 
         /// <inheritdoc cref="IModulusOperators{TSelf, TOther, TResult}.op_Modulus(TSelf, TOther)" />
         public static Decimal operator %(Decimal d1, Decimal d2)
         {
-            DecCalc.VarDecMod(ref AsMutable(ref d1), ref AsMutable(ref d2));
+            DecCalc_Main.VarDecMod(ref AsMutable(ref d1), ref AsMutable(ref d2));
             return d1;
         }
 
         /// <inheritdoc cref="IEqualityOperators{TSelf, TOther, TResult}.op_Equality(TSelf, TOther)" />
-        public static bool operator ==(Decimal d1, Decimal d2) => DecCalc.VarDecCmp(in d1, in d2) == 0;
+        public static bool operator ==(Decimal d1, Decimal d2) => DecCalc_Main.VarDecCmp(in d1, in d2) == 0;
 
         /// <inheritdoc cref="IEqualityOperators{TSelf, TOther, TResult}.op_Inequality(TSelf, TOther)" />
-        public static bool operator !=(Decimal d1, Decimal d2) => DecCalc.VarDecCmp(in d1, in d2) != 0;
+        public static bool operator !=(Decimal d1, Decimal d2) => DecCalc_Main.VarDecCmp(in d1, in d2) != 0;
 
         /// <inheritdoc cref="IComparisonOperators{TSelf, TOther, TResult}.op_LessThan(TSelf, TOther)" />
-        public static bool operator <(Decimal d1, Decimal d2) => DecCalc.VarDecCmp(in d1, in d2) < 0;
+        public static bool operator <(Decimal d1, Decimal d2) => DecCalc_Main.VarDecCmp(in d1, in d2) < 0;
 
         /// <inheritdoc cref="IComparisonOperators{TSelf, TOther, TResult}.op_LessThanOrEqual(TSelf, TOther)" />
-        public static bool operator <=(Decimal d1, Decimal d2) => DecCalc.VarDecCmp(in d1, in d2) <= 0;
+        public static bool operator <=(Decimal d1, Decimal d2) => DecCalc_Main.VarDecCmp(in d1, in d2) <= 0;
 
         /// <inheritdoc cref="IComparisonOperators{TSelf, TOther, TResult}.op_GreaterThan(TSelf, TOther)" />
-        public static bool operator >(Decimal d1, Decimal d2) => DecCalc.VarDecCmp(in d1, in d2) > 0;
+        public static bool operator >(Decimal d1, Decimal d2) => DecCalc_Main.VarDecCmp(in d1, in d2) > 0;
 
         /// <inheritdoc cref="IComparisonOperators{TSelf, TOther, TResult}.op_GreaterThanOrEqual(TSelf, TOther)" />
-        public static bool operator >=(Decimal d1, Decimal d2) => DecCalc.VarDecCmp(in d1, in d2) >= 0;
+        public static bool operator >=(Decimal d1, Decimal d2) => DecCalc_Main.VarDecCmp(in d1, in d2) >= 0;
 
         //
         // IConvertible implementation
