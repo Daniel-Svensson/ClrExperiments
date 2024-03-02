@@ -2405,7 +2405,7 @@ namespace Managed.New
                                 break;
                             uint power = iCurScale >= MaxInt32Scale ? TenToPowerNine : UInt32Powers10[iCurScale];
                             scale += iCurScale;
-                            ulong tmp = MathBigMul(bufQuo.U0, power);
+                            IncreaseScale(ref bufQuo, power);
                             bufQuo.U0 = (uint)tmp;
                             tmp >>= 32;
                             bufQuo.High64 = tmp + bufQuo.High64 * power;
