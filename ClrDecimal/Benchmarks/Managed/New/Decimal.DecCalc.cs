@@ -552,26 +552,19 @@ namespace Managed.New
             }
 
             /// <summary>
-            /// Perform multiplication between 64 and 32 bit numbers, returning lower 64 bits in <paramref name="low"/>
+            /// <para>Correspnds to <c>unsigned __int64 __shiftleft128(unsigned __int64 LowPart,unsigned __int64 HighPart, unsigned char Shift);</c></para>
+            /// Shifts a 128-bit quantity, represented as two 64-bit quantities <paramref name="lower"/> and <paramref name="upper"/>,
+            /// to the left by a number of bits specified by <paramref name="shift"/> and returns the high 64 bits of the result.
             /// </summary>
-            /// <returns>hi bits of the result</returns>
-            /// <remarks>returns nuint instead of uint to skip clearing upper 32bits on 64bit platforms</remarks>
+            /// <param name="lower">The low 64 bits of the 128-bit quantity to shift.</param>
+            /// <param name="upper">The high 64 bits of the 128-bit quantity to shift</param>
+            /// <param name="shift">Number of bits to shift.</param>
+            /// <returns>The high 64 bits of the result.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static nuint BigMul64By32(ulong a, uint b, out ulong low)
+            private static ulong ShiftLeft128(ulong lower, ulong upper, byte shift)
             {
-#if TARGET_64BIT
-                return (nuint)Math.BigMul(a, b, out low);
-#else
-                uint al = (uint)a;
-                uint ah = (uint)(a >> 32);
-                uint bl = b;
-
-                ulong prodL = ((ulong)al) * bl;
-                ulong prodH = ((ulong)ah) * bl + (prodL >> 32);
-
-                low = (prodH << 32 | (uint)prodL);
-                return (nuint)(prodH >> 32);
-#endif
+                // should instead be translated to a single shld on x64
+                return (upper << shift) | (lower >> (64 - shift));
             }
 
             /// <summary>
@@ -612,7 +605,7 @@ namespace Managed.New
                 // Compute full remainder, rem = dividend - (quo * divisor).
                 //
                 ulong prod1;
-                uint prod2 = (uint)BigMul64By32(bufDen.Low64, quo, out prod1);
+                uint prod2 = (uint)Math.BigMul(bufDen.Low64, quo, out prod1);
                 ulong num = bufNum.Low64 - prod1;
                 remainder -= (uint)prod2;
 
@@ -666,9 +659,9 @@ namespace Managed.New
             /// <returns>Returns highest 32 bits of product</returns>
             private static uint IncreaseScale(ref Buf12 bufNum, uint power)
             {
-                ulong hi64 = BigMul64By32(bufNum.Low64, power, out ulong low);
+                ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low);
                 bufNum.Low64 = low;
-                hi64 = MathBigMul(bufNum.U2, power) + hi64;
+                hi64 = Math.BigMul(bufNum.U2, power) + hi64;
                 bufNum.U2 = (uint)hi64;
                 return (uint)(hi64 >> 32);
             }
@@ -681,7 +674,7 @@ namespace Managed.New
             /// <param name="power">Scale factor to multiply by</param>
             private static void IncreaseScale64(ref Buf12 bufNum, uint power)
             {
-                bufNum.U2 = (uint)BigMul64By32(bufNum.Low64, power, out ulong low64);
+                bufNum.U2 = (uint)Math.BigMul(bufNum.Low64, power, out ulong low64);
                 bufNum.Low64 = low64;
             }
 
@@ -1382,7 +1375,7 @@ namespace Managed.New
                     if (pdecIn.High != 0)
                         goto ThrowOverflow;
                     uint pwr = UInt32Powers10[-scale];
-                    nuint high = BigMul64By32(pdecIn.Low, pwr, out ulong low);
+                    ulong high = Math.BigMul(pdecIn.Low64, pwr, out ulong low);
                     if (high != 0)
                         goto ThrowOverflow;
                     value = (long)low;
@@ -1547,7 +1540,7 @@ namespace Managed.New
                     else
                     {
                         // Left value is 32-bit, result fits in 4 uints
-                        tmp = BigMul64By32(d2.Low64, d1.Low, out ulong low);
+                        tmp = Math.BigMul(d2.Low64, d1.Low, out ulong low);
                         bufProd.Low64 = low;
 
                         if (d2.High != 0)
@@ -1567,7 +1560,7 @@ namespace Managed.New
                 else if ((d2.High | d2.Mid) == 0)
                 {
                     // Right value is 32-bit, result fits in 4 uints
-                    tmp = BigMul64By32(d1.Low64, d2.Low, out ulong low);
+                    tmp = Math.BigMul(d1.Low64, d2.Low, out ulong low);
                     bufProd.Low64 = low;
 
                     if (d1.High != 0)
@@ -1611,13 +1604,13 @@ namespace Managed.New
                         ulong hi64 = Math.BigMul(d1.High, d2.High);
 
                         // Do crosswise multiplications between upper 32bit and lower 64 bits
-                        hi64 += BigMul64By32(d1.Low64, d2.High, out tmp);
+                        hi64 += Math.BigMul(d1.Low64, d2.High, out tmp);
                         mid64 += tmp;
                         // propagate carry, can be simplified if https://github.com/dotnet/runtime/issues/48247 is done
                         if (mid64 < tmp)
                             ++hi64;
 
-                        hi64 += BigMul64By32(d2.Low64, d1.High, out tmp);
+                        hi64 += Math.BigMul(d2.Low64, d1.High, out tmp);
                         mid64 += tmp;
                         if (mid64 < tmp)
                             ++hi64;
@@ -1821,12 +1814,6 @@ namespace Managed.New
                 }
 
                 result.uflags = flags;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static ulong MathBigMul(uint a, uint b)
-            {
-                return (ulong)a * b;
             }
 
             /// <summary>
@@ -2128,13 +2115,11 @@ namespace Managed.New
                         // since power < 2^32
                         ulong num = Math.BigMul(remainder, power);
                         uint div;
-#if TARGET_32BIT
                         if (X86.X86Base.IsSupported)
                         {
                             (div, remainder) = X86.X86Base.DivRem((uint)num, (uint)(num >> 32), den);
                         }
                         else
-#endif
                         {
                             // Do full 64bit divide and cast result to 32bit
                             var divRes = Math.DivRem(num, den);
