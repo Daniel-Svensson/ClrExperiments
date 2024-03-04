@@ -532,7 +532,7 @@ namespace Managed.New
 
                 // Compute full remainder, rem = dividend - (quo * divisor).
                 //
-                ulong prod = MathBigMul(quo, (uint)den); // quo * lo divisor
+                ulong prod = Math.BigMul(quo, (uint)den); // quo * lo divisor
                 num -= prod;
 
                 if (num > ~prod)
@@ -1114,11 +1114,11 @@ namespace Managed.New
                             {
                                 if (scale <= MaxInt32Scale)
                                 {
-                                    low64 = MathBigMul((uint)low64, UInt32Powers10[scale]);
+                                    low64 = Math.BigMul((uint)low64, UInt32Powers10[scale]);
                                     goto AlignedAdd;
                                 }
                                 scale -= MaxInt32Scale;
-                                low64 = MathBigMul((uint)low64, TenToPowerNine);
+                                low64 = Math.BigMul((uint)low64, TenToPowerNine);
                             } while (low64 <= uint.MaxValue);
                         }
 
@@ -1127,8 +1127,8 @@ namespace Managed.New
                             power = TenToPowerNine;
                             if (scale < MaxInt32Scale)
                                 power = UInt32Powers10[scale];
-                            tmpLow = MathBigMul((uint)low64, power);
-                            tmp64 = MathBigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
+                            tmpLow = Math.BigMul((uint)low64, power);
+                            tmp64 = Math.BigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
                             low64 = (uint)tmpLow + (tmp64 << 32);
                             high = (uint)(tmp64 >> 32);
                             if ((scale -= MaxInt32Scale) <= 0)
@@ -1143,11 +1143,11 @@ namespace Managed.New
                         power = TenToPowerNine;
                         if (scale < MaxInt32Scale)
                             power = UInt32Powers10[scale];
-                        tmpLow = MathBigMul((uint)low64, power);
-                        tmp64 = MathBigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
+                        tmpLow = Math.BigMul((uint)low64, power);
+                        tmp64 = Math.BigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
                         low64 = (uint)tmpLow + (tmp64 << 32);
                         tmp64 >>= 32;
-                        tmp64 += MathBigMul(high, power);
+                        tmp64 += Math.BigMul(high, power);
 
                         scale -= MaxInt32Scale;
                         if (tmp64 > uint.MaxValue)
@@ -1179,7 +1179,7 @@ namespace Managed.New
                         for (uint cur = 0; ;)
                         {
                             Debug.Assert(cur < Buf24.Length);
-                            tmp64 += MathBigMul(rgulNum[cur], power);
+                            tmp64 += Math.BigMul(rgulNum[cur], power);
                             rgulNum[cur] = (uint)tmp64;
                             cur++;
                             tmp64 >>= 32;
@@ -1466,11 +1466,12 @@ namespace Managed.New
                     do
                     {
                         uint power = scale >= MaxInt32Scale ? TenToPowerNine : UInt32Powers10[scale];
-                        ulong tmpLow = MathBigMul((uint)low64, power);
-                        ulong tmp = MathBigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
+                        // high  Mul6432
+                        ulong tmpLow = Math.BigMul((uint)low64, power);
+                        ulong tmp = Math.BigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
                         low64 = (uint)tmpLow + (tmp << 32);
                         tmp >>= 32;
-                        tmp += MathBigMul(high, power);
+                        tmp += Math.BigMul(high, power);
                         // If the scaled value has more than 96 significant bits then it's greater than d2
                         if (tmp > uint.MaxValue)
                             return sign;
@@ -1496,20 +1497,6 @@ namespace Managed.New
                 return sign;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static ulong Mul64By64(ulong lhs, ulong rhs, out ulong low)
-            {
-                if (IntPtr.Size == 4 && ((lhs >> 32) | (rhs >> 32)) == 0)
-                {
-                    low = MathBigMul((uint)lhs, (uint)rhs);
-                    return 0;
-                }
-                else
-                {
-                    return Math.BigMul(lhs, rhs, out low);
-                }
-            }
-
             /// <summary>
             /// Decimal Multiply
             /// </summary>
@@ -1527,7 +1514,7 @@ namespace Managed.New
                     {
                         // Upper 64 bits are zero.
                         //
-                        ulong low64 = MathBigMul(d1.Low, d2.Low);
+                        ulong low64 = Math.BigMul(d1.Low, d2.Low);
                         if (scale > DEC_SCALE_MAX)
                         {
                             // Result scale is too big.  Divide result by power of 10 to reduce it.
@@ -1540,6 +1527,8 @@ namespace Managed.New
                             scale -= DEC_SCALE_MAX + 1;
                             ulong power = UInt64Powers10[scale];
 
+                            // TODO: 1: Look at X86Base div
+                            // TODO 2: split in 32 and 64 bit div ?
                             (low64, ulong remainder) = Math.DivRem(low64, power);
 
                             // Round result.  See if remainder >= 1/2 of divisor.
@@ -1563,7 +1552,7 @@ namespace Managed.New
 
                         if (d2.High != 0)
                         {
-                            tmp += MathBigMul(d1.Low, d2.High);
+                            tmp += Math.BigMul(d1.Low, d2.High);
                             if (tmp > uint.MaxValue)
                             {
                                 bufProd.Mid64 = tmp;
@@ -1583,7 +1572,7 @@ namespace Managed.New
 
                     if (d1.High != 0)
                     {
-                        tmp += MathBigMul(d2.Low, d1.High);
+                        tmp += Math.BigMul(d2.Low, d1.High);
                         if (tmp > uint.MaxValue)
                         {
                             bufProd.Mid64 = tmp;
@@ -1619,7 +1608,7 @@ namespace Managed.New
                     if ((d1.High | d2.High) != 0)
                     {
                         // hi64 will never overflow since the result will always fit in 192 (2*96) bits
-                        ulong hi64 = MathBigMul(d1.High, d2.High);
+                        ulong hi64 = Math.BigMul(d1.High, d2.High);
 
                         // Do crosswise multiplications between upper 32bit and lower 64 bits
                         hi64 += BigMul64By32(d1.Low64, d2.High, out tmp);
@@ -1644,6 +1633,7 @@ namespace Managed.New
                     }
                 }
 
+                // TODO: treat as 64bit to handle forward-store
                 // Check for leading zero uints on the product
                 //
                 uint* product = (uint*)&bufProd;
@@ -1756,7 +1746,7 @@ namespace Managed.New
                     power = -power;
                     if (power < 10)
                     {
-                        result.Low64 = MathBigMul(mant, UInt32Powers10[power]);
+                        result.Low64 = Math.BigMul(mant, UInt32Powers10[power]);
                     }
                     else
                     {
@@ -1764,14 +1754,14 @@ namespace Managed.New
                         //
                         if (power > 18)
                         {
-                            ulong low64 = MathBigMul(mant, UInt32Powers10[power - 18]);
+                            ulong low64 = Math.BigMul(mant, UInt32Powers10[power - 18]);
                             UInt64x64To128(low64, TenToPowerEighteen, ref result);
                         }
                         else
-                        {
-                            ulong low64 = MathBigMul(mant, UInt32Powers10[power - 9]);
-                            ulong hi64 = MathBigMul(TenToPowerNine, (uint)(low64 >> 32));
-                            low64 = MathBigMul(TenToPowerNine, (uint)low64);
+                        {// high  Mul6432
+                            ulong low64 = Math.BigMul(mant, UInt32Powers10[power - 9]);
+                            ulong hi64 = Math.BigMul(TenToPowerNine, (uint)(low64 >> 32));
+                            low64 = Math.BigMul(TenToPowerNine, (uint)low64);
                             result.Low = (uint)low64;
                             hi64 += low64 >> 32;
                             result.Mid = (uint)hi64;
@@ -1926,9 +1916,10 @@ namespace Managed.New
                     power = -power;
                     if (power < 10)
                     {
+                        // high  Mul6432
                         uint pow10 = UInt32Powers10[power];
-                        ulong low64 = MathBigMul((uint)mant, pow10);
-                        ulong hi64 = MathBigMul((uint)(mant >> 32), pow10);
+                        ulong low64 = Math.BigMul((uint)mant, pow10);
+                        ulong hi64 = Math.BigMul((uint)(mant >> 32), pow10);
                         result.Low = (uint)low64;
                         hi64 += low64 >> 32;
                         result.Mid = (uint)hi64;
@@ -2088,6 +2079,7 @@ namespace Managed.New
                         {
                             if (scale < 0)
                             {
+                                // TODO: Conider 64bit scaling ?
                                 curScale = Math.Min(9, -scale);
                                 goto HaveScale;
                             }
@@ -2134,7 +2126,7 @@ namespace Managed.New
 
                         // division of num by den will never overflow since upper 32bits must be less than divisor<<2^32
                         // since power < 2^32
-                        ulong num = MathBigMul(remainder, power);
+                        ulong num = Math.BigMul(remainder, power);
                         uint div;
 #if TARGET_32BIT
                         if (X86.X86Base.IsSupported)
@@ -2377,8 +2369,9 @@ namespace Managed.New
                     // Divisor scale can always be increased to dividend scale for remainder calculation.
                     do
                     {
+                        // high  Mul6432
                         uint power = scale >= MaxInt32Scale ? TenToPowerNine : UInt32Powers10[scale];
-                        ulong tmp = MathBigMul(d2.Low, power);
+                        ulong tmp = Math.BigMul(d2.Low, power);
                         d2.Low = (uint)tmp;
                         tmp >>= 32;
                         tmp += (d2.Mid + ((ulong)d2.High << 32)) * power;
@@ -2406,9 +2399,6 @@ namespace Managed.New
                             uint power = iCurScale >= MaxInt32Scale ? TenToPowerNine : UInt32Powers10[iCurScale];
                             scale += iCurScale;
                             IncreaseScale(ref bufQuo, power);
-                            bufQuo.U0 = (uint)tmp;
-                            tmp >>= 32;
-                            bufQuo.High64 = tmp + bufQuo.High64 * power;
                             if (power != TenToPowerNine)
                                 break;
                         }
@@ -2466,12 +2456,13 @@ namespace Managed.New
                 {
                     uint power = scale <= -MaxInt32Scale ? TenToPowerNine : UInt32Powers10[-scale];
                     uint* buf = (uint*)&b;
-                    ulong tmp64 = MathBigMul(b.Buf24.U0, power);
+                    // high  Mul6432 ??
+                    ulong tmp64 = Math.BigMul(b.Buf24.U0, power);
                     b.Buf24.U0 = (uint)tmp64;
                     for (int i = 1; i <= high; i++)
                     {
                         tmp64 >>= 32;
-                        tmp64 += MathBigMul(buf[i], power);
+                        tmp64 += Math.BigMul(buf[i], power);
                         buf[i] = (uint)tmp64;
                     }
                     // The high bit of the dividend must not be set.
@@ -2489,6 +2480,7 @@ namespace Managed.New
                     ulong divisor = d2.Low64 << shift;
                     switch (high)
                     {
+                        // TODO 128 by 64
                         case 6:
                             Div96By64(ref *(Buf12*)&b.Buf24.U4, divisor);
                             goto case 5;
