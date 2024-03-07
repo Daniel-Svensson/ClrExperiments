@@ -921,6 +921,29 @@ namespace Managed.New
                 return scale;
             }
 
+            // This is a table of the largest values that can be in the upper two
+            // uints of a 96-bit number that will not overflow when multiplied
+            // by a given power.  For the upper word, this is a table of
+            // 2^32 / 10^n for 1 <= n <= 8.  For the lower word, this is the
+            // remaining fraction part * 2^32.  2^32 = 4294967296.
+            static ReadOnlySpan<ulong> powerOvflValues => [
+                uint.MaxValue, ulong.MaxValue, // 0
+    429496729u, 11068046444225730969ul, // 10^1 remainder 0.6
+	   42949672,  17708874310761169551ul,  // 10^2 remainder 0.16
+	   4294967,   5460236245818027278ul,   // 10^3 remainder 0.616
+	   429496,    13458744476178488859ul,  // 10^4 remainder 0.1616
+	   42949,     12413920891843579855ul,  // 10^5 remainder 0.51616
+	   4294,      17843461755522954439ul,  // 10^6 remainder 0.551616
+	   429,       9163043805036116090ul,   // 10^7 remainder 0.9551616
+	   42,        17518374046842208063ul,  // 10^8 remainder 0.09991616
+	   4,         5441186219426131129ul,   // 10^9 remainder 
+                    ];
+
+            static uint overflowHigh(int scale)
+                    => (uint)powerOvflValues[scale * 2];
+            static ulong overflowMidLo(int scale)
+                => powerOvflValues[scale * 2 + 1];
+
             /// <summary>
             /// Determine the max power of 10, &lt;= 9, that the quotient can be scaled
             /// up by and still fit in 96 bits.
@@ -930,24 +953,13 @@ namespace Managed.New
             /// <returns>power of 10 to scale by</returns>
             private static int SearchScale(ref Buf12 bufQuo, int scale)
             {
-                const uint OVFL_MAX_9_HI = 4;
-                const uint OVFL_MAX_8_HI = 42;
-                const uint OVFL_MAX_7_HI = 429;
-                const uint OVFL_MAX_6_HI = 4294;
-                const uint OVFL_MAX_5_HI = 42949;
-                const uint OVFL_MAX_4_HI = 429496;
-                const uint OVFL_MAX_3_HI = 4294967;
-                const uint OVFL_MAX_2_HI = 42949672;
-                const uint OVFL_MAX_1_HI = 429496729;
-                const ulong OVFL_MAX_9_MIDLO = 5441186219426131129;
-
                 uint resHi = bufQuo.U2;
                 ulong resMidLo = bufQuo.Low64;
                 int curScale = 0;
 
                 // Quick check to stop us from trying to scale any more.
                 //
-                if (resHi > OVFL_MAX_1_HI)
+                if (resHi > overflowHigh(1)) // OR iScale >= DEC_SCALE_MAX 
                 {
                     goto HaveScale;
                 }
@@ -960,54 +972,32 @@ namespace Managed.New
                     // standard search for scale factor.
                     //
                     curScale = DEC_SCALE_MAX - scale;
-                    if (resHi < powerOvfl[curScale - 1].Hi)
+                    if (resHi < overflowHigh(curScale))
                         goto HaveScale;
                 }
-                else if (resHi < OVFL_MAX_9_HI || resHi == OVFL_MAX_9_HI && resMidLo <= OVFL_MAX_9_MIDLO)
+                else if (resHi <= overflowHigh(9) && (resHi < overflowHigh(9) || resMidLo <= overflowMidLo(9)))
                     return 9;
 
-                // Search for a power to scale by < 9.  Do a binary search.
+                // Multiply bit position by log10(2) to figure it's power of 10.
+                // We scale the log by 256.  log(2) = .30103, * 256 = 77.  Doing this
+                // with a multiply saves a 96-byte lookup table.  The power returned
+                // is <= the power of the number, so we must add one power of 10
+                // to make it's integer part zero after dividing by 256.
                 //
-                if (resHi > OVFL_MAX_5_HI)
-                {
-                    if (resHi > OVFL_MAX_3_HI)
-                    {
-                        curScale = 2;
-                        if (resHi > OVFL_MAX_2_HI)
-                            curScale--;
-                    }
-                    else
-                    {
-                        curScale = 4;
-                        if (resHi > OVFL_MAX_4_HI)
-                            curScale--;
-                    }
-                }
-                else
-                {
-                    if (resHi > OVFL_MAX_7_HI)
-                    {
-                        curScale = 6;
-                        if (resHi > OVFL_MAX_6_HI)
-                            curScale--;
-                    }
-                    else
-                    {
-                        curScale = 8;
-                        if (resHi > OVFL_MAX_8_HI)
-                            curScale--;
-                    }
-                }
+
+
+                curScale = ((BitOperations.LeadingZeroCount(resHi) * 77) >> 8) + 1;
 
                 // In all cases, we already found we could not use the power one larger.
                 // So if we can use this power, it is the biggest, and we're done.  If
                 // we can't use this power, the one below it is correct for all cases
                 // unless it's 10^1 -- we might have to go to 10^0 (no scaling).
                 //
-                if (resHi == powerOvfl[curScale - 1].Hi && resMidLo > powerOvfl[curScale - 1].MidLo)
+                if (resHi > overflowHigh(curScale) ||
+                    (resHi == overflowHigh(curScale) && resMidLo > overflowMidLo(curScale)))
                     curScale--;
 
-                HaveScale:
+            HaveScale:
                 // curScale = largest power of 10 we can scale by without overflow,
                 // curScale < 9.  See if this is enough to make scale factor
                 // positive if it isn't already.
@@ -2639,36 +2629,6 @@ namespace Managed.New
                 value.ulo = div;
                 return (uint)num - div * TenToPowerNine;
             }
-
-            private readonly struct PowerOvfl
-            {
-                public readonly uint Hi;
-                public readonly ulong MidLo;
-
-                public PowerOvfl(uint hi, uint mid, uint lo)
-                {
-                    Hi = hi;
-                    MidLo = ((ulong)mid << 32) + lo;
-                }
-            }
-
-            private static readonly PowerOvfl[] PowerOvflValues = new[]
-            {
-                // This is a table of the largest values that can be in the upper two
-                // uints of a 96-bit number that will not overflow when multiplied
-                // by a given power.  For the upper word, this is a table of
-                // 2^32 / 10^n for 1 <= n <= 8.  For the lower word, this is the
-                // remaining fraction part * 2^32.  2^32 = 4294967296.
-                //
-                new PowerOvfl(429496729, 2576980377, 2576980377),  // 10^1 remainder 0.6
-                new PowerOvfl(42949672,  4123168604, 687194767),   // 10^2 remainder 0.16
-                new PowerOvfl(4294967,   1271310319, 2645699854),  // 10^3 remainder 0.616
-                new PowerOvfl(429496,    3133608139, 694066715),   // 10^4 remainder 0.1616
-                new PowerOvfl(42949,     2890341191, 2216890319),  // 10^5 remainder 0.51616
-                new PowerOvfl(4294,      4154504685, 2369172679),  // 10^6 remainder 0.551616
-                new PowerOvfl(429,       2133437386, 4102387834),  // 10^7 remainder 0.9551616
-                new PowerOvfl(42,        4078814305, 410238783),   // 10^8 remainder 0.09991616
-            };
 
             [StructLayout(LayoutKind.Explicit)]
             private struct Buf12
