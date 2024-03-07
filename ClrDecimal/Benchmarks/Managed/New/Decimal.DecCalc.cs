@@ -1120,10 +1120,7 @@ namespace Managed.New
                             power = TenToPowerNine;
                             if (scale < MaxInt32Scale)
                                 power = UInt32Powers10[scale];
-                            tmpLow = Math.BigMul((uint)low64, power);
-                            tmp64 = Math.BigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
-                            low64 = (uint)tmpLow + (tmp64 << 32);
-                            high = (uint)(tmp64 >> 32);
+                           high = (uint)Math.BigMul(low64, power, out low64);
                             if ((scale -= MaxInt32Scale) <= 0)
                                 goto AlignedAdd;
                         } while (high == 0);
@@ -1136,10 +1133,7 @@ namespace Managed.New
                         power = TenToPowerNine;
                         if (scale < MaxInt32Scale)
                             power = UInt32Powers10[scale];
-                        tmpLow = Math.BigMul((uint)low64, power);
-                        tmp64 = Math.BigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
-                        low64 = (uint)tmpLow + (tmp64 << 32);
-                        tmp64 >>= 32;
+                        tmp64 = Math.BigMul(low64, power, out low64);
                         tmp64 += Math.BigMul(high, power);
 
                         scale -= MaxInt32Scale;
@@ -1459,11 +1453,7 @@ namespace Managed.New
                     do
                     {
                         uint power = scale >= MaxInt32Scale ? TenToPowerNine : UInt32Powers10[scale];
-                        // high  Mul6432
-                        ulong tmpLow = Math.BigMul((uint)low64, power);
-                        ulong tmp = Math.BigMul((uint)(low64 >> 32), power) + (tmpLow >> 32);
-                        low64 = (uint)tmpLow + (tmp << 32);
-                        tmp >>= 32;
+                        ulong tmp= Math.BigMul(low64, power, out low64);
                         tmp += Math.BigMul(high, power);
                         // If the scaled value has more than 96 significant bits then it's greater than d2
                         if (tmp > uint.MaxValue)
@@ -1753,12 +1743,8 @@ namespace Managed.New
                         else
                         {// high  Mul6432
                             ulong low64 = Math.BigMul(mant, UInt32Powers10[power - 9]);
-                            ulong hi64 = Math.BigMul(TenToPowerNine, (uint)(low64 >> 32));
-                            low64 = Math.BigMul(TenToPowerNine, (uint)low64);
-                            result.Low = (uint)low64;
-                            hi64 += low64 >> 32;
-                            result.Mid = (uint)hi64;
-                            hi64 >>= 32;
+                            ulong hi64 = Math.BigMul(TenToPowerNine, low64, out low64);
+                            result.Low64 = low64;
                             result.High = (uint)hi64;
                         }
                     }
@@ -1905,13 +1891,8 @@ namespace Managed.New
                     {
                         // high  Mul6432
                         uint pow10 = UInt32Powers10[power];
-                        ulong low64 = Math.BigMul((uint)mant, pow10);
-                        ulong hi64 = Math.BigMul((uint)(mant >> 32), pow10);
-                        result.Low = (uint)low64;
-                        hi64 += low64 >> 32;
-                        result.Mid = (uint)hi64;
-                        hi64 >>= 32;
-                        result.High = (uint)hi64;
+                        result.High = (uint)Math.BigMul(mant, pow10, out ulong low64);
+                        result.Low64 = low64;
                     }
                     else
                     {
@@ -2356,12 +2337,9 @@ namespace Managed.New
                     {
                         // high  Mul6432
                         uint power = scale >= MaxInt32Scale ? TenToPowerNine : UInt32Powers10[scale];
-                        ulong tmp = Math.BigMul(d2.Low, power);
-                        d2.Low = (uint)tmp;
-                        tmp >>= 32;
-                        tmp += (d2.Mid + ((ulong)d2.High << 32)) * power;
-                        d2.Mid = (uint)tmp;
-                        d2.High = (uint)(tmp >> 32);
+                        uint hi32 = (uint)Math.BigMul(d2.Low64, power, out ulong low64);
+                        d2.Low64 = low64;
+                        d2.High = hi32 + d2.High * power;
                     } while ((scale -= MaxInt32Scale) > 0);
                     scale = 0;
                 }
