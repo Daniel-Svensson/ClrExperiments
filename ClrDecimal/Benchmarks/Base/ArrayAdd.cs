@@ -62,7 +62,7 @@ namespace Benchmarks
             int dest = 0;
             foreach (var lhs in lhs_corert)
                 foreach (var rhs in rhs_corert)
-                    res_corert[dest++] = ClrClassLibrary.Methods.AddCoreRTManaged(lhs, rhs);
+                    res_corert[dest++] = ClrClassLibrary.Methods.AddManagedNew(lhs, rhs);
             return res_corert;
         }
 

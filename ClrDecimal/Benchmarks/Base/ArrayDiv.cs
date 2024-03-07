@@ -16,7 +16,7 @@ namespace Benchmarks
         {
         }
 
-        [Benchmark]
+        //[Benchmark]
         public decimal[] NetFramework()
         {
             int dest = 0;
@@ -37,7 +37,7 @@ namespace Benchmarks
             return res_builtin;
         }
 
-        [Benchmark]
+        //[Benchmark]
         public decimal[] PInvokeNew()
         {
             int dest = 0;
@@ -56,7 +56,7 @@ namespace Benchmarks
             return res_builtin;
         }
 
-        [Benchmark]
+        //[Benchmark]
         public decimal[] PInvokePalRT()
         {
             int dest = 0;
@@ -75,7 +75,7 @@ namespace Benchmarks
             return res_builtin;
         }
 
-        [Benchmark(Baseline = true)]
+        //[Benchmark(Baseline = true)]
         public decimal[] PInvokeOle32()
         {
             int dest = 0;
@@ -115,7 +115,7 @@ namespace Benchmarks
         //    return res_corert2;
         //}
 
-        [Benchmark]
+        //[Benchmark]
         public decimal[] PInvokeDummy()
         {
             int dest = 0;
@@ -125,6 +125,46 @@ namespace Benchmarks
                     try
                     {
                         res_builtin[dest++] = ClrClassLibrary.Methods.DivNoop(lhs, rhs);
+                    }
+                    catch (Exception)
+                    {
+                        dest++;
+                    }
+                }
+
+            return res_builtin;
+        }
+
+        [Benchmark]
+        public decimal[] New()
+        {
+            int dest = 0;
+            foreach (var lhs in lhs_builtin)
+                foreach (var rhs in rhs_builtin)
+                {
+                    try
+                    {
+                        res_builtin[dest++] = Managed.New.Decimal.Divide(lhs, rhs);
+                    }
+                    catch (Exception)
+                    {
+                        dest++;
+                    }
+                }
+
+            return res_builtin;
+        }
+
+        [Benchmark(Baseline = true)]
+        public decimal[] Main()
+        {
+            int dest = 0;
+            foreach (var lhs in lhs_builtin)
+                foreach (var rhs in rhs_builtin)
+                {
+                    try
+                    {
+                        res_builtin[dest++] = Managed.Main.Decimal.Divide(lhs, rhs);
                     }
                     catch (Exception)
                     {

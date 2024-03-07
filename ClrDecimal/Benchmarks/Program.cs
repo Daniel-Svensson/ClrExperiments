@@ -42,6 +42,20 @@ namespace Benchmarks
 #if TARGET_32BIT
             Console.WriteLine($"TARGET_32BIT is defined");
 #endif
+            //Managed.New.Decimal a = 1m / 365, b = 10_000m, res = 42m;
+            //Managed.Main.Decimal a2 = 1m / 365, b2 = 10_000m, res2 = 42m;
+
+            //for (int i = 0; i < 10_000_000; ++i)
+            //{
+            //    res = res + (a - b);
+            //  //  res = /*res * */a * b;
+            //    res = res / (a * b);
+
+            //    res2 = res2 + (a2 - b2);
+            //    //res2 = /*res2 * */a2 * b2;
+            //    res2 = res2 / (a2 * b2);
+            //}
+            //return;
 
             //Managed.New.Decimal a = new decimal(1023, 412, 213, false, 2), b = new decimal(32, 0, 0, false, 3);
             //Managed.New.Decimal res;
@@ -68,7 +82,7 @@ namespace Benchmarks
             var mul = new Multiply();
             foreach(var testCase in mul.TestCases())
             {
-                var expected = mul.NetFramework((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+                var expected = mul.System_Decimal((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
                 var actual = mul.New((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
 
                 Console.Write($"Verifying: {testCase[2]} ");
@@ -83,7 +97,7 @@ namespace Benchmarks
             var div = new Divide();
             foreach (var testCase in div.TestCases())
             {
-                var expected = div.NetFramework((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+                var expected = div.System_Decimal((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
                 var actual = div.New((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
 
                 Console.Write($"Verifying: {testCase[2]} ");
@@ -94,8 +108,26 @@ namespace Benchmarks
 
                 Debug.Assert(actual == expected);
             }
-            
-            BenchmarkRunner.Run<Multiply>();
+
+            var add = new Addition();
+            foreach (var testCase in add.TestCases())
+            {
+                var expected = add.System_Decimal((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+                var actual = add.New((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+
+                Console.Write($"Verifying: {testCase[2]} ");
+                if (actual != expected)
+                    Console.WriteLine($"- FAILED: {actual} but expected {expected}");
+                else
+                    Console.WriteLine($"- PASS");
+
+                Debug.Assert(actual == expected);
+            }
+
+
+            //BenchmarkRunner.Run<Addition>();
+            //BenchmarkRunner.Run<InterestBenchmark>();
+            //BenchmarkRunner.Run<Multiply>();
             BenchmarkRunner.Run<Divide>();
             return;
 

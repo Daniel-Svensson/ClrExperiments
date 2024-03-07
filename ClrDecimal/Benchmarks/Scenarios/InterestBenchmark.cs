@@ -26,15 +26,16 @@ namespace Benchmarks
         public Managed.New.Decimal DaysInYear;
     }
 
+    [InProcess]
     public class InterestBenchmark
     {
         public Accounts_Decimal[] _decAccounts;
         public Accounts_CoreRT[] _crt2Accounts;
 
         //[Params(100, 100000)]
-        [Params(100000)]
+        [Params(10000)]
         public int Count { get; set; }
-        [Params(true, false)]
+        [Params(true/*, false*/)]
         public bool RoundedAmounts = true;
         [Params(true, false)]
         public bool SmallDivisor = true;
@@ -110,7 +111,7 @@ namespace Benchmarks
         }
 
         [Benchmark(Description = "P/Invoke New C++")]
-        public void New()
+        public void CPlusPlus()
         {
             var array = _decAccounts;
 
@@ -139,18 +140,33 @@ namespace Benchmarks
             }
         }
 
-        //[Benchmark]
-        public void CoreRT2()
+        [Benchmark]
+        public void New()
         {
-            var array = _crt2Accounts;
+            var array = _decAccounts;
 
-            for (int i = 0; i < _crt2Accounts.Length; ++i)
+            for (int i = 0; i < array.Length; ++i)
             {
-                var dayFactor = Methods.DivCoreRTManaged(days, array[i].DaysInYear);
+                var dayFactor = Managed.New.Decimal.Divide(days, array[i].DaysInYear);
 
                 array[i].NewInterest =
-                    Methods.AddCoreRTManaged(array[i].CurrentInterest,
-                        Methods.MulCoreRTManaged(array[i].Amount, Methods.MulCoreRTManaged(array[i].CurrentInterestRate, dayFactor)));
+                    Managed.New.Decimal.Add(array[i].CurrentInterest,
+                        Managed.New.Decimal.Multiply(array[i].Amount, Managed.New.Decimal.Multiply(array[i].CurrentInterestRate, dayFactor)));
+            }
+        }
+
+        [Benchmark(Baseline = true)]
+        public void Main()
+        {
+            var array = _decAccounts;
+
+            for (int i = 0; i < array.Length; ++i)
+            {
+                var dayFactor = Managed.Main.Decimal.Divide(days, array[i].DaysInYear);
+
+                array[i].NewInterest =
+                    Managed.Main.Decimal.Add(array[i].CurrentInterest,
+                        Managed.Main.Decimal.Multiply(array[i].Amount, Managed.Main.Decimal.Multiply(array[i].CurrentInterestRate, dayFactor)));
             }
         }
 

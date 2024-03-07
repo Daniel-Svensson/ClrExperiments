@@ -26,7 +26,7 @@ namespace Benchmarks
 
         //[Benchmark(Baseline = true)]
         //[ArgumentsSource(nameof(TestCases))]
-        public decimal NetFramework(decimal a, decimal b, string descr)
+        public decimal System_Decimal(decimal a, decimal b, string descr)
         {
             return ClrClassLibrary.Methods.MulManaged(a, b);
         }

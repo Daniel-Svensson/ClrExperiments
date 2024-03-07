@@ -29,16 +29,11 @@ namespace Benchmarks.ClrClassLibrary
         }
 
 
-        internal static Managed.New.Decimal AddCoreRTManaged(Managed.New.Decimal a2, Managed.New.Decimal b2)
+        internal static Managed.New.Decimal AddManagedNew(Managed.New.Decimal a2, Managed.New.Decimal b2)
         {
             return Managed.New.Decimal.Add(a2, b2);
         }
 
-
-        //internal static Managed.New.Decimal2 AddCoreRTManaged(Managed.New.Decimal2 a2, Managed.New.Decimal2 b2)
-        //{
-        //    return Managed.New.Decimal2.Add(a2, b2);
-        //}
 
         internal static decimal MulManaged(decimal a, decimal b)
         {

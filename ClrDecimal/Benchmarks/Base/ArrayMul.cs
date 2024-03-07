@@ -15,7 +15,7 @@ namespace Benchmarks
         {
         }
 
-        [Benchmark]
+        //[Benchmark]
         public decimal[] NetFramework()
         {
             int dest = 0;
@@ -36,7 +36,7 @@ namespace Benchmarks
             return res_builtin;
         }
 
-        [Benchmark]
+        //[Benchmark]
         public decimal[] PInvokeNew()
         {
             int dest = 0;
@@ -55,7 +55,7 @@ namespace Benchmarks
             return res_builtin;
         }
 
-        [Benchmark]
+        //[Benchmark]
         public decimal[] PInvokePalRT()
         {
             int dest = 0;
@@ -74,7 +74,7 @@ namespace Benchmarks
             return res_builtin;
         }
 
-        [Benchmark(Baseline = true)]
+        //[Benchmark(Baseline = true)]
         public decimal[] PInvokeOle32()
         {
             int dest = 0;
@@ -95,27 +95,8 @@ namespace Benchmarks
         }
 
 
-        //[Benchmark]
-        //public Managed.New.Decimal2[] CoreCRTManaged2()
-        //{
-        //    int dest = 0;
-        //    foreach (var lhs in lhs_corert2)
-        //        foreach (var rhs in rhs_corert2)
-        //        {
-        //            try
-        //            {
-        //                res_corert2[dest++] = ClrClassLibrary.Methods.MulCoreRTManaged(lhs, rhs);
-        //            }
-        //            catch (Exception)
-        //            {
-        //                dest++;
-        //            }
-        //        }
-        //    return res_corert2;
-        //}
-
         [Benchmark]
-        public decimal[] PInvokeDummy()
+        public decimal[] New()
         {
             int dest = 0;
             foreach (var lhs in lhs_builtin)
@@ -123,7 +104,7 @@ namespace Benchmarks
                 {
                     try
                     {
-                        res_builtin[dest++] = ClrClassLibrary.Methods.MulNoop(lhs, rhs);
+                        res_builtin[dest++] = Managed.New.Decimal.Multiply(lhs, rhs);
                     }
                     catch (Exception)
                     {
@@ -131,8 +112,28 @@ namespace Benchmarks
                     }
                 }
 
+            return res_builtin;
+        }
+
+        [Benchmark(Baseline = true)]
+        public decimal[] Main()
+        {
+            int dest = 0;
+            foreach (var lhs in lhs_builtin)
+                foreach (var rhs in rhs_builtin)
+                {
+                    try
+                    {
+                        res_builtin[dest++] = Managed.Main.Decimal.Multiply(lhs, rhs);
+                    }
+                    catch (Exception)
+                    {
+                        dest++;
+                    }
+                }
 
             return res_builtin;
         }
+
     }
 }

@@ -27,10 +27,6 @@ namespace Benchmarks
             lhs_corert = lhs.Select(x => (Managed.New.Decimal)x).ToArray();
             rhs_corert = rhs.Select(x => (Managed.New.Decimal)x).ToArray();
             res_corert = new Managed.New.Decimal[lhs.Length * rhs.Length];
-
-            //lhs_corert2 = lhs.Select(x => (Managed.New.Decimal2)x).ToArray();
-            //rhs_corert2 = rhs.Select(x => (Managed.New.Decimal2)x).ToArray();
-            //res_corert2 = new Managed.New.Decimal2[lhs.Length * rhs.Length];
         }
 
     }
