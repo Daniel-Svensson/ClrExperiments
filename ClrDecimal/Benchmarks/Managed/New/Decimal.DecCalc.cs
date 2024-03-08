@@ -662,11 +662,23 @@ namespace Managed.New
             /// <returns>Returns highest 32 bits of product</returns>
             private static uint IncreaseScale(ref Buf12 bufNum, uint power)
             {
+#if TARGET_64BIT
                 ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low);
                 bufNum.Low64 = low;
-                hi64 = Math.BigMul(bufNum.U2, power) + hi64;
+                hi64 = Math.BigMul(bufNum.U2, power) + (nuint)hi64;
                 bufNum.U2 = (uint)hi64;
                 return (uint)(hi64 >> 32);
+#else
+                ulong tmp = Math.BigMulx(bufNum.U0, power);
+                bufNum.U0 = (uint)tmp;
+                tmp >>= 32;
+                tmp += Math.BigMulx(bufNum.U1, power);
+                bufNum.U1 = (uint)tmp;
+                tmp >>= 32;
+                tmp += Math.BigMulx(bufNum.U2, power);
+                bufNum.U2 = (uint)tmp;
+                return (uint)(tmp >> 32);
+#endif
             }
 
             /// <summary>
