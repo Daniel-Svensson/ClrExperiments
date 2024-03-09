@@ -278,8 +278,9 @@ namespace Managed.New
                 }
                 else
                 {
-                    var divRes = Math.DivRem(dividend, den);
-                    return ((uint)divRes.Quotient, (uint)divRes.Remainder);
+                    // TODO: https://github.com/dotnet/runtime/issues/5213
+                    uint quo = (uint)(dividend / den);
+                    return (quo, (uint)dividend - quo * den);
                 }
             }
 
@@ -678,6 +679,30 @@ namespace Managed.New
                 tmp += Math.BigMulx(bufNum.U2, power);
                 bufNum.U2 = (uint)tmp;
                 return (uint)(tmp >> 32);
+#endif
+            }
+
+            /// <summary>
+            /// Multiply the two numbers. The result overwrite the input.
+            /// </summary>
+            /// <param name="bufNum">buffer</param>
+            /// <param name="power">Scale factor to multiply by</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static void IncreaseScale(ref Buf16 bufNum, uint power)
+            {
+#if TARGET_64BIT
+                ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low64);
+                bufNum.Low64 = low64;
+                bufNum.High64 = Math.BigMul(bufNum.U2, power) + (nuint)hi64;
+#else
+                ulong tmp = Math.BigMulx(bufNum.U0, power);
+                bufNum.U0 = (uint)tmp;
+                tmp >>= 32;
+                tmp += Math.BigMulx(bufNum.U1, power);
+                bufNum.U1 = (uint)tmp;
+                tmp >>= 32;
+                tmp += Math.BigMulx(bufNum.U2, power);
+                bufNum.High64 = tmp;
 #endif
             }
 
@@ -2260,7 +2285,7 @@ namespace Managed.New
                             if (IncreaseScale(ref bufQuo, power) != 0)
                                 goto ThrowOverflow;
 
-                            bufRem.U3 = IncreaseScale(ref *(Buf12*)&bufRem, power);
+                            IncreaseScale(ref bufRem, power);
                             tmp = Div128By96(ref bufRem, ref bufDivisor);
                             if (!Add32To96(ref bufQuo, tmp))
                             {
