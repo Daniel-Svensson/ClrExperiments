@@ -293,22 +293,22 @@ namespace Managed.New
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static uint Div96By32(ref Buf12 bufNum, uint den)
             {
-                if (X86.X86Base.X64.IsSupported)
-                {
-                    uint hiRes = 0;
-                    ulong remainder = bufNum.U2;
+                //if (X86.X86Base.X64.IsSupported)
+                //{
+                //    uint hiRes = 0;
+                //    ulong remainder = bufNum.U2;
 
-                    if (remainder < den)
-                        goto Div164bit;
+                //    if (remainder >= den)
+                //    {
+                //        (hiRes, remainder) = X86.X86Base.DivRem(bufNum.U2, 0u, den);
+                //    }
 
-                    (hiRes, remainder) = X86.X86Base.DivRem(bufNum.U2, 0u, den);
-
-                Div164bit:
-                    bufNum.U2 = hiRes;
-                    (bufNum.Low64, remainder) = X86.X86Base.X64.DivRem(bufNum.Low64, remainder, (ulong)den);
-                    return (uint)remainder;
-                }
-                else if (X86.X86Base.IsSupported)
+                //    bufNum.U2 = hiRes;
+                //    (bufNum.Low64, remainder) = X86.X86Base.X64.DivRem(bufNum.Low64, remainder, (ulong)den);
+                //    return (uint)remainder;
+                //}
+                //else 
+                if (X86.X86Base.IsSupported)
                 {
                     uint remainder = 0;
 
@@ -352,8 +352,7 @@ namespace Managed.New
                     tmp = bufNum.Low64;
                     if (tmp == 0)
                         return 0;
-                    (div, rem) = Math.DivRem(tmp, den);
-                    bufNum.Low64 = div;
+                    (bufNum.Low64, rem) = Math.DivRem(bufNum.Low64, den);
                     return (uint)rem;
                 }
             }
