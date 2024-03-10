@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,9 +18,24 @@ namespace Managed
         public static ulong BigMul(ulong a, uint b, out ulong low)
         {
 #if TARGET_64BIT
-            return Math.BigMul((ulong)a, (ulong)b, out low);
+            return System.Math.BigMul((ulong)a, (ulong)b, out low);
+#elif TARGET_32BIT
+#if BIGENDIAN
+            const int lowOffset = 1, highOffset = 0;
 #else
+            const int lowOffset = 0, highOffset = 1;
+#endif
+            Unsafe.SkipInit(out low);
 
+            ulong tmp = BigMulx((uint)a, b);
+            Unsafe.Add(ref Unsafe.As<ulong, uint>(ref low), lowOffset) = (uint)tmp;
+            tmp >>= 32;
+            tmp += BigMulx((uint)(a >> 32), b);
+            Unsafe.Add(ref Unsafe.As<ulong, uint>(ref low), highOffset) = (uint)tmp;
+
+            return (tmp >> 32);
+#else
+            
             uint al = (uint)a;
             uint ah = (uint)(a >> 32);
 
@@ -39,6 +55,20 @@ namespace Managed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BigMul(uint a, uint b)
         {
+            return (ulong)a * b;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static ulong BigMulx(uint a, uint b)
+        {
+#if TARGET_32BIT
+            if (Bmi2.IsSupported)
+            {
+                uint low;
+                uint hi = Bmi2.MultiplyNoFlags(a, b, &low);
+                return ((ulong)hi << 32) | low;
+            }
+#endif
             return (ulong)a * b;
         }
 

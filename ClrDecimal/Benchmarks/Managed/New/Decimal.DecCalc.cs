@@ -1569,7 +1569,7 @@ namespace Managed.New
                     else
                     {
                         // Left value is 32-bit, result fits in 4 uints
-                        tmp = Math.BigMul(d2.Low64, d1.Low, out ulong low);
+                        tmp = Math.BigMul(d1.Low, d2.Low64, out ulong low);
                         bufProd.Low64 = low;
 
                         if (d2.High != 0)
