@@ -63,7 +63,7 @@ namespace Managed.New
             /// The low and mid fields combined
             /// </summary>
             [FieldOffset(8)]
-            public ulong ulomid;
+            public ulong Low64;
 
             public uint High
             {
@@ -88,13 +88,6 @@ namespace Managed.New
             public int Scale
             {
                 get => (byte)(uflags >> ScaleShift);
-            }
-
-
-            public ulong Low64
-            {
-                get => ulomid;
-                set => ulomid = value;
             }
 
             private const uint SignMask = 0x80000000;
@@ -472,8 +465,10 @@ namespace Managed.New
                 }
                 else
                 {
-                    uint hiBits = Div96By64(ref *(Buf12*)&bufNum->U1, den);
-                    uint loBits = Div96By64(ref *(Buf12*)bufNum, den);
+                    ulong mid64 = bufNum->Mid64;
+                    uint hiBits = Div96By64(bufNum->U3, ref mid64, den);
+                    bufNum->Mid64 = mid64;
+                    uint loBits = Div96By64(bufNum->U2, ref bufNum->Low64, den);
                     return ((ulong)hiBits << 32 | loBits);
                 }
             }
@@ -485,27 +480,27 @@ namespace Managed.New
             /// <param name="bufNum">96-bit dividend as array of uints, least-sig first</param>
             /// <param name="den">64-bit divisor</param>
             /// <returns>Returns quotient. Remainder overwrites lower 64-bits of dividend.</returns>
-            private static uint Div96By64(ref Buf12 bufNum, ulong den)
+            private static uint Div96By64(uint hi32, ref ulong low64, ulong den)
             {
-                Debug.Assert(den > bufNum.High64);
+                Debug.Assert(den > (low64 >> 32 | (ulong)hi32 << 32));
 
                 if (X86.X86Base.X64.IsSupported)
                 {
-                    // Assert above states: den > bufNum.High64 so den > bufNum.U2 and we can be sure we will not overflow
-                    (ulong quotient, bufNum.Low64) = X86.X86Base.X64.DivRem(bufNum.Low64, bufNum.U2, den);
+                    // Assert above states: den > bufNum.High64 so den > hi32 and we can be sure we will not overflow
+                    (ulong quotient, low64) = X86.X86Base.X64.DivRem(low64, hi32, den);
                     return (uint)quotient;
                 }
 
                 ulong num;
-                uint num2 = bufNum.U2;
+                uint num2 = hi32;
                 if (num2 == 0)
                 {
-                    num = bufNum.Low64;
+                    num = low64;
                     if (num < den)
                         // Result is zero.  Entire dividend is remainder.
                         return 0;
 
-                    (ulong quo64, bufNum.Low64) = Math.DivRem(num, den);
+                    (ulong quo64, low64) = Math.DivRem(num, den);
                     return (uint)quo64;
                 }
 
@@ -516,7 +511,7 @@ namespace Managed.New
                     // Divide would overflow.  Assume a quotient of 2^32, and set
                     // up remainder accordingly.
                     //
-                    num = bufNum.Low64;
+                    num = low64;
                     num -= den << 32;
                     quo = 0;
 
@@ -529,21 +524,21 @@ namespace Managed.New
                         num += den;
                     } while (num >= den);
 
-                    bufNum.Low64 = num;
+                    low64 = num;
                     return quo;
                 }
 
-                // Hardware divide won't overflow
+                // Hardware divide won't overflow: hi32 < denHigh32
                 //
-                ulong num64 = bufNum.High64;
-                if (num64 < denHigh32)
+                ulong num64 = ((ulong)hi32 << 32) | (uint)(low64 >> 32);
+                if (num64 < denHigh32) // must mean hi32 == 0 && (low64 >> 32) < denHigh32
                     // Result is zero.  Entire dividend is remainder.
                     //
                     return 0;
 
 
                 (quo, uint rem) = Div64By32(num64, denHigh32);
-                num = bufNum.U0 | ((ulong)rem << 32); // remainder
+                num = (uint)low64 | ((ulong)rem << 32); // remainder
 
                 // Compute full remainder, rem = dividend - (quo * divisor).
                 //
@@ -562,7 +557,7 @@ namespace Managed.New
                     } while (num >= den);
                 }
 
-                bufNum.Low64 = num;
+                low64 = num;
                 return quo;
             }
 
@@ -662,23 +657,10 @@ namespace Managed.New
             /// <returns>Returns highest 32 bits of product</returns>
             private static uint IncreaseScale(ref Buf12 bufNum, uint power)
             {
-#if TARGET_64BIT
-                ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low);
-                bufNum.Low64 = low;
+                ulong hi64 = Math.BigMul(bufNum.Low64, power, out bufNum.Low64);
                 hi64 = Math.BigMul(bufNum.U2, power) + (nuint)hi64;
                 bufNum.U2 = (uint)hi64;
                 return (uint)(hi64 >> 32);
-#else
-                ulong tmp = Math.BigMulx(bufNum.U0, power);
-                bufNum.U0 = (uint)tmp;
-                tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U1, power);
-                bufNum.U1 = (uint)tmp;
-                tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U2, power);
-                bufNum.U2 = (uint)tmp;
-                return (uint)(tmp >> 32);
-#endif
             }
 
             /// <summary>
@@ -689,20 +671,8 @@ namespace Managed.New
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static void IncreaseScale(ref Buf16 bufNum, uint power)
             {
-#if TARGET_64BIT
-                ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low64);
-                bufNum.Low64 = low64;
+                ulong hi64 = Math.BigMul(bufNum.Low64, power, out bufNum.Low64);
                 bufNum.High64 = Math.BigMul(bufNum.U2, power) + (nuint)hi64;
-#else
-                ulong tmp = Math.BigMulx(bufNum.U0, power);
-                bufNum.U0 = (uint)tmp;
-                tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U1, power);
-                bufNum.U1 = (uint)tmp;
-                tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U2, power);
-                bufNum.High64 = tmp;
-#endif
             }
 
             /// <summary>
@@ -711,10 +681,9 @@ namespace Managed.New
             /// </summary>
             /// <param name="bufNum">64-bit number as array of uints, least-sig first</param>
             /// <param name="power">Scale factor to multiply by</param>
-            private static void IncreaseScale64(ref Buf12 bufNum, uint power)
+            private static void IncreaseScale64(ref Buf16 bufNum, uint power)
             {
-                bufNum.U2 = (uint)Math.BigMul(bufNum.Low64, power, out ulong low64);
-                bufNum.Low64 = low64;
+                bufNum.U2 = (uint)Math.BigMul(bufNum.Low64, power, out bufNum.Low64);
             }
 
             /// <summary>
@@ -2213,8 +2182,9 @@ namespace Managed.New
                             if (IncreaseScale(ref bufQuo, power) != 0)
                                 goto ThrowOverflow;
 
-                            IncreaseScale64(ref *(Buf12*)&bufRem, power);
-                            tmp = Div96By64(ref *(Buf12*)&bufRem, divisor);
+                            //bufNum.U2 = (uint)Math.BigMul(bufNum.Low64, power, out bufNum.Low64);
+                            IncreaseScale64(ref bufRem, power);
+                            tmp = Div96By64(bufRem.U2, ref bufRem.Low64, divisor);
                             if (!Add32To96(ref bufQuo, tmp))
                             {
                                 scale = OverflowUnscale(ref bufQuo, scale, bufRem.Low64 != 0);
@@ -2365,8 +2335,7 @@ namespace Managed.New
                     {
                         // high  Mul6432
                         uint power = scale >= MaxInt32Scale ? TenToPowerNine : UInt32Powers10[scale];
-                        uint hi32 = (uint)Math.BigMul(d2.Low64, power, out ulong low64);
-                        d2.Low64 = low64;
+                        uint hi32 = (uint)Math.BigMul(d2.Low64, power, out d2.Low64);
                         d2.High = hi32 + d2.High * power;
                     } while ((scale -= MaxInt32Scale) > 0);
                     scale = 0;
@@ -2471,19 +2440,23 @@ namespace Managed.New
                     ulong divisor = d2.Low64 << shift;
                     switch (high)
                     {
-                        // TODO 128 by 64
-                        case 6:
-                            Div96By64(ref *(Buf12*)&b.Buf24.U4, divisor);
+                        case 6: // 224 = 6..3, or 6..4
+                            // TODO: ref on field instead
+                            ulong tmp64 = b.Buf24.High64;
+                            Div96By64(b.U6, ref tmp64, divisor);
+                            b.Buf24.High64 = tmp64;
                             goto case 5;
-                        case 5:
-                            Div96By64(ref *(Buf12*)&b.Buf24.U3, divisor);
-                            goto case 4;
+                        case 5: // 192 = 5..2
                         case 4:
-                            Div96By64(ref *(Buf12*)&b.Buf24.U2, divisor);
+                            Div128By64((Buf16*)&b.Buf24.U2, divisor);
                             break;
+                        //case 4:
+                        //    // TODO: ref on field instead
+                        //    Div96By64(ref *(Buf12*)&b.Buf24.U2, divisor);
+                        //    break;
                     }
-                    Div96By64(ref *(Buf12*)&b.Buf24.U1, divisor);
-                    Div96By64(ref *(Buf12*)&b, divisor);
+                    // 128 = 3..0
+                    Div128By64((Buf16*)&b, divisor);
 
                     d1.Low64 = b.Buf24.Low64 >> shift;
                     d1.High = 0;
@@ -2495,6 +2468,7 @@ namespace Managed.New
                     bufDivisor.Low64 = d2.Low64 << shift;
                     bufDivisor.U2 = (uint)((d2.Mid + ((ulong)d2.High << 32)) >> (32 - shift));
 
+                    // TODO: Problematic for BIGENDIAN, how to handle ?
                     switch (high)
                     {
                         case 6:
@@ -2687,20 +2661,20 @@ namespace Managed.New
                 public uint U2;
 
                 [FieldOffset(0)]
-                private ulong ulo64LE;
+                public ulong Low64;
                 [FieldOffset(4)]
                 private ulong uhigh64LE;
 
-                public ulong Low64
-                {
-#if BIGENDIAN
-                    get => ((ulong)U1 << 32) | U0;
-                    set { U1 = (uint)(value >> 32); U0 = (uint)value; }
-#else
-                    get => ulo64LE;
-                    set => ulo64LE = value;
-#endif
-                }
+//                public ulong Low64
+//                {
+//#if BIGENDIAN
+//                    get => ((ulong)U1 << 32) | U0;
+//                    set { U1 = (uint)(value >> 32); U0 = (uint)value; }
+//#else
+//                    get => ulo64LE;
+//                    set => ulo64LE = value;
+//#endif
+//                }
 
                 /// <summary>
                 /// U1-U2 combined (overlaps with Low64)
@@ -2720,6 +2694,7 @@ namespace Managed.New
             [StructLayout(LayoutKind.Explicit)]
             private struct Buf16
             {
+                // TODO: BIGENDIAN
                 [FieldOffset(0 * 4)]
                 public uint U0;
                 [FieldOffset(1 * 4)]
@@ -2730,31 +2705,47 @@ namespace Managed.New
                 public uint U3;
 
                 [FieldOffset(0 * 8)]
-                private ulong ulo64LE;
+                public ulong Low64;
                 [FieldOffset(1 * 8)]
-                private ulong uhigh64LE;
+                public ulong High64;
 
-                public ulong Low64
-                {
 #if BIGENDIAN
-                    get => ((ulong)U1 << 32) | U0;
-                    set { U1 = (uint)(value >> 32); U0 = (uint)value; }
-#else
-                    get => ulo64LE;
-                    set => ulo64LE = value;
-#endif
+                public ulong Mid64
+                {
+                    get => ((ulong)U2 << 32) | U1;
+                    set { U1 = (uint)value; U2 = (uint)(value >> 32); }
                 }
 
-                public ulong High64
-                {
-#if BIGENDIAN
-                    get => ((ulong)U3 << 32) | U2;
-                    set { U3 = (uint)(value >> 32); U2 = (uint)value; }
 #else
-                    get => uhigh64LE;
-                    set => uhigh64LE = value;
+                public ulong Mid64
+                {
+                    //TODO: ref access ??
+                    get => ((ulong)U2 << 32) | U1;
+                    set { U1 = (uint)value; U2 = (uint)(value >> 32); }
+                 }
 #endif
-                }
+
+                //                public ulong Low64
+                //                {
+                //#if BIGENDIAN
+                //                    get => ((ulong)U1 << 32) | U0;
+                //                    set { U1 = (uint)(value >> 32); U0 = (uint)value; }
+                //#else
+                //                    get => ulo64LE;
+                //                    set => ulo64LE = value;
+                //#endif
+                //                }
+
+                //                public ulong High64
+                //                {
+                //#if BIGENDIAN
+                //                    get => ((ulong)U3 << 32) | U2;
+                //                    set { U3 = (uint)(value >> 32); U2 = (uint)value; }
+                //#else
+                //                    get => uhigh64LE;
+                //                    set => uhigh64LE = value;
+                //#endif
+                //                }
             }
 
             [StructLayout(LayoutKind.Explicit)]
