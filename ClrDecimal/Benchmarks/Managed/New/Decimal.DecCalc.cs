@@ -660,11 +660,12 @@ namespace Managed.New
             /// <param name="bufNum">96-bit number as array of uints, least-sig first</param>
             /// <param name="power">Scale factor to multiply by</param>
             /// <returns>Returns highest 32 bits of product</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static uint IncreaseScale(ref Buf12 bufNum, uint power)
             {
 #if TARGET_64BIT
-                ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low);
-                bufNum.Low64 = low;
+                ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low64);
+                bufNum.Low64 = low64;
                 hi64 = Math.BigMul(bufNum.U2, power) + (nuint)hi64;
                 bufNum.U2 = (uint)hi64;
                 return (uint)(hi64 >> 32);
@@ -687,13 +688,14 @@ namespace Managed.New
             /// <param name="bufNum">buffer</param>
             /// <param name="power">Scale factor to multiply by</param>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static void IncreaseScale(ref Buf16 bufNum, uint power)
+            private unsafe static void IncreaseScale(ref Buf16 bufNum, uint power)
             {
 #if TARGET_64BIT
                 ulong hi64 = Math.BigMul(bufNum.Low64, power, out ulong low64);
                 bufNum.Low64 = low64;
                 bufNum.High64 = Math.BigMul(bufNum.U2, power) + (nuint)hi64;
-#else
+
+#elif TARGET_32BIT
                 ulong tmp = Math.BigMulx(bufNum.U0, power);
                 bufNum.U0 = (uint)tmp;
                 tmp >>= 32;
@@ -702,6 +704,8 @@ namespace Managed.New
                 tmp >>= 32;
                 tmp += Math.BigMulx(bufNum.U2, power);
                 bufNum.High64 = tmp;
+#else
+                bufNum.U3 = IncreaseScale(ref *(Buf12*)Unsafe.AsPointer(ref bufNum), power);
 #endif
             }
 
@@ -1118,7 +1122,7 @@ namespace Managed.New
                     }
 
                     uint power;
-                    ulong tmp64, tmpLow;
+                    ulong tmp64;
 
                     // d1 will need to be multiplied by 10^scale so
                     // it will have the same scale as d2.  We could be
