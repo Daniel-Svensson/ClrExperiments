@@ -95,7 +95,7 @@ namespace Benchmarks
             return new decimal(rand.NextDouble()) * range - mid;
         }
 
-        [Benchmark(Description = "System.Decimal")]
+        //[Benchmark(Description = "System.Decimal")]
         public void NetFramework()
         {
             var array = _decAccounts;
@@ -110,7 +110,7 @@ namespace Benchmarks
             }
         }
 
-        [Benchmark(Description = "P/Invoke New C++")]
+        //[Benchmark(Description = "P/Invoke New C++")]
         public void CPlusPlus()
         {
             var array = _decAccounts;

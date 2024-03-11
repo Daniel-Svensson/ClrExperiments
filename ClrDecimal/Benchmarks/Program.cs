@@ -1,13 +1,13 @@
-﻿//#define TEST_32bit_with_0_scale
-//#define TEST_32bit_with_scale
-//#define TEST_64bit_with_scale_64bit_result
-//#define TEST_64bit_with_0_scale_128bit_result
+﻿#define TEST_32bit_with_0_scale
+#define TEST_32bit_with_scale
+#define TEST_64bit_with_scale_64bit_result
+#define TEST_64bit_with_0_scale_128bit_result
 #define TEST_64bit_with_scale_128bit_result
-#define TEST_96bit_with_scale_96bit_result_and_overflow
-#define TEST_96bit_with_scale_96bit_result_no_overflow
+//#define TEST_96bit_with_scale_96bit_result_and_overflow
+//#define TEST_96bit_with_scale_96bit_result_no_overflow
 //#define TEST_Bitpatterns_with_all_scales
 
-//#define TEST_MULTIPLY
+#define TEST_MULTIPLY
 //#define TEST_ADD
 //#define TEST_SUB
 #define TEST_DIV
@@ -20,7 +20,9 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
+using Benchmarks.Distributions;
 using CommandLine;
+using Perfolizer.Horology;
 
 namespace Benchmarks
 {
@@ -45,13 +47,13 @@ namespace Benchmarks
             //Managed.New.Decimal a = 1m / 365, b = 10_000m, res = 42m;
             //Managed.Main.Decimal a2 = 1m / 365, b2 = 10_000m, res2 = 42m;
 
-            //for (int i = 0; i < 10_000_000; ++i)
+            //for (int i = 0; i < 5_000_000; ++i)
             //{
-            //    res = res + (a - b);
-            //  //  res = /*res * */a * b;
+            //    res = res + (a + b);
+            //    //  res = /*res * */a * b;
             //    res = res / (a * b);
 
-            //    res2 = res2 + (a2 - b2);
+            //    res2 = res2 + (a2 + b2);
             //    //res2 = /*res2 * */a2 * b2;
             //    res2 = res2 / (a2 * b2);
             //}
@@ -65,9 +67,10 @@ namespace Benchmarks
             //for (int i = 0; i < 100_000; ++i)
             //{
             //    res = a / b;
+            //    res = a % b;
             //    res2 = a2 / b2;
             //}
-                
+
             //Console.WriteLine("\n\n----------------- SLEEP ------------------------");
             //Thread.Sleep(7_000);
 
@@ -99,6 +102,7 @@ namespace Benchmarks
             {
                 var expected = div.System_Decimal((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
                 var actual = div.New((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
+                var _ = div.Main((decimal)testCase[0], (decimal)testCase[1], (string)testCase[2]);
 
                 Console.Write($"Verifying: {testCase[2]} ");
                 if (actual != expected)
@@ -125,47 +129,30 @@ namespace Benchmarks
             }
 
 
-            //BenchmarkRunner.Run<Addition>();
-            //BenchmarkRunner.Run<InterestBenchmark>();
-            //BenchmarkRunner.Run<Multiply>();
-            BenchmarkRunner.Run<Divide>();
+            var config = BenchmarkDotNet.Configs.DefaultConfig.Instance
+    .AddJob(Job.InProcess/*.WithIterationCount(5)*/
+    //.AddHardwareCounters(
+    //HardwareCounter.TotalCycles,
+    //HardwareCounter.TotalIssues,
+    //HardwareCounter.InstructionRetired
+    //HardwareCounter.UnhaltedCoreCycles
+    //HardwareCounter.Timer,
+    //HardwareCounter.BranchInstructionRetired,
+    //HardwareCounter.BranchMispredictsRetired,
+    )
+    ;
+
+            ////BenchmarkRunner.Run<Addition>();
+            ////BenchmarkRunner.Run<InterestBenchmark>(config);
+            //BenchmarkRunner.Run<Multiply>(config);
+            BenchmarkRunner.Run<Divide>(config);
+            ////BenchmarkRunner.Run<MulPentP>();
+            ////BenchmarkRunner.Run<DivPentP>();
+
+                
             return;
 
-            var config = DefaultConfig.Instance
-                //.AddHardwareCounters(
-                //[
-                //HardwareCounter.BranchInstructionRetired,
-                //HardwareCounter.BranchInstructions,
-                //HardwareCounter.BranchMispredictions,
-                //HardwareCounter.CacheMisses,
-                //HardwareCounter.TotalIssues,
-                //HardwareCounter.LlcReference,
-                //HardwareCounter.LlcMisses])
-                ;
-                
-              //.With(Job.Core)
-              //.With(Job.RyuJitX64, Job.LegacyJitX86)
-              ;
-
-            //#if NET47
-            //            if (Is64Bit)
-            //            {
-            //                config = config.With(Job.RyuJitX64, Job.LegacyJitX64);
-            //            }
-            //#endif
-
-            //BenchmarkRunner.Run<Add96by96_Carry>(config);
-            //BenchmarkRunner.Run<Add96by96>(config);
-            //BenchmarkRunner.Run<Mul96by96>(config);
-            //BenchmarkRunner.Run<Div96by96>(config);
-
-            //BenchmarkRunner.Run<InterestBenchmark>(config);
-
             //PrintStats(Distributions.AddPentP.LoadFile());
-
-            //(new Distributions.MulPentP()).NetFramework();
-            //(new Distributions.DivPentP()).NetFramework();
-
 
 
             var program = new Program();

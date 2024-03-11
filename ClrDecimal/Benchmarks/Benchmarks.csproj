@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>exe</OutputType>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<TargetFramework>net8.0</TargetFramework>
 		<!--<TargetFramework>net47</TargetFramework>-->
 		<OutputTypeEx>exe</OutputTypeEx>
 		<!--<RuntimeIdentifier>win10-x64</RuntimeIdentifier>-->
@@ -10,10 +10,17 @@
 		<Platforms>AnyCPU;x64;x86</Platforms>
 		<LangVersion>latest</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		
 		<EnablePreviewFeatures>true</EnablePreviewFeatures>
-	  <DefineConstants Condition="'$(Platform)'=='x86'">TARGET_32BIT;$(DefineConstants)</DefineConstants>
-	  <DefineConstants Condition="'$(Platform)'=='x64'">TARGET_64BIT;$(DefineConstants)</DefineConstants>
-
+		<DefineConstants Condition="'$(Platform)'=='x86'">TARGET_32BIT;$(DefineConstants)</DefineConstants>
+		<DefineConstants Condition="'$(Platform)'!='x86'">TARGET_64BIT;$(DefineConstants)</DefineConstants>
+		<DebugType>full</DebugType>
+		
+		<!-- Simplify benchmarkning -->
+		<TieredCompilation>false</TieredCompilation>
+		<TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+		<TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
+		<TieredPGO>false</TieredPGO>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Remove="BenchmarkDotNet.Artifacts\**" />
@@ -22,21 +29,15 @@
 	</ItemGroup>
 	<!-- Nuget Packages-->
 	<ItemGroup>
-		<PackageReference Include="BenchmarkDotNet" Version="0.11.1" />
+		<PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
+		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.12" />
 	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)'=='net47'">
-		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.11.1" />
-	</ItemGroup>
-	<!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">-->
-	<!--<ItemGroup Condition="'$(TargetFramework)'!='net47'">
-    <PackageReference Include="System.Diagnostics.FileVersionInfo" Version="4.3.0" />
-  </ItemGroup>-->
 	<!-- dll -->
 	<ItemGroup>
 		<Content Condition="'$(Platform)'=='x86'" Include="..\$(Configuration)\decimalDLL.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Condition="'$(Platform)'=='x64'" Include="..\x64\$(Configuration)\decimalDLL.dll">
+		<Content Condition="'$(Platform)'!='x86'" Include="..\x64\$(Configuration)\decimalDLL.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
