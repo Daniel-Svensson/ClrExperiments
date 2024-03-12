@@ -19,7 +19,7 @@ namespace Managed
         {
 #if TARGET_64BIT
             return System.Math.BigMul((ulong)a, (ulong)b, out low);
-#elif TARGET_32BIT
+#elif TARGET_32BIT_
 #if BIGENDIAN
             const int lowOffset = 1, highOffset = 0;
 #else
@@ -35,16 +35,14 @@ namespace Managed
 
             return (tmp >> 32);
 #else
-            
             uint al = (uint)a;
             uint ah = (uint)(a >> 32);
 
-            ulong prodH = (((ulong)ah) * (ulong)b);
             ulong prodL = ((ulong)al) * (ulong)b;
-            prodH += (prodL >> 32);
+            ulong prodH = (uint)(prodL >> 32) + (((ulong)ah) * (ulong)b);
 
             low = ((prodH << 32) | (uint)prodL);
-            return (prodH >> 32);
+            return prodH >> 32;
 #endif
         }
 
@@ -55,7 +53,8 @@ namespace Managed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BigMul(uint a, uint b)
         {
-            return (ulong)a * b;
+            return BigMulx(a, b);
+            //return (ulong)a * b;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

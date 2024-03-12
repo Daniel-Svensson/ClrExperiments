@@ -670,13 +670,13 @@ namespace Managed.New
                 bufNum.U2 = (uint)hi64;
                 return (uint)(hi64 >> 32);
 #else
-                ulong tmp = Math.BigMulx(bufNum.U0, power);
+                ulong tmp = (ulong)bufNum.U0 * power;
                 bufNum.U0 = (uint)tmp;
                 tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U1, power);
+                tmp += (ulong)bufNum.U1 * power;
                 bufNum.U1 = (uint)tmp;
                 tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U2, power);
+                tmp += (ulong)bufNum.U2 * power;
                 bufNum.U2 = (uint)tmp;
                 return (uint)(tmp >> 32);
 #endif
@@ -696,13 +696,13 @@ namespace Managed.New
                 bufNum.High64 = Math.BigMul(bufNum.U2, power) + (nuint)hi64;
 
 #elif TARGET_32BIT
-                ulong tmp = Math.BigMulx(bufNum.U0, power);
+                ulong tmp = (ulong)bufNum.U0 * power;
                 bufNum.U0 = (uint)tmp;
                 tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U1, power);
+                tmp += (ulong)bufNum.U1 * power;
                 bufNum.U1 = (uint)tmp;
                 tmp >>= 32;
-                tmp += Math.BigMulx(bufNum.U2, power);
+                tmp += (ulong)bufNum.U2 * power;
                 bufNum.High64 = tmp;
 #else
                 bufNum.U3 = IncreaseScale(ref *(Buf12*)Unsafe.AsPointer(ref bufNum), power);
