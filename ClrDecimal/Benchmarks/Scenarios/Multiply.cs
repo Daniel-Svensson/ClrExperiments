@@ -38,7 +38,7 @@ namespace Benchmarks
             return ClrClassLibrary.Methods.MulNative(a, b);
         }
        
-        //[Benchmark(Baseline = true)]
+        //[Benchmark()]
         //[ArgumentsSource(nameof(TestCases))]
         public decimal Ole32(decimal a, decimal b, string descr)
         {

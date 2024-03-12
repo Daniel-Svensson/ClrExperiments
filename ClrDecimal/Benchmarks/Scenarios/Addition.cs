@@ -12,31 +12,13 @@ namespace Benchmarks
     [InProcess]
     public class Addition
     {
-        readonly decimal a;
-        readonly decimal b;
-        readonly Managed.New.Decimal a2;
-        readonly Managed.New.Decimal b2;
-        //readonly Managed.New.Decimal2 a3;
-        //readonly Managed.New.Decimal2 b3;
-
-        public Addition()
-        {
-            // TODO: test bort 3 and 10 
-            a = new decimal(1023, 345, 321, false, 3);
-            b = new decimal(32, 23, 2, false, 0);
-            a2 = a;
-            b2 = b;
-            //a3 = a;
-            //b3 = b;
-        }
-
         public IEnumerable<object[]> TestCases()
         {
             return [
-                [new decimal(0, 1, 0, false, 3), new decimal(0, 1, 0, false, 3), "same scale"],
-                [(1m/3), (decimal)ulong.MaxValue,""],
+                [new decimal(0, 1, 0, false, 3), new decimal(0, 1, 0, false, 3), "2^32 + 2^32 same scale"],
+                [(1m/3), (decimal)ulong.MaxValue,"1/3 + (2^64-1)"],
                 [new decimal(-1, -1, -1, false, 1), new decimal(-1, -1, -1, false, 1), "with carry"],
-                [new decimal(-1, -1, -2, false, 1), new decimal(-1, -1, -1, false, 1), "subtract"],
+                //[new decimal(-1, -1, -2, false, 1), new decimal(-1, -1, -1, false, 1), "subtract"],
             ];
         }
 

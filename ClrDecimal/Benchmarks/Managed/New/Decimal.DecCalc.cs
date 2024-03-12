@@ -957,7 +957,7 @@ namespace Managed.New
                     bufQuo.U0 = div;
                     remainder = (uint)(tmp - div * 10);
                 }
-                
+
                 // The remainder is the last digit that does not fit, so we can use it to work out if we need to round up
                 if (remainder > 5 || remainder == 5 && (sticky || (bufQuo.U0 & 1) != 0))
                     Add32To96(ref bufQuo, 1);

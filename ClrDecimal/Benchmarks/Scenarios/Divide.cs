@@ -11,16 +11,17 @@ namespace Benchmarks
     //[ReturnValueValidator()]
     //[RyuJitX64Job, RyuJitX86Job]
 #if TARGET_32BIT || TARGET_64BIT
-    [InProcess] // To allow "Native"
+    //[InProcess] // To allow "Native"
+    //[ShortRunJob]
 #endif
     public class Divide
     {
         public IEnumerable<object[]> TestCases()
         {
             return [
-                [1m, 3m, "1/3 small 32bit division"],
+                [1m, 3m, "1/3 32bit division"],
                 [new decimal(int.MaxValue, int.MaxValue, 5, false, 0), new decimal(3, 0, 0, false, 0), "96bit / 32bit"],
-                //[new decimal(int.MaxValue, 2, 0, false, 2), new decimal(33, 0, 0, false, 1), "34bit / 32bit"],
+                [new decimal(int.MaxValue, 2, 0, false, 2), new decimal(33, 0, 0, false, 1), "34bit / 32bit"],
                 [new decimal(1023, 412, 213, false, 0), new decimal(32, 32, 1, false, 0), "96bit / 96bit"],
                 [new decimal(1023, 412, 213, false, 0), new decimal(32, 3, 0, false, 0), "96bit / 64bit"],
             ];
