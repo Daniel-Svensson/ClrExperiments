@@ -41,8 +41,8 @@ namespace Benchmarks
             return ClrClassLibrary.Methods.DivNative(a, b);
         }
 
-        [Benchmark]
-        [ArgumentsSource(nameof(TestCases))]
+        //[Benchmark]
+        //[ArgumentsSource(nameof(TestCases))]
         public decimal Ole32(decimal a, decimal b, string descr)
         {
             return ClrClassLibrary.Methods.DivOle32(a, b);

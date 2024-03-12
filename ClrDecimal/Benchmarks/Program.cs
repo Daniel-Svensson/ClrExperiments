@@ -142,9 +142,9 @@ namespace Benchmarks
     )
     ;
 
-            ////BenchmarkRunner.Run<Addition>();
-            ////BenchmarkRunner.Run<InterestBenchmark>(config);
-            //BenchmarkRunner.Run<Multiply>(config);
+            BenchmarkRunner.Run<Addition>(config);
+            BenchmarkRunner.Run<InterestBenchmark>(config);
+            BenchmarkRunner.Run<Multiply>(config);
             BenchmarkRunner.Run<Divide>(config);
             ////BenchmarkRunner.Run<MulPentP>();
             ////BenchmarkRunner.Run<DivPentP>();
