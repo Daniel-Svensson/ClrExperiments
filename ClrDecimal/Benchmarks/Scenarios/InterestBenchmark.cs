@@ -17,15 +17,15 @@ namespace Benchmarks
         public decimal DaysInYear;
     }
 
-    [InProcess]
+    //[InProcess]
     public class InterestBenchmark
     {
         public Accounts_Decimal[] _decAccounts;
 
         //[Params(100, 100000)]
-        [Params(10000)]
+        [Params(100000)]
         public int Count { get; set; }
-        [Params(true/*, false*/)]
+        [Params(true, false)]
         public bool RoundedAmounts = true;
         [Params(true, false)]
         public bool SmallDivisor = true;
@@ -76,7 +76,7 @@ namespace Benchmarks
             return new decimal(rand.NextDouble()) * range - mid;
         }
 
-        //[Benchmark(Description = "System.Decimal")]
+        [Benchmark(Description = "System.Decimal .NET8")]
         public void NetFramework()
         {
             var array = _decAccounts;
@@ -91,22 +91,7 @@ namespace Benchmarks
             }
         }
 
-        //[Benchmark(Description = "P/Invoke New C++")]
-        public void CPlusPlus()
-        {
-            var array = _decAccounts;
-
-            for (int i = 0; i < array.Length; ++i)
-            {
-                var dayFactor = Methods.DivNative(days, array[i].DaysInYear);
-
-                array[i].NewInterest =
-                    Methods.AddNative(array[i].CurrentInterest,
-                        Methods.MulNative(array[i].Amount, Methods.MulNative(array[i].CurrentInterestRate, dayFactor)));
-            }
-        }
-
-        //[Benchmark(Description = "P/Invoke oleauto32")]
+     //   [Benchmark(Description = "P/Invoke oleauto32")]
         public void Oleauto32()
         {
             var array = _decAccounts;
@@ -121,7 +106,7 @@ namespace Benchmarks
             }
         }
 
-        [Benchmark]
+     //   [Benchmark]
         public void New()
         {
             var array = _decAccounts;
@@ -136,7 +121,7 @@ namespace Benchmarks
             }
         }
 
-        [Benchmark(Baseline = true)]
+     //   [Benchmark(Baseline = true)]
         public void Main()
         {
             var array = _decAccounts;
