@@ -44,6 +44,8 @@ namespace Benchmarks
 #if TARGET_32BIT
             Console.WriteLine($"TARGET_32BIT is defined");
 #endif
+
+
             //Managed.New.Decimal a = 1m / 365, b = 10_000m, res = 42m;
             //Managed.Main.Decimal a2 = 1m / 365, b2 = 10_000m, res2 = 42m;
 
@@ -128,9 +130,8 @@ namespace Benchmarks
                 Debug.Assert(actual == expected);
             }
 
-
             var config = BenchmarkDotNet.Configs.DefaultConfig.Instance
-    .AddJob(Job.InProcess/*.WithIterationCount(5)*/
+   // .AddJob(Job.InProcess/*.WithIterationCount(5)*/
     //.AddHardwareCounters(
     //HardwareCounter.TotalCycles,
     //HardwareCounter.TotalIssues,
@@ -139,17 +140,21 @@ namespace Benchmarks
     //HardwareCounter.Timer,
     //HardwareCounter.BranchInstructionRetired,
     //HardwareCounter.BranchMispredictsRetired,
-    )
+    //)
     ;
 
-            BenchmarkRunner.Run<Addition>(config);
-            BenchmarkRunner.Run<InterestBenchmark>(config);
-            BenchmarkRunner.Run<Multiply>(config);
-            BenchmarkRunner.Run<Divide>(config);
+            //BenchmarkRunner.Run<Addition>(config, args);
+            //BenchmarkRunner.Run<InterestBenchmark>(config, args);
+            ////BenchmarkRunner.Run<Multiply>(config, args);
+            //BenchmarkRunner.Run<Divide>(config, args);
             ////BenchmarkRunner.Run<MulPentP>();
             ////BenchmarkRunner.Run<DivPentP>();
 
-                
+            BenchmarkRunner.Run<FastMod>(config, args);
+            //BenchmarkRunner.Run<XXHashBenchmarks>(config, args);
+            //BenchmarkRunner.Run<Scenarios.BigMulTests>(config, args);
+            //BenchmarkSwitcher.FromTypes([typeof(Addition), typeof(InterestBenchmark), typeof(Multiply), typeof(Divide), typeof(Scenarios.BigMulTests)])
+            //    .RunAll(args: args);
             return;
 
             //PrintStats(Distributions.AddPentP.LoadFile());
