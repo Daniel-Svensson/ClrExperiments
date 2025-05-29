@@ -1323,6 +1323,7 @@ namespace Managed.New
                         Number.ThrowOverflowException(SR.Overflow_Decimal);
                     flags -= 1 << ScaleShift;
 
+                    // Same as overflow unscale, and DivByConst
                     const uint den = 10;
                     ulong num = high + (1UL << 32);
                     high = (uint)(num / den);
